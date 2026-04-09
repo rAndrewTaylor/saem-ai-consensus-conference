@@ -8,10 +8,19 @@ Thumbs.db
 
 # Claude Code
 .claude/
+.mcp.json
 
-# Large binary files (PDFs tracked separately or via Git LFS)
-WG1_PDFs/
+# Large binary files
 *.pdf
+
+# Google Drive symlinks (documents live on Drive, not in git)
+gdrive
+docs-methodology
+docs-shared
+literature-wg*
+
+# Platform runtime data
+platform/data/
 
 # Sensitive / local-only
 *.pst
@@ -19,3 +28,9 @@ WG1_PDFs/
 # Office temp files
 ~$*
 *.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
