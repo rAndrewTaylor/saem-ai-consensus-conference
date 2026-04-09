@@ -73,7 +73,7 @@ This repository contains the planning documents, procedures, literature reviews,
 ## Key Links
 
 - **Slack Workspace:** saemaiconsens
-- **Google Drive:** [Shared Folder](https://drive.google.com/drive/folders/1F6RIBGo9-SDqXEYp2VZU8atL_vuUErXI?usp=drive_link)
+- **Google Drive:** Shared folder (link available to collaborators via Slack)
 
 ## Dissemination
 
