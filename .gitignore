@@ -1,0 +1,21 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+# Large binary files (PDFs tracked separately or via Git LFS)
+WG1_PDFs/
+*.pdf
+
+# Sensitive / local-only
+*.pst
+
+# Office temp files
+~$*
+*.tmp
