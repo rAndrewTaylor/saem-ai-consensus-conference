@@ -1,0 +1,185 @@
+================================================================================
+WG4: HUMAN-AI INTERACTION & SELF - LITERATURE REVIEW INDEX
+SAEM 2026 AI Consensus Conference
+================================================================================
+
+PRIMARY DELIVERABLES:
+====================
+
+1. WG4_Human_AI_Interaction_Literature_Review.docx (26 KB)
+   - Professional literature review document
+   - 85 peer-reviewed articles
+   - 19 subtopic areas
+   - Ready for distribution to working group members
+
+2. WG4_Article_Tracker.xlsx (16 KB)
+   - Article metadata tracking spreadsheet
+   - PDF availability status
+   - Hyperlinked DOI and PMID references
+   - Summary statistics
+
+BACKUP LOCATIONS:
+=================
+
+Google Drive:
+  /My Drive/SAEM 2026 AI Consensus Conference/WG4 - Human-AI Interaction & Self/
+  - WG4_Human_AI_Interaction_Literature_Review.docx
+  - WG4_Article_Tracker.xlsx
+  - PDFs/ (directory ready for downloads)
+
+Generation Scripts:
+  /sessions/lucid-great-brahmagupta/wg4_doc/
+  - generate.js (regenerate literature review)
+  - create_tracker.py (regenerate tracker)
+  - download_pdfs.py (download open-access PDFs)
+  - README.md (complete documentation)
+
+ARTICLE ORGANIZATION:
+=====================
+
+19 Subtopic Areas:
+  1. Human-AI Teaming & Collaboration in Clinical Settings (5 articles)
+  2. Clinician Trust in AI Systems (4 articles)
+  3. AI Explainability & Interpretability (XAI) (5 articles)
+  4. Clinical Decision Support & Alert Fatigue (5 articles)
+  5. Workflow Integration of AI in Emergency Departments (4 articles)
+  6. Human Factors Engineering for Health AI (5 articles)
+  7. Cognitive Load & AI-Assisted Decision Making (5 articles)
+  8. Automation Bias in Clinical AI (4 articles)
+  9. User Interface Design for Clinical AI (4 articles)
+  10. Shared Decision-Making with AI (Patient-Facing) (4 articles)
+  11. AI & Clinical/Diagnostic Reasoning (5 articles)
+  12. Physician Autonomy & AI Recommendations (4 articles)
+  13. AI Usability Studies in Emergency Medicine (4 articles)
+  14. Alarm/Alert Design for Clinical AI (4 articles)
+  15. AI & Clinician Burnout/Wellbeing (4 articles)
+  16. Human Oversight of AI in Healthcare (4 articles)
+  17. Adaptive AI Systems & User Feedback (4 articles)
+  18. Patient Perceptions of AI in Healthcare (4 articles)
+  19. Sociotechnical Systems Approach to Health AI (5 articles)
+
+Total: 85 peer-reviewed articles from 1974-2025
+
+KEY JOURNAL SOURCES:
+====================
+
+Emergency Medicine:
+  - Academic Emergency Medicine
+  - Annals of Emergency Medicine
+  - Journal of Emergency Medicine
+
+General Medical:
+  - Journal of the American Medical Association (JAMA)
+  - New England Journal of Medicine (NEJM)
+  - The Lancet / Lancet Digital Health
+  - Nature Medicine
+
+Human Factors & Ergonomics:
+  - Human Factors
+  - Ergonomics
+  - Applied Ergonomics
+
+Health Informatics:
+  - Journal of the American Medical Informatics Association (JAMIA)
+  - npj Digital Medicine
+  - International Journal of Medical Informatics (IJMI)
+  - Journal of Biomedical Informatics
+  - Journal of Medical Internet Research (JMIR)
+
+Computer Science & HCI:
+  - CHI (Conference on Human Factors in Computing Systems)
+  - IEEE Transactions on Systems, Man, and Cybernetics
+  - Neural Information Processing Systems (NIPS)
+  - Proceedings of various machine learning conferences
+
+DOCUMENT STRUCTURE:
+===================
+
+PART I: NARRATIVE LITERATURE REVIEW
+  - Executive Summary
+  - Section 1: Human-AI Teaming & Collaboration in Clinical Settings
+  - Section 2: Clinician Trust in AI Systems
+  - Section 3: AI Explainability & Interpretability (XAI)
+  - Section 4: Clinical Decision Support & Alert Fatigue
+  - Section 5: Workflow Integration of AI in Emergency Departments
+  - Section 6: Human Factors Engineering for Health AI
+  - Section 7: Cognitive Load & AI-Assisted Decision Making
+  - Section 8: Automation Bias in Clinical AI
+  - [Plus 9 additional subtopic sections in extended bibliography]
+
+PART II: ANNOTATED BIBLIOGRAPHY
+  - 85 articles organized by 19 subtopic areas
+  - Full citations with DOI/PMID
+  - Key findings summaries for each article
+
+SPREADSHEET STRUCTURE:
+====================
+
+ARTICLE TRACKER SHEET:
+  Column A: ID (1-85)
+  Column B: PDF? (YES/NO with color coding)
+  Column C: First Author
+  Column D: Year
+  Column E: Title
+  Column F: Journal
+  Column G: Subtopic Area
+  Column H: DOI Link (hyperlinked)
+  Column I: PMID (hyperlinked)
+
+SUMMARY SHEET:
+  - Total Articles: 85
+  - PDFs Available: [updates automatically]
+  - PDFs Missing: [updates automatically]
+  - Statistics and tracking data
+
+QUICK START:
+============
+
+To Access Documents:
+  1. Open WG4_Human_AI_Interaction_Literature_Review.docx
+  2. Open WG4_Article_Tracker.xlsx
+  3. Use hyperlinks to access DOI and PMID information
+
+To Regenerate Documents:
+  1. cd /sessions/lucid-great-brahmagupta/wg4_doc
+  2. node generate.js (regenerates literature review)
+  3. python3 create_tracker.py (regenerates spreadsheet)
+
+To Download PDFs:
+  1. python3 download_pdfs.py (downloads open-access PDFs)
+  2. PDFs populate in: WG4 - Human-AI Interaction & Self/PDFs/
+  3. Tracker automatically updates PDF status
+
+DOCUMENT METADATA:
+==================
+
+Version: 1.0
+Generated: April 2, 2026
+For: Andrew Taylor, WG4 Chair
+Conference: SAEM 2026 AI Consensus Conference
+Working Group: WG4 - Human-AI Interaction & Self
+
+Document Type: Literature Review
+Format: DOCX + XLSX
+Professional Formatting: Yes (matching WG1 standards)
+Accessibility: Fully accessible to all group members
+
+CONTACT & SUPPORT:
+==================
+
+For questions about documents:
+  - Contact Andrew Taylor (WG4 Chair)
+
+For technical issues:
+  - Refer to README.md in wg4_doc directory
+  - All scripts are documented and customizable
+
+For updates/modifications:
+  - Edit articles array in generate.js
+  - Run regeneration scripts
+  - Commit changes to project directory
+
+================================================================================
+This document is part of the SAEM 2026 AI Consensus Conference project.
+Last Updated: April 2, 2026
+================================================================================

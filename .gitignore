@@ -13,11 +13,8 @@ Thumbs.db
 # Large binary files
 *.pdf
 
-# Google Drive symlinks (documents live on Drive, not in git)
+# Google Drive (symlinks from Drive point to repo files — not tracked here)
 gdrive
-docs-methodology
-docs-shared
-literature-wg*
 
 # Platform runtime data
 platform/data/
