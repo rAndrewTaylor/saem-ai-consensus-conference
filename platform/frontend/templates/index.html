@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAEM 2026 AI Consensus Conference</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>SAEM 2026 AI Consensus Conference</h1>
+        <div class="subtitle">AI-Enhanced Consensus Building for Emergency Medicine Research</div>
+        <div class="badge">Modified Delphi Method</div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">Working Groups</div>
+            <p style="color:var(--gray-500);font-size:0.9rem;margin-bottom:16px;">
+                Select your working group to participate in the Delphi survey or pairwise ranking.
+            </p>
+            <div id="wg-list">Loading...</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Conference Day Voting</div>
+            <p style="color:var(--gray-500);font-size:0.9rem;margin-bottom:12px;">
+                Active voting sessions will appear here during the conference.
+            </p>
+            <div id="sessions-list">Loading...</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Quick Links</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="/dashboard" class="btn btn-outline">Admin Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load working groups from dashboard data
+            try {
+                const data = await api('/api/admin/dashboard');
+                const wgList = document.getElementById('wg-list');
+                if (!data.working_groups || data.working_groups.length === 0) {
+                    wgList.innerHTML = '<p style="color:var(--gray-500)">No working groups loaded yet.</p>';
+                    return;
+                }
+                wgList.innerHTML = data.working_groups.map(wg => `
+                    <div class="question-card" style="cursor:default;">
+                        <div class="question-number">WG ${wg.wg_number} &mdash; ${wg.pillar}</div>
+                        <div class="question-text">${wg.name}</div>
+                        <div class="question-meta">
+                            <span>${wg.total_questions} questions</span>
+                            <span>${wg.confirmed} confirmed</span>
+                            <span>${wg.r1_participants} R1 participants</span>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                            <a href="/survey/${wg.wg_number}/round_1" class="btn btn-primary" style="font-size:0.8rem;padding:6px 14px;">Round 1 Survey</a>
+                            <a href="/survey/${wg.wg_number}/round_2" class="btn btn-outline" style="font-size:0.8rem;padding:6px 14px;">Round 2 Survey</a>
+                            <a href="/rank/${wg.wg_number}" class="btn btn-outline" style="font-size:0.8rem;padding:6px 14px;">Pairwise Ranking</a>
+                            <a href="/results/${wg.wg_number}" class="btn btn-outline" style="font-size:0.8rem;padding:6px 14px;">Results</a>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('wg-list').innerHTML = '<p style="color:var(--gray-500)">Could not load working groups.</p>';
+            }
+
+            // Load active sessions
+            try {
+                const sessions = await api('/api/conference/sessions');
+                const list = document.getElementById('sessions-list');
+                const active = sessions.filter(s => s.is_active);
+                if (active.length === 0) {
+                    list.innerHTML = '<p style="color:var(--gray-500)">No active voting sessions.</p>';
+                } else {
+                    list.innerHTML = active.map(s => `
+                        <a href="/vote/${s.id}" class="btn btn-success btn-block" style="margin-bottom:8px;">
+                            ${s.session_type.replace(/_/g, ' ')} &mdash; ${s.phase.replace(/_/g, ' ')} (${s.vote_count} votes)
+                        </a>
+                    `).join('');
+                }
+            } catch (e) {
+                document.getElementById('sessions-list').innerHTML = '<p style="color:var(--gray-500)">Could not load sessions.</p>';
+            }
+        });
+    </script>
+</body>
+</html>

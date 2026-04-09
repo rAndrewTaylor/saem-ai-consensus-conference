@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delphi Survey &mdash; SAEM AI Consensus</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Delphi Survey</h1>
+        <div class="subtitle" id="survey-subtitle">Loading...</div>
+        <div class="badge" id="round-badge">{{ round_name | replace("_", " ") | title }}</div>
+    </div>
+
+    <div class="container">
+        <!-- Progress -->
+        <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%"></div></div>
+        <div style="text-align:center;color:var(--gray-500);font-size:0.85rem;margin-bottom:16px;" id="progress-text">0 / 0 completed</div>
+
+        <!-- Instructions card -->
+        <div class="card" id="instructions-card">
+            <div class="card-header">Instructions</div>
+            <p style="font-size:0.9rem;color:var(--gray-700);margin-bottom:12px;">
+                For each research question below, please:
+            </p>
+            <ol style="font-size:0.9rem;color:var(--gray-700);padding-left:20px;margin-bottom:12px;">
+                <li><strong>Vote on disposition:</strong> Include, Include with Modifications, or Exclude</li>
+                <li><strong>Rate importance</strong> on a 1-9 scale (1 = not important, 9 = critically important)</li>
+                <li><strong>Add a comment</strong> (optional but encouraged, especially for "Modify" or "Exclude" votes)</li>
+            </ol>
+            <p style="font-size:0.85rem;color:var(--gray-500);">
+                Your responses are anonymous. You can change answers before submitting.
+            </p>
+        </div>
+
+        <!-- Questions container -->
+        <div id="questions-container">Loading questions...</div>
+
+        <!-- Suggestion section -->
+        <div class="card" id="suggestion-card" style="display:none;">
+            <div class="card-header">Suggest a New Question</div>
+            <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px;">
+                Is there a research question missing from this working group? Suggest it here.
+            </p>
+            <textarea class="comment-field" id="suggestion-text" placeholder="Your suggested research question..." rows="3"></textarea>
+            <textarea class="comment-field" id="suggestion-comment" placeholder="Any additional context (optional)..." rows="2" style="margin-top:8px;"></textarea>
+            <button class="btn btn-outline" style="margin-top:8px;" onclick="submitSuggestion()">Submit Suggestion</button>
+        </div>
+
+        <!-- Submit button -->
+        <button class="btn btn-primary btn-block" id="submit-btn" style="display:none;margin-top:16px;" onclick="submitAll()">
+            Submit All Responses
+        </button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        const WG_NUMBER = {{ wg_number }};
+        const ROUND_NAME = '{{ round_name }}';
+        let questions = [];
+        let responses = {};
+        let token = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Get or restore token
+            token = getToken(WG_NUMBER);
+            if (!token) {
+                const result = await api('/api/surveys/token', {
+                    method: 'POST',
+                    params: { wg_number: WG_NUMBER }
+                });
+                token = result.token;
+                setToken(WG_NUMBER, token);
+            }
+
+            // Load questions
+            questions = await api(`/api/surveys/questions/${WG_NUMBER}`, {
+                params: { round_name: ROUND_NAME }
+            });
+
+            if (!questions || questions.length === 0) {
+                document.getElementById('questions-container').innerHTML =
+                    '<div class="card"><p style="color:var(--gray-500);text-align:center;">No questions available for this round yet.</p></div>';
+                return;
+            }
+
+            document.getElementById('survey-subtitle').textContent =
+                `Working Group ${WG_NUMBER} — ${questions.length} questions`;
+
+            renderQuestions();
+            document.getElementById('suggestion-card').style.display = 'block';
+            document.getElementById('submit-btn').style.display = 'block';
+        });
+
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = questions.map((q, idx) => `
+                <div class="question-card" id="q-${q.id}">
+                    <div class="question-number">Question ${idx + 1} of ${questions.length}</div>
+                    <div class="question-text">${q.text}</div>
+                    ${ROUND_NAME === 'round_2' && q.r1_include_pct !== null ? `
+                        <div style="margin-bottom:12px;">
+                            <div class="result-bar-label">
+                                <span>Round 1 Results</span>
+                                <span>${q.r1_include_pct}% include</span>
+                            </div>
+                            <div class="result-bar">
+                                <div class="include" style="width:${q.r1_include_pct - (q.r1_modify_pct || 0)}%"></div>
+                                <div class="modify" style="width:${q.r1_modify_pct || 0}%"></div>
+                                <div class="exclude" style="width:${q.r1_exclude_pct || 0}%"></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="disposition-group">
+                        <button class="disposition-btn" data-qid="${q.id}" data-val="include" onclick="setDisposition(${q.id},'include',this)">
+                            Include
+                        </button>
+                        <button class="disposition-btn" data-qid="${q.id}" data-val="include_with_modifications" onclick="setDisposition(${q.id},'include_with_modifications',this)">
+                            Include with Modifications
+                        </button>
+                        <button class="disposition-btn" data-qid="${q.id}" data-val="exclude" onclick="setDisposition(${q.id},'exclude',this)">
+                            Exclude
+                        </button>
+                    </div>
+                    <div class="importance-row">
+                        <span class="importance-label">Importance:</span>
+                        <input type="range" class="importance-slider" min="1" max="9" value="5"
+                               data-qid="${q.id}"
+                               oninput="setImportance(${q.id}, this.value)">
+                        <span class="importance-value" id="imp-val-${q.id}">5</span>
+                    </div>
+                    <textarea class="comment-field" placeholder="Comment (optional — especially helpful for Modify/Exclude votes)"
+                              data-qid="${q.id}"
+                              oninput="setComment(${q.id}, this.value)"></textarea>
+                </div>
+            `).join('');
+        }
+
+        function setDisposition(qid, value, btn) {
+            if (!responses[qid]) responses[qid] = { disposition: null, importance_rating: 5, comment: null };
+            responses[qid].disposition = value;
+
+            // Update button styles
+            const group = btn.closest('.disposition-group');
+            group.querySelectorAll('.disposition-btn').forEach(b => {
+                b.className = 'disposition-btn';
+            });
+            const classes = { include: 'selected-include', include_with_modifications: 'selected-modify', exclude: 'selected-exclude' };
+            btn.classList.add(classes[value]);
+
+            updateProgress();
+        }
+
+        function setImportance(qid, value) {
+            if (!responses[qid]) responses[qid] = { disposition: null, importance_rating: 5, comment: null };
+            responses[qid].importance_rating = parseInt(value);
+            document.getElementById(`imp-val-${qid}`).textContent = value;
+        }
+
+        function setComment(qid, value) {
+            if (!responses[qid]) responses[qid] = { disposition: null, importance_rating: 5, comment: null };
+            responses[qid].comment = value || null;
+        }
+
+        function updateProgress() {
+            const answered = Object.values(responses).filter(r => r.disposition).length;
+            const total = questions.length;
+            const pct = total > 0 ? Math.round(answered / total * 100) : 0;
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-text').textContent = `${answered} / ${total} completed`;
+        }
+
+        async function submitAll() {
+            const answered = Object.values(responses).filter(r => r.disposition);
+            if (answered.length === 0) {
+                showToast('Please answer at least one question before submitting.');
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            try {
+                // Submit individual responses (batch endpoint expects a different format)
+                for (const [qid, resp] of Object.entries(responses)) {
+                    if (!resp.disposition) continue;
+                    await api(`/api/surveys/respond/${WG_NUMBER}/${ROUND_NAME}/${qid}`, {
+                        method: 'POST',
+                        params: { token },
+                        body: {
+                            disposition: resp.disposition,
+                            importance_rating: resp.importance_rating,
+                            comment: resp.comment
+                        }
+                    });
+                }
+                showToast('Responses submitted successfully!');
+                btn.textContent = 'Submitted';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+            } catch (e) {
+                showToast('Error submitting. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Submit All Responses';
+            }
+        }
+
+        async function submitSuggestion() {
+            const text = document.getElementById('suggestion-text').value.trim();
+            if (!text) { showToast('Please enter a question suggestion.'); return; }
+
+            try {
+                await api(`/api/surveys/suggest/${WG_NUMBER}/${ROUND_NAME}`, {
+                    method: 'POST',
+                    params: { token },
+                    body: {
+                        suggestion_text: text,
+                        general_comment: document.getElementById('suggestion-comment').value.trim() || null
+                    }
+                });
+                showToast('Suggestion submitted!');
+                document.getElementById('suggestion-text').value = '';
+                document.getElementById('suggestion-comment').value = '';
+            } catch (e) {
+                showToast('Error submitting suggestion.');
+            }
+        }
+    </script>
+</body>
+</html>

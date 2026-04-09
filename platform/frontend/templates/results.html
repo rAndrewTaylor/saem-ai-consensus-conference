@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results &mdash; SAEM AI Consensus</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Results</h1>
+        <div class="subtitle" id="results-subtitle">Loading...</div>
+    </div>
+
+    <div class="container">
+        <!-- Round selector -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button class="btn btn-primary" id="tab-r1" onclick="loadRound('round_1')">Round 1</button>
+            <button class="btn btn-outline" id="tab-r2" onclick="loadRound('round_2')">Round 2</button>
+            <button class="btn btn-outline" id="tab-pw" onclick="loadPairwise()">Pairwise</button>
+            <button class="btn btn-outline" id="tab-conc" onclick="loadConcordance()">Concordance</button>
+        </div>
+
+        <!-- Delphi Results -->
+        <div id="delphi-results"></div>
+
+        <!-- Pairwise Rankings -->
+        <div id="pairwise-results" style="display:none;"></div>
+
+        <!-- Concordance -->
+        <div id="concordance-results" style="display:none;"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        const WG_NUMBER = {{ wg_number }};
+        let currentView = 'round_1';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRound('round_1');
+        });
+
+        function setActiveTab(id) {
+            ['tab-r1', 'tab-r2', 'tab-pw', 'tab-conc'].forEach(t => {
+                document.getElementById(t).className = t === id ? 'btn btn-primary' : 'btn btn-outline';
+            });
+        }
+
+        async function loadRound(round) {
+            currentView = round;
+            setActiveTab(round === 'round_1' ? 'tab-r1' : 'tab-r2');
+            document.getElementById('delphi-results').style.display = 'block';
+            document.getElementById('pairwise-results').style.display = 'none';
+            document.getElementById('concordance-results').style.display = 'none';
+
+            try {
+                const data = await api(`/api/surveys/results/${WG_NUMBER}/${round}`);
+                document.getElementById('results-subtitle').textContent =
+                    `${data.wg_name} — ${round.replace('_', ' ')}`;
+
+                const questions = data.questions;
+                if (!questions || questions.length === 0) {
+                    document.getElementById('delphi-results').innerHTML =
+                        '<div class="card"><p style="color:var(--gray-500);text-align:center;">No results computed yet for this round.</p></div>';
+                    return;
+                }
+
+                // Group by status
+                const prefix = round === 'round_1' ? 'r1' : 'r2';
+                const confirmed = questions.filter(q => q.status === 'confirmed');
+                const active = questions.filter(q => ['active', 'revised', 'near_consensus'].includes(q.status));
+                const removed = questions.filter(q => q.status === 'removed');
+
+                document.getElementById('delphi-results').innerHTML = `
+                    ${renderSection('Confirmed', confirmed, prefix, 'status-confirmed')}
+                    ${renderSection('Active / Gray Zone', active, prefix, 'status-active')}
+                    ${renderSection('Removed', removed, prefix, 'status-removed')}
+                `;
+            } catch (e) {
+                document.getElementById('delphi-results').innerHTML =
+                    '<div class="card"><p style="color:var(--danger);">Error loading results.</p></div>';
+            }
+        }
+
+        function renderSection(title, questions, prefix, statusClass) {
+            if (questions.length === 0) return '';
+            return `
+                <div class="card">
+                    <div class="card-header">
+                        ${title}
+                        <span class="status ${statusClass}" style="margin-left:8px;">${questions.length}</span>
+                    </div>
+                    ${questions.map(q => {
+                        const incl = q[`${prefix}_include_pct`];
+                        const mod = prefix === 'r1' ? q.r1_modify_pct : 0;
+                        const excl = q[`${prefix}_exclude_pct`];
+                        const imp = q[`${prefix}_importance_mean`];
+                        return `
+                            <div class="question-card">
+                                <div class="question-text">${q.text}</div>
+                                ${incl !== null ? `
+                                    <div class="result-bar-container">
+                                        <div class="result-bar-label">
+                                            <span>Include: ${incl}%</span>
+                                            <span>Importance: ${imp ? imp.toFixed(1) : 'N/A'}</span>
+                                        </div>
+                                        <div class="result-bar">
+                                            <div class="include" style="width:${(incl || 0) - (mod || 0)}%"></div>
+                                            <div class="modify" style="width:${mod || 0}%"></div>
+                                            <div class="exclude" style="width:${excl || 0}%"></div>
+                                        </div>
+                                    </div>
+                                ` : '<div style="font-size:0.85rem;color:var(--gray-500);">No results computed yet</div>'}
+                                ${q.pairwise_score ? `
+                                    <div class="question-meta">
+                                        <span>Pairwise score: ${q.pairwise_score.toFixed(1)}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        async function loadPairwise() {
+            setActiveTab('tab-pw');
+            document.getElementById('delphi-results').style.display = 'none';
+            document.getElementById('pairwise-results').style.display = 'block';
+            document.getElementById('concordance-results').style.display = 'none';
+
+            try {
+                const data = await api(`/api/pairwise/rankings/${WG_NUMBER}`);
+                const stats = await api(`/api/pairwise/stats/${WG_NUMBER}`);
+
+                document.getElementById('results-subtitle').textContent = `${data.wg_name} — Pairwise Rankings`;
+
+                document.getElementById('pairwise-results').innerHTML = `
+                    <div class="card">
+                        <div class="card-header">Pairwise Statistics</div>
+                        <div class="question-meta" style="font-size:0.9rem;">
+                            <span>Total votes: ${stats.total_votes}</span>
+                            <span>Participants: ${stats.unique_participants}</span>
+                            <span>Skips: ${stats.total_skips}</span>
+                            ${stats.avg_response_time_ms ? `<span>Avg time: ${(stats.avg_response_time_ms / 1000).toFixed(1)}s</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Rankings</div>
+                        ${data.rankings.length === 0
+                            ? '<p style="color:var(--gray-500);">No pairwise data yet.</p>'
+                            : `<table class="data-table">
+                                <thead><tr><th>#</th><th>Question</th><th>Score</th><th>W/L</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    ${data.rankings.map(r => `
+                                        <tr>
+                                            <td style="font-weight:700;color:var(--primary);">${r.rank}</td>
+                                            <td style="font-size:0.85rem;">${r.text}</td>
+                                            <td style="font-weight:600;">${r.score.toFixed(1)}</td>
+                                            <td style="color:var(--gray-500);font-size:0.8rem;">${r.wins}W / ${r.losses}L</td>
+                                            <td><span class="status status-${r.delphi_status === 'confirmed' ? 'confirmed' : r.delphi_status === 'removed' ? 'removed' : 'active'}">${r.delphi_status}</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>`
+                        }
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('pairwise-results').innerHTML =
+                    '<div class="card"><p style="color:var(--danger);">Error loading pairwise data.</p></div>';
+            }
+        }
+
+        async function loadConcordance() {
+            setActiveTab('tab-conc');
+            document.getElementById('delphi-results').style.display = 'none';
+            document.getElementById('pairwise-results').style.display = 'none';
+            document.getElementById('concordance-results').style.display = 'block';
+
+            try {
+                const data = await api(`/api/analysis/concordance/${WG_NUMBER}`);
+                document.getElementById('results-subtitle').textContent =
+                    `Working Group ${WG_NUMBER} — Method Concordance`;
+
+                if (data.error) {
+                    document.getElementById('concordance-results').innerHTML =
+                        `<div class="card"><p style="color:var(--gray-500);">${data.error}</p></div>`;
+                    return;
+                }
+
+                document.getElementById('concordance-results').innerHTML = `
+                    <div class="card">
+                        <div class="card-header">Delphi vs. Pairwise Concordance</div>
+                        <div style="text-align:center;padding:16px;">
+                            <div style="font-size:3rem;font-weight:700;color:var(--primary);">${data.spearman_rho.toFixed(2)}</div>
+                            <div style="font-size:0.85rem;color:var(--gray-500);margin-top:4px;">Spearman's rho (${data.n_questions} questions)</div>
+                            <div style="font-size:0.9rem;color:var(--gray-700);margin-top:8px;">${data.interpretation}</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Rank Comparison</div>
+                        <table class="data-table">
+                            <thead><tr><th>Question</th><th>Delphi Rank</th><th>Pairwise Rank</th><th>Difference</th></tr></thead>
+                            <tbody>
+                                ${data.comparison.map(c => `
+                                    <tr>
+                                        <td style="font-size:0.85rem;">${c.text}</td>
+                                        <td style="text-align:center;">${c.delphi_rank}</td>
+                                        <td style="text-align:center;">${c.pairwise_rank}</td>
+                                        <td style="text-align:center;font-weight:600;color:${c.rank_difference > 2 ? 'var(--warning)' : 'var(--gray-500)'};">${c.rank_difference}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('concordance-results').innerHTML =
+                    '<div class="card"><p style="color:var(--danger);">Error loading concordance data.</p></div>';
+            }
+        }
+    </script>
+</body>
+</html>

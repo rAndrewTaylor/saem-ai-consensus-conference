@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pairwise Ranking &mdash; SAEM AI Consensus</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Pairwise Ranking</h1>
+        <div class="subtitle" id="pw-subtitle">Loading...</div>
+        <div class="badge">Working Group {{ wg_number }}</div>
+    </div>
+
+    <div class="container">
+        <!-- Instructions -->
+        <div class="card" id="instructions-card">
+            <div class="card-header">How it Works</div>
+            <p style="font-size:0.9rem;color:var(--gray-700);">
+                You'll see two research questions side by side. Click the one you think is
+                <strong>more important</strong> for the research agenda. If you can't decide, skip the pair.
+                Each comparison takes ~10 seconds. Do as many as you like.
+            </p>
+        </div>
+
+        <!-- Pair display -->
+        <div id="pair-container" style="display:none;">
+            <div class="pairwise-container">
+                <div class="pairwise-option" id="option-a" onclick="selectOption('a')">
+                    <div id="text-a"></div>
+                </div>
+                <div class="pairwise-vs">VS</div>
+                <div class="pairwise-option" id="option-b" onclick="selectOption('b')">
+                    <div id="text-b"></div>
+                </div>
+            </div>
+            <div class="pairwise-skip">
+                <a onclick="skipPair()">Can't decide &mdash; skip this pair</a>
+            </div>
+            <div class="pairwise-progress" id="pw-progress">Comparisons completed: 0</div>
+        </div>
+
+        <!-- Loading/done state -->
+        <div id="loading-state" class="card" style="text-align:center;">
+            <p style="color:var(--gray-500);">Loading pairs...</p>
+        </div>
+
+        <!-- Stats & Rankings -->
+        <div class="card" id="rankings-card" style="display:none;">
+            <div class="card-header">Current Rankings</div>
+            <div id="stats-summary" style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px;"></div>
+            <table class="data-table" id="rankings-table">
+                <thead>
+                    <tr><th>#</th><th>Question</th><th>Score</th><th>W/L</th></tr>
+                </thead>
+                <tbody id="rankings-body"></tbody>
+            </table>
+        </div>
+
+        <!-- Suggestion -->
+        <div class="card">
+            <div class="card-header">Suggest a Question</div>
+            <textarea class="comment-field" id="suggestion-text" placeholder="Is there a research question missing? Suggest it here..." rows="2"></textarea>
+            <button class="btn btn-outline" style="margin-top:8px;" onclick="submitSuggestion()">Submit</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        const WG_NUMBER = {{ wg_number }};
+        let token = null;
+        let currentPair = null;
+        let pairStartTime = null;
+        let completedCount = 0;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            token = getToken(WG_NUMBER);
+            if (!token) {
+                const result = await api('/api/surveys/token', {
+                    method: 'POST',
+                    params: { wg_number: WG_NUMBER }
+                });
+                token = result.token;
+                setToken(WG_NUMBER, token);
+            }
+            await loadPair();
+            loadRankings();
+        });
+
+        async function loadPair() {
+            try {
+                currentPair = await api(`/api/pairwise/pair/${WG_NUMBER}`, {
+                    params: { token }
+                });
+                document.getElementById('pw-subtitle').textContent =
+                    `${currentPair.wg_name} — ${currentPair.total_questions} questions`;
+                document.getElementById('text-a').textContent = currentPair.question_a.text;
+                document.getElementById('text-b').textContent = currentPair.question_b.text;
+                document.getElementById('option-a').className = 'pairwise-option';
+                document.getElementById('option-b').className = 'pairwise-option';
+                document.getElementById('pair-container').style.display = 'block';
+                document.getElementById('loading-state').style.display = 'none';
+                pairStartTime = Date.now();
+            } catch (e) {
+                document.getElementById('loading-state').innerHTML =
+                    '<p style="color:var(--gray-500);">Not enough questions for pairwise comparison yet.</p>';
+            }
+        }
+
+        async function selectOption(choice) {
+            const responseTime = Date.now() - pairStartTime;
+            const winnerId = choice === 'a' ? currentPair.question_a.id : currentPair.question_b.id;
+
+            // Visual feedback
+            document.getElementById(`option-${choice}`).classList.add('selected');
+
+            await submitVote(winnerId, responseTime);
+        }
+
+        async function skipPair() {
+            const responseTime = Date.now() - pairStartTime;
+            await submitVote(null, responseTime);
+        }
+
+        async function submitVote(winnerId, responseTime) {
+            try {
+                await api(`/api/pairwise/vote/${WG_NUMBER}`, {
+                    method: 'POST',
+                    params: { token },
+                    body: {
+                        question_a_id: currentPair.question_a.id,
+                        question_b_id: currentPair.question_b.id,
+                        winner_id: winnerId,
+                        response_time_ms: responseTime
+                    }
+                });
+                completedCount++;
+                document.getElementById('pw-progress').textContent = `Comparisons completed: ${completedCount}`;
+
+                // Brief delay for visual feedback then load next
+                setTimeout(() => loadPair(), 300);
+
+                // Refresh rankings every 5 comparisons
+                if (completedCount % 5 === 0) loadRankings();
+            } catch (e) {
+                showToast('Error submitting vote.');
+            }
+        }
+
+        async function loadRankings() {
+            try {
+                const data = await api(`/api/pairwise/rankings/${WG_NUMBER}`);
+                if (!data.rankings || data.rankings.length === 0) return;
+
+                document.getElementById('rankings-card').style.display = 'block';
+                document.getElementById('stats-summary').textContent =
+                    `${data.total_votes} total votes across all participants`;
+
+                document.getElementById('rankings-body').innerHTML = data.rankings.map(r => `
+                    <tr>
+                        <td style="font-weight:700;color:var(--primary);">${r.rank}</td>
+                        <td style="font-size:0.85rem;">${r.text.length > 80 ? r.text.slice(0,80) + '...' : r.text}</td>
+                        <td style="font-weight:600;">${r.score.toFixed(1)}</td>
+                        <td style="color:var(--gray-500);font-size:0.8rem;">${r.wins}/${r.losses}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                // Rankings not available yet — that's fine
+            }
+        }
+
+        async function submitSuggestion() {
+            const text = document.getElementById('suggestion-text').value.trim();
+            if (!text) { showToast('Please enter a suggestion.'); return; }
+            try {
+                await api(`/api/pairwise/suggest/${WG_NUMBER}`, {
+                    method: 'POST',
+                    params: { token },
+                    body: { suggestion_text: text }
+                });
+                showToast('Suggestion submitted!');
+                document.getElementById('suggestion-text').value = '';
+            } catch (e) {
+                showToast('Error submitting suggestion.');
+            }
+        }
+    </script>
+</body>
+</html>

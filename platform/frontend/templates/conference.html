@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conference Voting &mdash; SAEM AI Consensus</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Conference Voting</h1>
+        <div class="subtitle" id="session-subtitle">Loading...</div>
+        <div class="badge" id="phase-badge"></div>
+    </div>
+
+    <div class="container">
+        <!-- Session status -->
+        <div class="card" id="status-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span id="session-status" style="font-weight:600;"></span>
+                <span id="voter-count" style="color:var(--gray-500);font-size:0.85rem;"></span>
+            </div>
+        </div>
+
+        <!-- Vote type tabs -->
+        <div id="vote-tabs" style="display:none;margin-bottom:16px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-primary" id="tab-ranking" onclick="switchTab('ranking')">Priority Ranking</button>
+                <button class="btn btn-outline" id="tab-importance" onclick="switchTab('importance')">Importance Rating</button>
+                <button class="btn btn-outline" id="tab-allocation" onclick="switchTab('allocation')">Point Allocation</button>
+            </div>
+        </div>
+
+        <!-- RANKING VIEW -->
+        <div id="view-ranking" style="display:none;">
+            <div class="card">
+                <div class="card-header">Drag to Rank (Most Important First)</div>
+                <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px;">
+                    Drag items to reorder. Position 1 = highest priority.
+                </p>
+                <ol class="ranking-list" id="ranking-list"></ol>
+                <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="submitRanking()">Submit Ranking</button>
+            </div>
+        </div>
+
+        <!-- IMPORTANCE VIEW -->
+        <div id="view-importance" style="display:none;">
+            <div class="card">
+                <div class="card-header">Rate Importance (1-9)</div>
+                <div id="importance-list"></div>
+                <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="submitImportance()">Submit Ratings</button>
+            </div>
+        </div>
+
+        <!-- ALLOCATION VIEW -->
+        <div id="view-allocation" style="display:none;">
+            <div class="card">
+                <div class="card-header">Allocate 100 Points</div>
+                <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px;">
+                    Distribute 100 points among the questions. More points = higher priority.
+                </p>
+                <div id="allocation-list"></div>
+                <div class="allocation-total" id="alloc-total">Total: 0 / 100</div>
+                <button class="btn btn-primary btn-block" id="alloc-submit" onclick="submitAllocation()">Submit Allocation</button>
+            </div>
+        </div>
+
+        <!-- Comment -->
+        <div class="card" id="comment-card" style="display:none;">
+            <div class="card-header">Comments &amp; Suggestions</div>
+            <select id="comment-type" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:8px;font-size:0.9rem;">
+                <option value="general">General Comment</option>
+                <option value="modification">Suggest Modification</option>
+                <option value="new_question">Suggest New Question</option>
+            </select>
+            <textarea class="comment-field" id="comment-text" placeholder="Your comment..." rows="3"></textarea>
+            <button class="btn btn-outline" style="margin-top:8px;" onclick="submitComment()">Submit Comment</button>
+        </div>
+
+        <!-- Session not active -->
+        <div class="card" id="inactive-card" style="display:none;text-align:center;">
+            <p style="color:var(--gray-500);font-size:1.1rem;padding:20px 0;">
+                This voting session is not currently active.
+            </p>
+            <a href="/" class="btn btn-outline">Back to Home</a>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        const SESSION_ID = {{ session_id }};
+        let token = null;
+        let questions = [];
+        let sessionData = null;
+        let currentTab = 'ranking';
+        let allocations = {};
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Get token — use WG 0 as conference-wide token
+            token = getToken(0);
+            if (!token) {
+                const result = await api('/api/surveys/token', {
+                    method: 'POST',
+                    params: { wg_number: 1 }
+                });
+                token = result.token;
+                setToken(0, token);
+            }
+
+            await loadSession();
+        });
+
+        async function loadSession() {
+            try {
+                sessionData = await api(`/api/conference/sessions/${SESSION_ID}/questions`);
+                questions = sessionData.questions;
+
+                document.getElementById('session-subtitle').textContent =
+                    sessionData.session_type.replace(/_/g, ' ');
+                document.getElementById('phase-badge').textContent =
+                    sessionData.phase.replace(/_/g, ' ');
+
+                if (!sessionData.is_active) {
+                    document.getElementById('inactive-card').style.display = 'block';
+                    document.getElementById('session-status').textContent = 'Session Closed';
+                    return;
+                }
+
+                document.getElementById('session-status').innerHTML =
+                    '<span class="status status-active">LIVE</span>';
+                document.getElementById('vote-tabs').style.display = 'block';
+                document.getElementById('comment-card').style.display = 'block';
+
+                renderRanking();
+                renderImportance();
+                renderAllocation();
+                switchTab('ranking');
+            } catch (e) {
+                document.getElementById('status-card').innerHTML =
+                    '<p style="color:var(--danger);">Could not load session.</p>';
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            ['ranking', 'importance', 'allocation'].forEach(t => {
+                document.getElementById(`view-${t}`).style.display = t === tab ? 'block' : 'none';
+                document.getElementById(`tab-${t}`).className = t === tab ? 'btn btn-primary' : 'btn btn-outline';
+            });
+        }
+
+        // --- RANKING ---
+        function renderRanking() {
+            const list = document.getElementById('ranking-list');
+            list.innerHTML = questions.map((q, i) => `
+                <li class="ranking-item" draggable="true" data-qid="${q.id}">
+                    <span class="rank-num">${i + 1}</span>
+                    <span class="rank-text">${q.short_text || q.text}</span>
+                </li>
+            `).join('');
+
+            // Drag and drop
+            let dragEl = null;
+            list.querySelectorAll('.ranking-item').forEach(item => {
+                item.addEventListener('dragstart', e => {
+                    dragEl = item;
+                    item.style.opacity = '0.4';
+                });
+                item.addEventListener('dragend', () => {
+                    item.style.opacity = '1';
+                    updateRankNumbers();
+                });
+                item.addEventListener('dragover', e => e.preventDefault());
+                item.addEventListener('drop', e => {
+                    e.preventDefault();
+                    if (dragEl !== item) {
+                        const items = [...list.children];
+                        const dragIdx = items.indexOf(dragEl);
+                        const dropIdx = items.indexOf(item);
+                        if (dragIdx < dropIdx) {
+                            item.after(dragEl);
+                        } else {
+                            item.before(dragEl);
+                        }
+                    }
+                });
+            });
+
+            // Touch drag support
+            let touchEl = null;
+            let touchClone = null;
+            list.querySelectorAll('.ranking-item').forEach(item => {
+                item.addEventListener('touchstart', e => {
+                    touchEl = item;
+                    touchClone = item.cloneNode(true);
+                    touchClone.style.position = 'fixed';
+                    touchClone.style.opacity = '0.7';
+                    touchClone.style.pointerEvents = 'none';
+                    touchClone.style.zIndex = '999';
+                    touchClone.style.width = item.offsetWidth + 'px';
+                    document.body.appendChild(touchClone);
+                    item.style.opacity = '0.3';
+                }, { passive: true });
+                item.addEventListener('touchmove', e => {
+                    if (!touchClone) return;
+                    const touch = e.touches[0];
+                    touchClone.style.left = touch.clientX - touchClone.offsetWidth / 2 + 'px';
+                    touchClone.style.top = touch.clientY - 20 + 'px';
+                }, { passive: true });
+                item.addEventListener('touchend', e => {
+                    if (!touchEl || !touchClone) return;
+                    touchClone.remove();
+                    touchEl.style.opacity = '1';
+                    const touch = e.changedTouches[0];
+                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const dropItem = target ? target.closest('.ranking-item') : null;
+                    if (dropItem && dropItem !== touchEl) {
+                        const items = [...list.children];
+                        const dragIdx = items.indexOf(touchEl);
+                        const dropIdx = items.indexOf(dropItem);
+                        if (dragIdx < dropIdx) dropItem.after(touchEl);
+                        else dropItem.before(touchEl);
+                    }
+                    updateRankNumbers();
+                    touchEl = null;
+                    touchClone = null;
+                });
+            });
+        }
+
+        function updateRankNumbers() {
+            document.querySelectorAll('#ranking-list .ranking-item').forEach((item, i) => {
+                item.querySelector('.rank-num').textContent = i + 1;
+            });
+        }
+
+        async function submitRanking() {
+            const items = document.querySelectorAll('#ranking-list .ranking-item');
+            const rankings = {};
+            items.forEach((item, i) => {
+                rankings[item.dataset.qid] = i + 1;
+            });
+            try {
+                await api(`/api/conference/vote/${SESSION_ID}/ranking`, {
+                    method: 'POST',
+                    params: { token },
+                    body: { rankings }
+                });
+                showToast('Ranking submitted!');
+            } catch (e) {
+                showToast('Error submitting ranking.');
+            }
+        }
+
+        // --- IMPORTANCE ---
+        function renderImportance() {
+            document.getElementById('importance-list').innerHTML = questions.map(q => `
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:0.9rem;font-weight:500;margin-bottom:6px;">${q.short_text || q.text}</div>
+                    <div class="importance-row">
+                        <span class="importance-label">1</span>
+                        <input type="range" class="importance-slider" min="1" max="9" value="5"
+                               data-qid="${q.id}"
+                               oninput="document.getElementById('imp-${q.id}').textContent=this.value">
+                        <span class="importance-label">9</span>
+                        <span class="importance-value" id="imp-${q.id}">5</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function submitImportance() {
+            const ratings = {};
+            document.querySelectorAll('#importance-list .importance-slider').forEach(slider => {
+                ratings[slider.dataset.qid] = parseInt(slider.value);
+            });
+            try {
+                await api(`/api/conference/vote/${SESSION_ID}/importance`, {
+                    method: 'POST',
+                    params: { token },
+                    body: { ratings }
+                });
+                showToast('Ratings submitted!');
+            } catch (e) {
+                showToast('Error submitting ratings.');
+            }
+        }
+
+        // --- ALLOCATION ---
+        function renderAllocation() {
+            document.getElementById('allocation-list').innerHTML = questions.map(q => `
+                <div class="allocation-item">
+                    <span class="allocation-text">${q.short_text || q.text}</span>
+                    <input type="number" class="allocation-input" min="0" max="100" value="0"
+                           data-qid="${q.id}" oninput="updateAllocationTotal()">
+                </div>
+            `).join('');
+        }
+
+        function updateAllocationTotal() {
+            let total = 0;
+            document.querySelectorAll('#allocation-list .allocation-input').forEach(inp => {
+                total += parseInt(inp.value) || 0;
+            });
+            const el = document.getElementById('alloc-total');
+            el.textContent = `Total: ${total} / 100`;
+            el.className = 'allocation-total';
+            if (total === 100) el.classList.add('exact');
+            else if (total > 100) el.classList.add('over');
+        }
+
+        async function submitAllocation() {
+            const allocs = {};
+            let total = 0;
+            document.querySelectorAll('#allocation-list .allocation-input').forEach(inp => {
+                const val = parseInt(inp.value) || 0;
+                if (val > 0) allocs[inp.dataset.qid] = val;
+                total += val;
+            });
+            if (Math.abs(total - 100) > 1) {
+                showToast(`Points must sum to 100 (currently ${total}).`);
+                return;
+            }
+            try {
+                await api(`/api/conference/vote/${SESSION_ID}/allocate`, {
+                    method: 'POST',
+                    params: { token },
+                    body: { allocations: allocs, budget: 100 }
+                });
+                showToast('Allocation submitted!');
+            } catch (e) {
+                showToast('Error submitting allocation.');
+            }
+        }
+
+        // --- COMMENT ---
+        async function submitComment() {
+            const text = document.getElementById('comment-text').value.trim();
+            if (!text) { showToast('Please enter a comment.'); return; }
+            try {
+                await api(`/api/conference/comment/${SESSION_ID}`, {
+                    method: 'POST',
+                    params: { token },
+                    body: {
+                        comment_text: text,
+                        comment_type: document.getElementById('comment-type').value
+                    }
+                });
+                showToast('Comment submitted!');
+                document.getElementById('comment-text').value = '';
+            } catch (e) {
+                showToast('Error submitting comment.');
+            }
+        }
+    </script>
+</body>
+</html>
