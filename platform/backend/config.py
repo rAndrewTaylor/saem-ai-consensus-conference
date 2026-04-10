@@ -6,9 +6,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Database ---
-DATABASE_URL: str = os.environ.get(
-    "DATABASE_URL", "sqlite:///./data/consensus.db"
-)
+_db_url: str = os.environ.get("DATABASE_URL", "sqlite:///./data/consensus.db")
+# Railway/Render use "postgresql://" but SQLAlchemy needs "postgresql+psycopg2://"
+if _db_url.startswith("postgresql://"):
+    _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+DATABASE_URL: str = _db_url
 
 # --- API Keys ---
 ANTHROPIC_API_KEY: str = os.environ.get("ANTHROPIC_API_KEY", "")
