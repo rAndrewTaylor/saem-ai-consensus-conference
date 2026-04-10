@@ -1,21 +1,23 @@
 """AI synthesis and analysis routes — Claude API integration."""
 
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 import json
-import os
 
 from ..database import (
     get_db, WorkingGroup, Question, DelphiResponse, DelphiSuggestion,
     AISynthesisRun, AISynthesisItem, AISynthesisType, HumanDecision,
-    DelphiRound, DispositionVote, QuestionStatus
+    DelphiRound, DispositionVote, QuestionStatus, write_audit_log,
 )
+from ..auth import require_admin
 from ..services.ai_synthesis import run_synthesis, PROMPTS
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class SynthesisRequest(BaseModel):
@@ -33,7 +35,11 @@ class ReviewItem(BaseModel):
 # --- Run AI Synthesis ---
 
 @router.post("/synthesize")
-async def run_ai_synthesis(request: SynthesisRequest, db: Session = Depends(get_db)):
+async def run_ai_synthesis(
+    request: SynthesisRequest,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Run an AI synthesis task. Returns the structured output."""
 
     synthesis_type = AISynthesisType(request.synthesis_type)
@@ -53,7 +59,14 @@ async def run_ai_synthesis(request: SynthesisRequest, db: Session = Depends(get_
     prompt = prompt_template.format(**input_data)
 
     # Run through Claude
-    result = await run_synthesis(prompt, input_data)
+    try:
+        result = await run_synthesis(prompt, input_data)
+    except RuntimeError as exc:
+        logger.error("Synthesis failed for type=%s wg=%s: %s", request.synthesis_type, request.wg_number, exc)
+        raise HTTPException(502, f"AI synthesis failed: {exc}") from exc
+    except Exception as exc:
+        logger.exception("Unexpected error during synthesis")
+        raise HTTPException(500, f"Unexpected error during AI synthesis: {exc}") from exc
 
     # Store the run
     wg = None
@@ -78,6 +91,14 @@ async def run_ai_synthesis(request: SynthesisRequest, db: Session = Depends(get_
     db.commit()
     db.refresh(run)
 
+    # Audit log
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="synthesis_run",
+        detail=f"type={request.synthesis_type} wg={request.wg_number} run_id={run.id} model={result['model']}",
+    )
+
     return {
         "run_id": run.id,
         "synthesis_type": request.synthesis_type,
@@ -92,7 +113,12 @@ async def run_ai_synthesis(request: SynthesisRequest, db: Session = Depends(get_
 
 
 @router.post("/synthesize/all/{wg_number}/{round_name}")
-async def run_full_synthesis(wg_number: int, round_name: str, db: Session = Depends(get_db)):
+async def run_full_synthesis(
+    wg_number: int,
+    round_name: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Run all synthesis tasks for a WG round: theme clustering, revisions, new questions, summary."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
@@ -106,7 +132,13 @@ async def run_full_synthesis(wg_number: int, round_name: str, db: Session = Depe
         wg_number=wg_number,
         round_name=round_name,
     )
-    results["round_summary"] = await run_ai_synthesis(req, db)
+    try:
+        results["round_summary"] = await run_ai_synthesis(req, db, admin)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Full synthesis round_summary failed for WG%d: %s", wg_number, exc)
+        raise HTTPException(502, f"Round summary synthesis failed: {exc}") from exc
 
     # 2. Theme clustering for each gray-zone question
     gray_zone_questions = db.query(Question).filter(
@@ -129,7 +161,13 @@ async def run_full_synthesis(wg_number: int, round_name: str, db: Session = Depe
                 round_name=round_name,
                 question_id=q.id,
             )
-            results[f"themes_q{q.id}"] = await run_ai_synthesis(req, db)
+            try:
+                results[f"themes_q{q.id}"] = await run_ai_synthesis(req, db, admin)
+            except HTTPException:
+                raise
+            except Exception as exc:
+                logger.error("Theme clustering failed for q%d: %s", q.id, exc)
+                results[f"themes_q{q.id}"] = {"error": str(exc)}
 
     # 3. Question revision suggestions for "modify" questions
     modify_questions = db.query(Question).filter(
@@ -145,7 +183,13 @@ async def run_full_synthesis(wg_number: int, round_name: str, db: Session = Depe
             round_name=round_name,
             question_id=q.id,
         )
-        results[f"revisions_q{q.id}"] = await run_ai_synthesis(req, db)
+        try:
+            results[f"revisions_q{q.id}"] = await run_ai_synthesis(req, db, admin)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Question revision failed for q%d: %s", q.id, exc)
+            results[f"revisions_q{q.id}"] = {"error": str(exc)}
 
     # 4. New question synthesis
     suggestions = db.query(DelphiSuggestion).filter(
@@ -158,7 +202,13 @@ async def run_full_synthesis(wg_number: int, round_name: str, db: Session = Depe
             wg_number=wg_number,
             round_name=round_name,
         )
-        results["new_questions"] = await run_ai_synthesis(req, db)
+        try:
+            results["new_questions"] = await run_ai_synthesis(req, db, admin)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("New question synthesis failed for WG%d: %s", wg_number, exc)
+            results["new_questions"] = {"error": str(exc)}
 
     return {
         "wg_number": wg_number,
@@ -169,17 +219,32 @@ async def run_full_synthesis(wg_number: int, round_name: str, db: Session = Depe
 
 
 @router.post("/synthesize/cross-wg")
-async def run_cross_wg_analysis(db: Session = Depends(get_db)):
+async def run_cross_wg_analysis(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Run cross-WG overlap detection and research agenda analysis."""
     results = {}
 
     # Cross-WG overlap detection
     req = SynthesisRequest(synthesis_type="cross_wg_overlap")
-    results["overlap"] = await run_ai_synthesis(req, db)
+    try:
+        results["overlap"] = await run_ai_synthesis(req, db, admin)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Cross-WG overlap synthesis failed: %s", exc)
+        raise HTTPException(502, f"Cross-WG overlap analysis failed: {exc}") from exc
 
     # Full agenda analysis
     req = SynthesisRequest(synthesis_type="agenda_analysis")
-    results["agenda"] = await run_ai_synthesis(req, db)
+    try:
+        results["agenda"] = await run_ai_synthesis(req, db, admin)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Agenda analysis synthesis failed: %s", exc)
+        raise HTTPException(502, f"Agenda analysis failed: {exc}") from exc
 
     return {"tasks_completed": len(results), "results": results}
 
@@ -190,9 +255,12 @@ async def run_cross_wg_analysis(db: Session = Depends(get_db)):
 def list_runs(
     wg_number: Optional[int] = None,
     synthesis_type: Optional[str] = None,
-    db: Session = Depends(get_db)
+    skip: int = Query(default=0, ge=0, description="Number of records to skip"),
+    limit: int = Query(default=50, ge=1, le=500, description="Max records to return"),
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
 ):
-    """List all AI synthesis runs."""
+    """List all AI synthesis runs with pagination."""
     query = db.query(AISynthesisRun).order_by(AISynthesisRun.created_at.desc())
     if wg_number:
         wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
@@ -201,21 +269,32 @@ def list_runs(
     if synthesis_type:
         query = query.filter(AISynthesisRun.synthesis_type == AISynthesisType(synthesis_type))
 
-    runs = query.all()
-    return [{
-        "id": r.id,
-        "synthesis_type": r.synthesis_type.value,
-        "wg_id": r.wg_id,
-        "round": r.round.value if r.round else None,
-        "model": r.model_name,
-        "created_at": r.created_at.isoformat(),
-        "items_count": len(r.items),
-        "reviewed": sum(1 for i in r.items if i.human_decision != HumanDecision.PENDING),
-    } for r in runs]
+    total = query.count()
+    runs = query.offset(skip).limit(limit).all()
+
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "runs": [{
+            "id": r.id,
+            "synthesis_type": r.synthesis_type.value,
+            "wg_id": r.wg_id,
+            "round": r.round.value if r.round else None,
+            "model": r.model_name,
+            "created_at": r.created_at.isoformat(),
+            "items_count": len(r.items),
+            "reviewed": sum(1 for i in r.items if i.human_decision != HumanDecision.PENDING),
+        } for r in runs],
+    }
 
 
 @router.get("/runs/{run_id}")
-def get_run(run_id: int, db: Session = Depends(get_db)):
+def get_run(
+    run_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Get full details of an AI synthesis run."""
     run = db.query(AISynthesisRun).get(run_id)
     if not run:
@@ -240,7 +319,12 @@ def get_run(run_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/items/{item_id}/review")
-def review_item(item_id: int, review: ReviewItem, db: Session = Depends(get_db)):
+def review_item(
+    item_id: int,
+    review: ReviewItem,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Record a human review decision on an AI synthesis item."""
     item = db.query(AISynthesisItem).get(item_id)
     if not item:
@@ -250,13 +334,26 @@ def review_item(item_id: int, review: ReviewItem, db: Session = Depends(get_db))
     item.human_notes = review.notes
     item.reviewed_at = datetime.utcnow()
     db.commit()
+
+    # Audit log
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="synthesis_review",
+        detail=f"item_id={item_id} decision={review.decision} reviewer={review.reviewer}",
+    )
+
     return {"status": "reviewed", "decision": review.decision}
 
 
 # --- Concordance Analysis ---
 
 @router.get("/concordance/{wg_number}")
-def compute_concordance(wg_number: int, db: Session = Depends(get_db)):
+def compute_concordance(
+    wg_number: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Compute concordance between Delphi importance and pairwise ranking."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:

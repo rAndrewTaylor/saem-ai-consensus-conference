@@ -7,38 +7,55 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <div class="header">
+    <header class="header">
         <h1>Pairwise Ranking</h1>
         <div class="subtitle" id="pw-subtitle">Loading...</div>
         <div class="badge">Working Group {{ wg_number }}</div>
-    </div>
+    </header>
 
-    <div class="container">
+    <main class="container">
         <!-- Instructions -->
-        <div class="card" id="instructions-card">
+        <section class="card" id="instructions-card">
             <div class="card-header">How it Works</div>
             <p style="font-size:0.9rem;color:var(--gray-700);">
                 You'll see two research questions side by side. Click the one you think is
                 <strong>more important</strong> for the research agenda. If you can't decide, skip the pair.
                 Each comparison takes ~10 seconds. Do as many as you like.
             </p>
-        </div>
+            <p style="font-size:0.85rem;color:var(--gray-500);margin-top:8px;">
+                <strong>Keyboard shortcuts:</strong>
+                <kbd style="padding:2px 6px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:4px;font-size:0.8rem;">A</kbd> or
+                <kbd style="padding:2px 6px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:4px;font-size:0.8rem;">&larr;</kbd> for Option A,
+                <kbd style="padding:2px 6px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:4px;font-size:0.8rem;">B</kbd> or
+                <kbd style="padding:2px 6px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:4px;font-size:0.8rem;">&rarr;</kbd> for Option B,
+                <kbd style="padding:2px 6px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:4px;font-size:0.8rem;">S</kbd> to skip
+            </p>
+        </section>
 
         <!-- Pair display -->
         <div id="pair-container" style="display:none;">
             <div class="pairwise-container">
-                <div class="pairwise-option" id="option-a" onclick="selectOption('a')">
+                <button class="pairwise-option" id="option-a" type="button" aria-label="Select option A">
+                    <div class="pairwise-option-label" style="font-size:0.75rem;font-weight:700;color:var(--primary);margin-bottom:8px;">A</div>
                     <div id="text-a"></div>
-                </div>
-                <div class="pairwise-vs">VS</div>
-                <div class="pairwise-option" id="option-b" onclick="selectOption('b')">
+                </button>
+                <div class="pairwise-vs" aria-hidden="true">VS</div>
+                <button class="pairwise-option" id="option-b" type="button" aria-label="Select option B">
+                    <div class="pairwise-option-label" style="font-size:0.75rem;font-weight:700;color:var(--primary);margin-bottom:8px;">B</div>
                     <div id="text-b"></div>
-                </div>
+                </button>
             </div>
             <div class="pairwise-skip">
-                <a onclick="skipPair()">Can't decide &mdash; skip this pair</a>
+                <button type="button" id="skip-btn"
+                        style="background:none;border:none;color:var(--gray-500);font-size:0.85rem;cursor:pointer;text-decoration:underline;font-family:inherit;"
+                        aria-label="Skip this pair">
+                    Can't decide &mdash; skip this pair
+                </button>
             </div>
-            <div class="pairwise-progress" id="pw-progress">Comparisons completed: 0</div>
+            <div style="text-align:center;margin-top:4px;">
+                <span class="pairwise-progress" id="pw-progress">Comparisons completed: 0</span>
+                <span id="response-time" style="display:block;font-size:0.8rem;color:var(--gray-500);margin-top:4px;" aria-live="polite"></span>
+            </div>
         </div>
 
         <!-- Loading/done state -->
@@ -47,7 +64,7 @@
         </div>
 
         <!-- Stats & Rankings -->
-        <div class="card" id="rankings-card" style="display:none;">
+        <section class="card" id="rankings-card" style="display:none;">
             <div class="card-header">Current Rankings</div>
             <div id="stats-summary" style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px;"></div>
             <table class="data-table" id="rankings-table">
@@ -56,17 +73,18 @@
                 </thead>
                 <tbody id="rankings-body"></tbody>
             </table>
-        </div>
+        </section>
 
         <!-- Suggestion -->
-        <div class="card">
+        <section class="card">
             <div class="card-header">Suggest a Question</div>
-            <textarea class="comment-field" id="suggestion-text" placeholder="Is there a research question missing? Suggest it here..." rows="2"></textarea>
-            <button class="btn btn-outline" style="margin-top:8px;" onclick="submitSuggestion()">Submit</button>
-        </div>
-    </div>
+            <label for="suggestion-text" class="importance-label" style="display:block;margin-bottom:4px;">Suggested question</label>
+            <textarea class="comment-field" id="suggestion-text" placeholder="Is there a research question missing? Suggest it here..." rows="2" aria-label="Suggest a research question"></textarea>
+            <button class="btn btn-outline" style="margin-top:8px;" id="suggestion-btn" type="button" aria-label="Submit question suggestion">Submit</button>
+        </section>
+    </main>
 
-    <div class="toast" id="toast"></div>
+    <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
     <script src="/static/js/app.js"></script>
     <script>
@@ -75,6 +93,11 @@
         let currentPair = null;
         let pairStartTime = null;
         let completedCount = 0;
+        let isSubmitting = false;
+
+        // ---------------------------------------------------------------
+        // Initialization
+        // ---------------------------------------------------------------
 
         document.addEventListener('DOMContentLoaded', async () => {
             token = getToken(WG_NUMBER);
@@ -86,21 +109,80 @@
                 token = result.token;
                 setToken(WG_NUMBER, token);
             }
+
+            // Wire up event listeners
+            document.getElementById('option-a').addEventListener('click', () => selectOption('a'));
+            document.getElementById('option-b').addEventListener('click', () => selectOption('b'));
+            document.getElementById('skip-btn').addEventListener('click', skipPair);
+            document.getElementById('suggestion-btn').addEventListener('click', submitSuggestion);
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboard);
+
             await loadPair();
             loadRankings();
         });
 
+        // ---------------------------------------------------------------
+        // Keyboard support
+        // ---------------------------------------------------------------
+
+        function handleKeyboard(e) {
+            // Don't capture keys when typing in form fields
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+            if (!currentPair || isSubmitting) return;
+
+            switch (e.key.toLowerCase()) {
+                case 'a':
+                case 'arrowleft':
+                    e.preventDefault();
+                    selectOption('a');
+                    break;
+                case 'b':
+                case 'arrowright':
+                    e.preventDefault();
+                    selectOption('b');
+                    break;
+                case 's':
+                    e.preventDefault();
+                    skipPair();
+                    break;
+            }
+        }
+
+        // ---------------------------------------------------------------
+        // Load and display pairs
+        // ---------------------------------------------------------------
+
         async function loadPair() {
             try {
                 currentPair = await api(`/api/pairwise/pair/${WG_NUMBER}`, {
-                    params: { token }
+                    token
                 });
                 document.getElementById('pw-subtitle').textContent =
-                    `${currentPair.wg_name} — ${currentPair.total_questions} questions`;
+                    `${esc(currentPair.wg_name)} \u2014 ${currentPair.total_questions} questions`;
                 document.getElementById('text-a').textContent = currentPair.question_a.text;
                 document.getElementById('text-b').textContent = currentPair.question_b.text;
+
+                // Update aria-labels with question text previews
+                const previewA = currentPair.question_a.text.length > 60
+                    ? currentPair.question_a.text.slice(0, 60) + '...'
+                    : currentPair.question_a.text;
+                const previewB = currentPair.question_b.text.length > 60
+                    ? currentPair.question_b.text.slice(0, 60) + '...'
+                    : currentPair.question_b.text;
+                document.getElementById('option-a').setAttribute('aria-label', `Select option A: ${previewA}`);
+                document.getElementById('option-b').setAttribute('aria-label', `Select option B: ${previewB}`);
+
+                // Reset visual state
                 document.getElementById('option-a').className = 'pairwise-option';
                 document.getElementById('option-b').className = 'pairwise-option';
+                document.getElementById('option-a').disabled = false;
+                document.getElementById('option-b').disabled = false;
+                document.getElementById('skip-btn').disabled = false;
+                document.getElementById('response-time').textContent = '';
+                isSubmitting = false;
+
                 document.getElementById('pair-container').style.display = 'block';
                 document.getElementById('loading-state').style.display = 'none';
                 pairStartTime = Date.now();
@@ -110,26 +192,54 @@
             }
         }
 
+        // ---------------------------------------------------------------
+        // Vote handling
+        // ---------------------------------------------------------------
+
         async function selectOption(choice) {
+            if (isSubmitting) return;
+            isSubmitting = true;
+
             const responseTime = Date.now() - pairStartTime;
             const winnerId = choice === 'a' ? currentPair.question_a.id : currentPair.question_b.id;
 
             // Visual feedback
             document.getElementById(`option-${choice}`).classList.add('selected');
+            document.getElementById('option-a').disabled = true;
+            document.getElementById('option-b').disabled = true;
+            document.getElementById('skip-btn').disabled = true;
+
+            // Show response time
+            showResponseTime(responseTime);
 
             await submitVote(winnerId, responseTime);
         }
 
         async function skipPair() {
+            if (isSubmitting) return;
+            isSubmitting = true;
+
             const responseTime = Date.now() - pairStartTime;
+
+            document.getElementById('option-a').disabled = true;
+            document.getElementById('option-b').disabled = true;
+            document.getElementById('skip-btn').disabled = true;
+
+            showResponseTime(responseTime);
+
             await submitVote(null, responseTime);
+        }
+
+        function showResponseTime(ms) {
+            const seconds = (ms / 1000).toFixed(1);
+            document.getElementById('response-time').textContent = `Response time: ${seconds}s`;
         }
 
         async function submitVote(winnerId, responseTime) {
             try {
                 await api(`/api/pairwise/vote/${WG_NUMBER}`, {
                     method: 'POST',
-                    params: { token },
+                    token,
                     body: {
                         question_a_id: currentPair.question_a.id,
                         question_b_id: currentPair.question_b.id,
@@ -147,8 +257,16 @@
                 if (completedCount % 5 === 0) loadRankings();
             } catch (e) {
                 showToast('Error submitting vote.');
+                isSubmitting = false;
+                document.getElementById('option-a').disabled = false;
+                document.getElementById('option-b').disabled = false;
+                document.getElementById('skip-btn').disabled = false;
             }
         }
+
+        // ---------------------------------------------------------------
+        // Rankings
+        // ---------------------------------------------------------------
 
         async function loadRankings() {
             try {
@@ -161,16 +279,20 @@
 
                 document.getElementById('rankings-body').innerHTML = data.rankings.map(r => `
                     <tr>
-                        <td style="font-weight:700;color:var(--primary);">${r.rank}</td>
-                        <td style="font-size:0.85rem;">${r.text.length > 80 ? r.text.slice(0,80) + '...' : r.text}</td>
-                        <td style="font-weight:600;">${r.score.toFixed(1)}</td>
-                        <td style="color:var(--gray-500);font-size:0.8rem;">${r.wins}/${r.losses}</td>
+                        <td style="font-weight:700;color:var(--primary);">${esc(String(r.rank))}</td>
+                        <td style="font-size:0.85rem;">${esc(r.text.length > 80 ? r.text.slice(0, 80) + '...' : r.text)}</td>
+                        <td style="font-weight:600;">${esc(r.score.toFixed(1))}</td>
+                        <td style="color:var(--gray-500);font-size:0.8rem;">${esc(String(r.wins))}/${esc(String(r.losses))}</td>
                     </tr>
                 `).join('');
             } catch (e) {
-                // Rankings not available yet — that's fine
+                // Rankings not available yet
             }
         }
+
+        // ---------------------------------------------------------------
+        // Suggestion
+        // ---------------------------------------------------------------
 
         async function submitSuggestion() {
             const text = document.getElementById('suggestion-text').value.trim();
@@ -178,7 +300,7 @@
             try {
                 await api(`/api/pairwise/suggest/${WG_NUMBER}`, {
                     method: 'POST',
-                    params: { token },
+                    token,
                     body: { suggestion_text: text }
                 });
                 showToast('Suggestion submitted!');

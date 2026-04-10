@@ -5,122 +5,176 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conference Voting &mdash; SAEM AI Consensus</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .rank-arrows {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .rank-arrow-btn {
+            background: var(--gray-100);
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+            width: 32px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--gray-700);
+            transition: background 0.15s;
+            padding: 0;
+            line-height: 1;
+        }
+        .rank-arrow-btn:hover { background: var(--primary-light); color: var(--primary); }
+        .rank-arrow-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .submitted-banner {
+            background: #ecfdf5;
+            border: 2px solid var(--success);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+            color: var(--success);
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 12px;
+        }
+        .ranking-item { touch-action: manipulation; }
+    </style>
 </head>
 <body>
-    <div class="header">
+    <header class="header" role="banner">
         <h1>Conference Voting</h1>
-        <div class="subtitle" id="session-subtitle">Loading...</div>
-        <div class="badge" id="phase-badge"></div>
-    </div>
+        <p class="subtitle" id="session-subtitle" aria-label="Session type">Loading...</p>
+        <span class="badge" id="phase-badge" aria-label="Current phase"></span>
+    </header>
 
-    <div class="container">
+    <main class="container" role="main">
         <!-- Session status -->
-        <div class="card" id="status-card">
+        <section class="card" id="status-card" aria-label="Session status">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span id="session-status" style="font-weight:600;"></span>
-                <span id="voter-count" style="color:var(--gray-500);font-size:0.85rem;"></span>
+                <span id="voter-count" style="color:var(--gray-500);font-size:0.85rem;" aria-live="polite"></span>
             </div>
-        </div>
+        </section>
 
         <!-- Vote type tabs -->
-        <div id="vote-tabs" style="display:none;margin-bottom:16px;">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn btn-primary" id="tab-ranking" onclick="switchTab('ranking')">Priority Ranking</button>
-                <button class="btn btn-outline" id="tab-importance" onclick="switchTab('importance')">Importance Rating</button>
-                <button class="btn btn-outline" id="tab-allocation" onclick="switchTab('allocation')">Point Allocation</button>
+        <nav id="vote-tabs" style="display:none;margin-bottom:16px;" aria-label="Vote type selection">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" role="tablist">
+                <button class="btn btn-primary" id="tab-ranking" role="tab" aria-selected="true" aria-controls="view-ranking" onclick="switchTab('ranking')">Priority Ranking</button>
+                <button class="btn btn-outline" id="tab-importance" role="tab" aria-selected="false" aria-controls="view-importance" onclick="switchTab('importance')">Importance Rating</button>
+                <button class="btn btn-outline" id="tab-allocation" role="tab" aria-selected="false" aria-controls="view-allocation" onclick="switchTab('allocation')">Point Allocation</button>
             </div>
-        </div>
+        </nav>
 
         <!-- RANKING VIEW -->
-        <div id="view-ranking" style="display:none;">
+        <section id="view-ranking" role="tabpanel" aria-labelledby="tab-ranking" style="display:none;">
             <div class="card">
-                <div class="card-header">Drag to Rank (Most Important First)</div>
+                <h2 class="card-header">Drag to Rank (Most Important First)</h2>
                 <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px;">
-                    Drag items to reorder. Position 1 = highest priority.
+                    Use the arrow buttons to reorder, or drag items on desktop. Position 1 = highest priority.
                 </p>
-                <ol class="ranking-list" id="ranking-list"></ol>
-                <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="submitRanking()">Submit Ranking</button>
+                <ol class="ranking-list" id="ranking-list" aria-label="Ranked items"></ol>
+                <button class="btn btn-primary btn-block" style="margin-top:12px;" id="ranking-submit-btn" aria-label="Submit priority ranking" onclick="submitRanking()">Submit Ranking</button>
+                <div id="ranking-submitted" class="submitted-banner" style="display:none;" aria-live="polite">Ranking submitted successfully</div>
             </div>
-        </div>
+        </section>
 
         <!-- IMPORTANCE VIEW -->
-        <div id="view-importance" style="display:none;">
+        <section id="view-importance" role="tabpanel" aria-labelledby="tab-importance" style="display:none;">
             <div class="card">
-                <div class="card-header">Rate Importance (1-9)</div>
+                <h2 class="card-header">Rate Importance (1&ndash;9)</h2>
                 <div id="importance-list"></div>
-                <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="submitImportance()">Submit Ratings</button>
+                <button class="btn btn-primary btn-block" style="margin-top:12px;" id="importance-submit-btn" aria-label="Submit importance ratings" onclick="submitImportance()">Submit Ratings</button>
+                <div id="importance-submitted" class="submitted-banner" style="display:none;" aria-live="polite">Ratings submitted successfully</div>
             </div>
-        </div>
+        </section>
 
         <!-- ALLOCATION VIEW -->
-        <div id="view-allocation" style="display:none;">
+        <section id="view-allocation" role="tabpanel" aria-labelledby="tab-allocation" style="display:none;">
             <div class="card">
-                <div class="card-header">Allocate 100 Points</div>
+                <h2 class="card-header">Allocate 100 Points</h2>
                 <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px;">
                     Distribute 100 points among the questions. More points = higher priority.
                 </p>
                 <div id="allocation-list"></div>
-                <div class="allocation-total" id="alloc-total">Total: 0 / 100</div>
-                <button class="btn btn-primary btn-block" id="alloc-submit" onclick="submitAllocation()">Submit Allocation</button>
+                <div class="allocation-total" id="alloc-total" aria-live="polite">Total: 0 / 100</div>
+                <button class="btn btn-primary btn-block" id="alloc-submit" aria-label="Submit point allocation" onclick="submitAllocation()" disabled>Submit Allocation</button>
+                <div id="allocation-submitted" class="submitted-banner" style="display:none;" aria-live="polite">Allocation submitted successfully</div>
             </div>
-        </div>
+        </section>
 
         <!-- Comment -->
-        <div class="card" id="comment-card" style="display:none;">
-            <div class="card-header">Comments &amp; Suggestions</div>
-            <select id="comment-type" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:8px;font-size:0.9rem;">
+        <section class="card" id="comment-card" style="display:none;" aria-label="Comments and suggestions">
+            <h2 class="card-header">Comments &amp; Suggestions</h2>
+            <label for="comment-type" class="importance-label" style="display:block;margin-bottom:4px;">Comment type</label>
+            <select id="comment-type" aria-label="Comment type" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:8px;font-size:0.9rem;">
                 <option value="general">General Comment</option>
                 <option value="modification">Suggest Modification</option>
                 <option value="new_question">Suggest New Question</option>
             </select>
-            <textarea class="comment-field" id="comment-text" placeholder="Your comment..." rows="3"></textarea>
-            <button class="btn btn-outline" style="margin-top:8px;" onclick="submitComment()">Submit Comment</button>
-        </div>
+            <label for="comment-text" class="importance-label" style="display:block;margin-bottom:4px;">Your comment</label>
+            <textarea class="comment-field" id="comment-text" aria-label="Comment text" placeholder="Your comment..." rows="3"></textarea>
+            <button class="btn btn-outline" style="margin-top:8px;" aria-label="Submit comment" onclick="submitComment()">Submit Comment</button>
+        </section>
 
         <!-- Session not active -->
-        <div class="card" id="inactive-card" style="display:none;text-align:center;">
+        <section class="card" id="inactive-card" style="display:none;text-align:center;" aria-label="Session inactive">
             <p style="color:var(--gray-500);font-size:1.1rem;padding:20px 0;">
                 This voting session is not currently active.
             </p>
-            <a href="/" class="btn btn-outline">Back to Home</a>
-        </div>
-    </div>
+            <a href="/" class="btn btn-outline" aria-label="Return to home page">Back to Home</a>
+        </section>
+    </main>
 
-    <div class="toast" id="toast"></div>
+    <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
     <script src="/static/js/app.js"></script>
     <script>
         const SESSION_ID = {{ session_id }};
+        const AUTOSAVE_KEY = `conference_${SESSION_ID}`;
         let token = null;
         let questions = [];
         let sessionData = null;
         let currentTab = 'ranking';
-        let allocations = {};
+        let sseConnection = null;
 
+        // -----------------------------------------------------------------
+        // Initialization
+        // -----------------------------------------------------------------
         document.addEventListener('DOMContentLoaded', async () => {
-            // Get token — use WG 0 as conference-wide token
+            // Get or create participant token (conference uses WG 0)
             token = getToken(0);
             if (!token) {
-                const result = await api('/api/surveys/token', {
-                    method: 'POST',
-                    params: { wg_number: 1 }
-                });
-                token = result.token;
-                setToken(0, token);
+                try {
+                    const result = await api('/api/surveys/token', {
+                        method: 'POST',
+                        params: { wg_number: 1 }
+                    });
+                    token = result.token;
+                    setToken(0, token);
+                } catch (e) {
+                    showToast('Could not obtain session token.');
+                    return;
+                }
             }
 
             await loadSession();
         });
 
+        // -----------------------------------------------------------------
+        // Load session data
+        // -----------------------------------------------------------------
         async function loadSession() {
             try {
-                sessionData = await api(`/api/conference/sessions/${SESSION_ID}/questions`);
+                sessionData = await api(`/api/conference/sessions/${SESSION_ID}/questions`, { token });
                 questions = sessionData.questions;
 
                 document.getElementById('session-subtitle').textContent =
-                    sessionData.session_type.replace(/_/g, ' ');
+                    esc(sessionData.session_type.replace(/_/g, ' '));
                 document.getElementById('phase-badge').textContent =
-                    sessionData.phase.replace(/_/g, ' ');
+                    esc(sessionData.phase.replace(/_/g, ' '));
 
                 if (!sessionData.is_active) {
                     document.getElementById('inactive-card').style.display = 'block';
@@ -136,46 +190,139 @@
                 renderRanking();
                 renderImportance();
                 renderAllocation();
+                restoreAutosave();
                 switchTab('ranking');
+
+                // Connect SSE for live voter count
+                sseConnection = connectSSE(SESSION_ID, onVoteUpdate);
             } catch (e) {
                 document.getElementById('status-card').innerHTML =
                     '<p style="color:var(--danger);">Could not load session.</p>';
             }
         }
 
+        // -----------------------------------------------------------------
+        // SSE vote update handler
+        // -----------------------------------------------------------------
+        function onVoteUpdate(data) {
+            if (data && data.voter_count !== undefined) {
+                const el = document.getElementById('voter-count');
+                el.textContent = `${data.voter_count} voter${data.voter_count !== 1 ? 's' : ''}`;
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Tab switching
+        // -----------------------------------------------------------------
         function switchTab(tab) {
             currentTab = tab;
             ['ranking', 'importance', 'allocation'].forEach(t => {
-                document.getElementById(`view-${t}`).style.display = t === tab ? 'block' : 'none';
-                document.getElementById(`tab-${t}`).className = t === tab ? 'btn btn-primary' : 'btn btn-outline';
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}`);
+                const isActive = t === tab;
+                view.style.display = isActive ? 'block' : 'none';
+                btn.className = isActive ? 'btn btn-primary' : 'btn btn-outline';
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
             });
         }
 
-        // --- RANKING ---
+        // -----------------------------------------------------------------
+        // Autosave — save & restore all vote state
+        // -----------------------------------------------------------------
+        function saveState() {
+            const rankingItems = document.querySelectorAll('#ranking-list .ranking-item');
+            const rankOrder = [...rankingItems].map(item => item.dataset.qid);
+
+            const importanceValues = {};
+            document.querySelectorAll('#importance-list .importance-slider').forEach(slider => {
+                importanceValues[slider.dataset.qid] = slider.value;
+            });
+
+            const allocationValues = {};
+            document.querySelectorAll('#allocation-list .allocation-input').forEach(inp => {
+                allocationValues[inp.dataset.qid] = inp.value;
+            });
+
+            autosave(AUTOSAVE_KEY, { rankOrder, importanceValues, allocationValues });
+        }
+
+        function restoreAutosave() {
+            const saved = autosaveRestore(AUTOSAVE_KEY);
+            if (!saved) return;
+
+            // Restore ranking order
+            if (saved.rankOrder && saved.rankOrder.length > 0) {
+                const list = document.getElementById('ranking-list');
+                const items = [...list.querySelectorAll('.ranking-item')];
+                const itemMap = {};
+                items.forEach(item => { itemMap[item.dataset.qid] = item; });
+                saved.rankOrder.forEach(qid => {
+                    const item = itemMap[qid];
+                    if (item) list.appendChild(item);
+                });
+                updateRankNumbers();
+            }
+
+            // Restore importance values
+            if (saved.importanceValues) {
+                for (const [qid, val] of Object.entries(saved.importanceValues)) {
+                    const slider = document.querySelector(`#importance-list .importance-slider[data-qid="${qid}"]`);
+                    if (slider) {
+                        slider.value = val;
+                        const display = document.getElementById(`imp-${qid}`);
+                        if (display) display.textContent = val;
+                    }
+                }
+            }
+
+            // Restore allocation values
+            if (saved.allocationValues) {
+                for (const [qid, val] of Object.entries(saved.allocationValues)) {
+                    const inp = document.querySelector(`#allocation-list .allocation-input[data-qid="${qid}"]`);
+                    if (inp) inp.value = val;
+                }
+                updateAllocationTotal();
+            }
+
+            showToast('Previous answers restored.');
+        }
+
+        // -----------------------------------------------------------------
+        // RANKING — arrow buttons + desktop drag
+        // -----------------------------------------------------------------
         function renderRanking() {
             const list = document.getElementById('ranking-list');
             list.innerHTML = questions.map((q, i) => `
-                <li class="ranking-item" draggable="true" data-qid="${q.id}">
-                    <span class="rank-num">${i + 1}</span>
-                    <span class="rank-text">${q.short_text || q.text}</span>
+                <li class="ranking-item" draggable="true" data-qid="${q.id}" aria-label="Rank ${i + 1}: ${esc(q.short_text || q.text)}">
+                    <span class="rank-num" aria-hidden="true">${i + 1}</span>
+                    <span class="rank-text">${esc(q.short_text || q.text)}</span>
+                    <span class="rank-arrows">
+                        <button type="button" class="rank-arrow-btn" aria-label="Move up" onclick="moveItem(this, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+                        <button type="button" class="rank-arrow-btn" aria-label="Move down" onclick="moveItem(this, 1)" ${i === questions.length - 1 ? 'disabled' : ''}>&#9660;</button>
+                    </span>
                 </li>
             `).join('');
 
-            // Drag and drop
+            // Desktop HTML5 drag-and-drop
             let dragEl = null;
             list.querySelectorAll('.ranking-item').forEach(item => {
                 item.addEventListener('dragstart', e => {
                     dragEl = item;
                     item.style.opacity = '0.4';
+                    e.dataTransfer.effectAllowed = 'move';
                 });
                 item.addEventListener('dragend', () => {
                     item.style.opacity = '1';
                     updateRankNumbers();
+                    saveState();
                 });
-                item.addEventListener('dragover', e => e.preventDefault());
+                item.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
                 item.addEventListener('drop', e => {
                     e.preventDefault();
-                    if (dragEl !== item) {
+                    if (dragEl && dragEl !== item) {
                         const items = [...list.children];
                         const dragIdx = items.indexOf(dragEl);
                         const dropIdx = items.indexOf(item);
@@ -187,52 +334,36 @@
                     }
                 });
             });
+        }
 
-            // Touch drag support
-            let touchEl = null;
-            let touchClone = null;
-            list.querySelectorAll('.ranking-item').forEach(item => {
-                item.addEventListener('touchstart', e => {
-                    touchEl = item;
-                    touchClone = item.cloneNode(true);
-                    touchClone.style.position = 'fixed';
-                    touchClone.style.opacity = '0.7';
-                    touchClone.style.pointerEvents = 'none';
-                    touchClone.style.zIndex = '999';
-                    touchClone.style.width = item.offsetWidth + 'px';
-                    document.body.appendChild(touchClone);
-                    item.style.opacity = '0.3';
-                }, { passive: true });
-                item.addEventListener('touchmove', e => {
-                    if (!touchClone) return;
-                    const touch = e.touches[0];
-                    touchClone.style.left = touch.clientX - touchClone.offsetWidth / 2 + 'px';
-                    touchClone.style.top = touch.clientY - 20 + 'px';
-                }, { passive: true });
-                item.addEventListener('touchend', e => {
-                    if (!touchEl || !touchClone) return;
-                    touchClone.remove();
-                    touchEl.style.opacity = '1';
-                    const touch = e.changedTouches[0];
-                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                    const dropItem = target ? target.closest('.ranking-item') : null;
-                    if (dropItem && dropItem !== touchEl) {
-                        const items = [...list.children];
-                        const dragIdx = items.indexOf(touchEl);
-                        const dropIdx = items.indexOf(dropItem);
-                        if (dragIdx < dropIdx) dropItem.after(touchEl);
-                        else dropItem.before(touchEl);
-                    }
-                    updateRankNumbers();
-                    touchEl = null;
-                    touchClone = null;
-                });
-            });
+        function moveItem(btn, direction) {
+            const item = btn.closest('.ranking-item');
+            const list = document.getElementById('ranking-list');
+            const items = [...list.children];
+            const idx = items.indexOf(item);
+            const targetIdx = idx + direction;
+
+            if (targetIdx < 0 || targetIdx >= items.length) return;
+
+            if (direction === -1) {
+                item.previousElementSibling.before(item);
+            } else {
+                item.nextElementSibling.after(item);
+            }
+
+            updateRankNumbers();
+            saveState();
         }
 
         function updateRankNumbers() {
-            document.querySelectorAll('#ranking-list .ranking-item').forEach((item, i) => {
+            const items = document.querySelectorAll('#ranking-list .ranking-item');
+            const total = items.length;
+            items.forEach((item, i) => {
                 item.querySelector('.rank-num').textContent = i + 1;
+                item.setAttribute('aria-label', `Rank ${i + 1}: ${item.querySelector('.rank-text').textContent}`);
+                const arrows = item.querySelectorAll('.rank-arrow-btn');
+                arrows[0].disabled = (i === 0);
+                arrows[1].disabled = (i === total - 1);
             });
         }
 
@@ -245,30 +376,43 @@
             try {
                 await api(`/api/conference/vote/${SESSION_ID}/ranking`, {
                     method: 'POST',
-                    params: { token },
+                    token,
                     body: { rankings }
                 });
                 showToast('Ranking submitted!');
+                document.getElementById('ranking-submitted').style.display = 'block';
+                autosaveClear(AUTOSAVE_KEY);
             } catch (e) {
                 showToast('Error submitting ranking.');
             }
         }
 
-        // --- IMPORTANCE ---
+        // -----------------------------------------------------------------
+        // IMPORTANCE — slider ratings
+        // -----------------------------------------------------------------
         function renderImportance() {
             document.getElementById('importance-list').innerHTML = questions.map(q => `
                 <div style="margin-bottom:16px;">
-                    <div style="font-size:0.9rem;font-weight:500;margin-bottom:6px;">${q.short_text || q.text}</div>
+                    <label for="imp-slider-${q.id}" style="font-size:0.9rem;font-weight:500;margin-bottom:6px;display:block;">${esc(q.short_text || q.text)}</label>
                     <div class="importance-row">
-                        <span class="importance-label">1</span>
-                        <input type="range" class="importance-slider" min="1" max="9" value="5"
+                        <span class="importance-label" aria-hidden="true">1</span>
+                        <input type="range" class="importance-slider" id="imp-slider-${q.id}" min="1" max="9" value="5"
                                data-qid="${q.id}"
-                               oninput="document.getElementById('imp-${q.id}').textContent=this.value">
-                        <span class="importance-label">9</span>
-                        <span class="importance-value" id="imp-${q.id}">5</span>
+                               aria-label="Importance of: ${esc(q.short_text || q.text)}"
+                               aria-valuemin="1" aria-valuemax="9" aria-valuenow="5"
+                               oninput="onImportanceChange(this)">
+                        <span class="importance-label" aria-hidden="true">9</span>
+                        <span class="importance-value" id="imp-${q.id}" aria-live="polite">5</span>
                     </div>
                 </div>
             `).join('');
+        }
+
+        function onImportanceChange(slider) {
+            const qid = slider.dataset.qid;
+            document.getElementById(`imp-${qid}`).textContent = slider.value;
+            slider.setAttribute('aria-valuenow', slider.value);
+            saveState();
         }
 
         async function submitImportance() {
@@ -279,22 +423,28 @@
             try {
                 await api(`/api/conference/vote/${SESSION_ID}/importance`, {
                     method: 'POST',
-                    params: { token },
+                    token,
                     body: { ratings }
                 });
                 showToast('Ratings submitted!');
+                document.getElementById('importance-submitted').style.display = 'block';
+                autosaveClear(AUTOSAVE_KEY);
             } catch (e) {
                 showToast('Error submitting ratings.');
             }
         }
 
-        // --- ALLOCATION ---
+        // -----------------------------------------------------------------
+        // ALLOCATION — distribute 100 points
+        // -----------------------------------------------------------------
         function renderAllocation() {
             document.getElementById('allocation-list').innerHTML = questions.map(q => `
                 <div class="allocation-item">
-                    <span class="allocation-text">${q.short_text || q.text}</span>
-                    <input type="number" class="allocation-input" min="0" max="100" value="0"
-                           data-qid="${q.id}" oninput="updateAllocationTotal()">
+                    <label for="alloc-${q.id}" class="allocation-text">${esc(q.short_text || q.text)}</label>
+                    <input type="number" class="allocation-input" id="alloc-${q.id}" min="0" max="100" value="0"
+                           data-qid="${q.id}"
+                           aria-label="Points for: ${esc(q.short_text || q.text)}"
+                           oninput="updateAllocationTotal()">
                 </div>
             `).join('');
         }
@@ -307,8 +457,17 @@
             const el = document.getElementById('alloc-total');
             el.textContent = `Total: ${total} / 100`;
             el.className = 'allocation-total';
-            if (total === 100) el.classList.add('exact');
-            else if (total > 100) el.classList.add('over');
+
+            const submitBtn = document.getElementById('alloc-submit');
+            if (total === 100) {
+                el.classList.add('exact');
+                submitBtn.disabled = false;
+            } else {
+                if (total > 100) el.classList.add('over');
+                submitBtn.disabled = true;
+            }
+
+            saveState();
         }
 
         async function submitAllocation() {
@@ -319,30 +478,34 @@
                 if (val > 0) allocs[inp.dataset.qid] = val;
                 total += val;
             });
-            if (Math.abs(total - 100) > 1) {
-                showToast(`Points must sum to 100 (currently ${total}).`);
+            if (total !== 100) {
+                showToast(`Points must sum to exactly 100 (currently ${total}).`);
                 return;
             }
             try {
                 await api(`/api/conference/vote/${SESSION_ID}/allocate`, {
                     method: 'POST',
-                    params: { token },
+                    token,
                     body: { allocations: allocs, budget: 100 }
                 });
                 showToast('Allocation submitted!');
+                document.getElementById('allocation-submitted').style.display = 'block';
+                autosaveClear(AUTOSAVE_KEY);
             } catch (e) {
                 showToast('Error submitting allocation.');
             }
         }
 
-        // --- COMMENT ---
+        // -----------------------------------------------------------------
+        // COMMENT
+        // -----------------------------------------------------------------
         async function submitComment() {
             const text = document.getElementById('comment-text').value.trim();
             if (!text) { showToast('Please enter a comment.'); return; }
             try {
                 await api(`/api/conference/comment/${SESSION_ID}`, {
                     method: 'POST',
-                    params: { token },
+                    token,
                     body: {
                         comment_text: text,
                         comment_type: document.getElementById('comment-type').value

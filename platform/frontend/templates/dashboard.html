@@ -12,123 +12,275 @@
         <div class="subtitle">SAEM 2026 AI Consensus Conference</div>
     </div>
 
-    <div class="container-wide">
-        <!-- Overview Cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;" id="overview-cards">
-        </div>
-
-        <!-- Working Group Summary Table -->
-        <div class="card">
-            <div class="card-header">Working Groups</div>
-            <div style="overflow-x:auto;">
-                <table class="data-table" id="wg-table">
-                    <thead>
-                        <tr>
-                            <th>WG</th><th>Name</th><th>Questions</th>
-                            <th>Confirmed</th><th>R1 Resp.</th><th>R2 Resp.</th>
-                            <th>Pairwise</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="wg-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Conference Sessions -->
-        <div class="card">
-            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>Conference Sessions</span>
-                <button class="btn btn-primary" style="font-size:0.8rem;padding:4px 12px;" onclick="createSession()">+ New Session</button>
-            </div>
-            <div id="sessions-container">Loading...</div>
-        </div>
-
-        <!-- AI Synthesis -->
-        <div class="card">
-            <div class="card-header">AI Synthesis</div>
-            <div id="synthesis-stats" style="color:var(--gray-500);font-size:0.9rem;margin-bottom:12px;"></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn btn-outline" style="font-size:0.85rem;" onclick="runCrossWG()">Run Cross-WG Analysis</button>
-            </div>
-            <div id="synthesis-runs" style="margin-top:12px;"></div>
-        </div>
-
-        <!-- Question Management -->
-        <div class="card">
-            <div class="card-header">Question Management</div>
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-                <select id="mgmt-wg" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
-                    <option value="1">WG 1</option><option value="2">WG 2</option>
-                    <option value="3">WG 3</option><option value="4">WG 4</option>
-                    <option value="5">WG 5</option>
-                </select>
-                <button class="btn btn-outline" style="font-size:0.85rem;" onclick="activateQuestions()">Activate Drafts</button>
-                <button class="btn btn-outline" style="font-size:0.85rem;" onclick="computeResults('round_1')">Compute R1</button>
-                <button class="btn btn-outline" style="font-size:0.85rem;" onclick="computeResults('round_2')">Compute R2</button>
-                <button class="btn btn-outline" style="font-size:0.85rem;" onclick="runSynthesis()">Run AI Synthesis</button>
-            </div>
-            <!-- Add questions -->
-            <div style="border-top:1px solid var(--gray-200);padding-top:12px;">
-                <textarea class="comment-field" id="new-questions" placeholder="Paste questions (one per line) to add to the selected WG..." rows="4"></textarea>
-                <button class="btn btn-primary" style="margin-top:8px;font-size:0.85rem;" onclick="addQuestions()">Add Questions</button>
-            </div>
-        </div>
-
-        <!-- Exports -->
-        <div class="card">
-            <div class="card-header">Data Exports</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <select id="export-wg" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
-                    <option value="1">WG 1</option><option value="2">WG 2</option>
-                    <option value="3">WG 3</option><option value="4">WG 4</option>
-                    <option value="5">WG 5</option>
-                </select>
-                <a class="btn btn-outline" style="font-size:0.85rem;" onclick="exportData('delphi','round_1')">Delphi R1 CSV</a>
-                <a class="btn btn-outline" style="font-size:0.85rem;" onclick="exportData('delphi','round_2')">Delphi R2 CSV</a>
-                <a class="btn btn-outline" style="font-size:0.85rem;" onclick="exportData('pairwise')">Pairwise CSV</a>
-                <a class="btn btn-outline" style="font-size:0.85rem;" href="/api/admin/export/ai-synthesis">AI Audit Log</a>
-                <a class="btn btn-outline" style="font-size:0.85rem;" href="/api/admin/export/full-results">Full Results JSON</a>
+    <!-- Login Form (shown when not authenticated) -->
+    <div id="login-section" style="display:none;">
+        <div class="container" style="max-width:400px;">
+            <div class="card">
+                <div class="card-header">Admin Login</div>
+                <form id="login-form" autocomplete="on">
+                    <div style="margin-bottom:12px;">
+                        <label for="login-email" style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:4px;color:var(--gray-700);">Email</label>
+                        <input type="email" id="login-email" name="email" value="admin" autocomplete="username"
+                               style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <label for="login-password" style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:4px;color:var(--gray-700);">Password</label>
+                        <input type="password" id="login-password" name="password" autocomplete="current-password"
+                               style="width:100%;padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                    </div>
+                    <div id="login-error" style="color:var(--danger);font-size:0.85rem;margin-bottom:12px;display:none;"></div>
+                    <button type="submit" class="btn btn-primary btn-block">Log In</button>
+                </form>
             </div>
         </div>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <!-- Dashboard (shown when authenticated) -->
+    <div id="dashboard-section" style="display:none;">
+        <div class="container-wide">
+            <!-- Top bar with logout -->
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                <button class="btn btn-outline" style="font-size:0.8rem;padding:4px 14px;" id="logout-btn">Logout</button>
+            </div>
+
+            <!-- Overview Cards -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;" id="overview-cards">
+            </div>
+
+            <!-- Working Group Summary Table -->
+            <div class="card">
+                <div class="card-header">Working Groups</div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="wg-table">
+                        <thead>
+                            <tr>
+                                <th>WG</th><th>Name</th><th>Questions</th>
+                                <th>Confirmed</th><th>R1 Resp.</th><th>R2 Resp.</th>
+                                <th>Pairwise</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wg-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Conference Sessions -->
+            <div class="card">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>Conference Sessions</span>
+                    <button class="btn btn-primary" style="font-size:0.8rem;padding:4px 12px;" id="toggle-new-session-btn">+ New Session</button>
+                </div>
+                <!-- Inline session creation form (hidden by default) -->
+                <div id="new-session-form" style="display:none;border:1px solid var(--gray-200);border-radius:var(--radius);padding:16px;margin-bottom:12px;background:var(--gray-50);">
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                        <div>
+                            <label for="session-type" style="display:block;font-size:0.8rem;font-weight:500;margin-bottom:4px;color:var(--gray-500);">Session Type</label>
+                            <select id="session-type" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                                <option value="wg_presentation">WG Presentation</option>
+                                <option value="cross_wg_prioritization">Cross-WG Prioritization</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="session-wg" style="display:block;font-size:0.8rem;font-weight:500;margin-bottom:4px;color:var(--gray-500);">Working Group</label>
+                            <select id="session-wg" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                                <option value="">(none / cross-WG)</option>
+                                <option value="1">WG 1</option>
+                                <option value="2">WG 2</option>
+                                <option value="3">WG 3</option>
+                                <option value="4">WG 4</option>
+                                <option value="5">WG 5</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="session-phase" style="display:block;font-size:0.8rem;font-weight:500;margin-bottom:4px;color:var(--gray-500);">Phase</label>
+                            <select id="session-phase" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                                <option value="pre_discussion">Pre-Discussion</option>
+                                <option value="post_discussion">Post-Discussion</option>
+                                <option value="final">Final</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-primary" style="font-size:0.85rem;padding:6px 16px;" id="create-session-btn">Create</button>
+                            <button class="btn btn-outline" style="font-size:0.85rem;padding:6px 16px;" id="cancel-session-btn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sessions-container">
+                    <p style="color:var(--gray-500);font-size:0.9rem;">Loading sessions...</p>
+                </div>
+            </div>
+
+            <!-- AI Synthesis -->
+            <div class="card">
+                <div class="card-header">AI Synthesis</div>
+                <div id="synthesis-stats" style="color:var(--gray-500);font-size:0.9rem;margin-bottom:12px;"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="run-cross-wg-btn">Run Cross-WG Analysis</button>
+                </div>
+                <div id="synthesis-runs" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- Question Management -->
+            <div class="card">
+                <div class="card-header">Question Management</div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                    <select id="mgmt-wg" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                        <option value="1">WG 1</option><option value="2">WG 2</option>
+                        <option value="3">WG 3</option><option value="4">WG 4</option>
+                        <option value="5">WG 5</option>
+                    </select>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="activate-btn">Activate Drafts</button>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="compute-r1-btn">Compute R1</button>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="compute-r2-btn">Compute R2</button>
+                </div>
+                <!-- Synthesis round picker (inline instead of prompt) -->
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                    <select id="synthesis-round" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                        <option value="round_1">Round 1</option>
+                        <option value="round_2">Round 2</option>
+                    </select>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="run-synthesis-btn">Run AI Synthesis</button>
+                </div>
+                <!-- Add questions -->
+                <div style="border-top:1px solid var(--gray-200);padding-top:12px;">
+                    <label for="new-questions" style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:4px;color:var(--gray-700);">Add Questions</label>
+                    <textarea class="comment-field" id="new-questions" placeholder="Paste questions (one per line) to add to the selected WG..." rows="4"></textarea>
+                    <button class="btn btn-primary" style="margin-top:8px;font-size:0.85rem;" id="add-questions-btn">Add Questions</button>
+                </div>
+            </div>
+
+            <!-- Exports -->
+            <div class="card">
+                <div class="card-header">Data Exports</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <select id="export-wg" style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:0.9rem;">
+                        <option value="1">WG 1</option><option value="2">WG 2</option>
+                        <option value="3">WG 3</option><option value="4">WG 4</option>
+                        <option value="5">WG 5</option>
+                    </select>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="export-r1-btn">Delphi R1 CSV</button>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="export-r2-btn">Delphi R2 CSV</button>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="export-pairwise-btn">Pairwise CSV</button>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="export-ai-btn">AI Audit Log</button>
+                    <button class="btn btn-outline" style="font-size:0.85rem;" id="export-full-btn">Full Results JSON</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
     <script src="/static/js/app.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        let _refreshTimer = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const loggedIn = await requireAdminLogin();
+            if (!loggedIn) {
+                showLoginForm();
+                return;
+            }
+            showDashboard();
+        });
+
+        // ---------------------------------------------------------------
+        // Auth: login form vs dashboard
+        // ---------------------------------------------------------------
+
+        function showLoginForm() {
+            document.getElementById('login-section').style.display = '';
+            document.getElementById('dashboard-section').style.display = 'none';
+            stopAutoRefresh();
+        }
+
+        function showDashboard() {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = '';
+            loadAllData();
+            startAutoRefresh();
+        }
+
+        // Login form handler
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+            errorDiv.style.display = 'none';
+
+            if (!password) {
+                errorDiv.textContent = 'Please enter a password.';
+                errorDiv.style.display = '';
+                return;
+            }
+
+            try {
+                await adminLogin(email || 'admin', password);
+                showDashboard();
+            } catch (err) {
+                errorDiv.textContent = 'Invalid credentials. Please try again.';
+                errorDiv.style.display = '';
+            }
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            clearAdminToken();
+            window.location.reload();
+        });
+
+        // ---------------------------------------------------------------
+        // Auto-refresh
+        // ---------------------------------------------------------------
+
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            _refreshTimer = setInterval(() => {
+                loadAllData();
+            }, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (_refreshTimer) {
+                clearInterval(_refreshTimer);
+                _refreshTimer = null;
+            }
+        }
+
+        function loadAllData() {
             loadDashboard();
             loadSessions();
             loadSynthesisRuns();
-        });
+        }
+
+        // ---------------------------------------------------------------
+        // Dashboard overview + WG table
+        // ---------------------------------------------------------------
 
         async function loadDashboard() {
             try {
-                const data = await api('/api/admin/dashboard');
+                const data = await api('/api/admin/dashboard', { silent: true });
                 // Overview cards
+                const totalQ = data.working_groups.reduce((s, w) => s + w.total_questions, 0);
+                const totalC = data.working_groups.reduce((s, w) => s + w.confirmed, 0);
+                const totalR1 = data.working_groups.reduce((s, w) => s + w.r1_participants, 0);
+                const pendingReview = data.ai_synthesis ? data.ai_synthesis.pending_review : 0;
+
                 document.getElementById('overview-cards').innerHTML = `
                     <div class="card" style="text-align:center;margin-bottom:0;">
-                        <div style="font-size:2rem;font-weight:700;color:var(--primary);">
-                            ${data.working_groups.reduce((s,w) => s + w.total_questions, 0)}
-                        </div>
+                        <div style="font-size:2rem;font-weight:700;color:var(--primary);">${esc(String(totalQ))}</div>
                         <div style="font-size:0.8rem;color:var(--gray-500);">Total Questions</div>
                     </div>
                     <div class="card" style="text-align:center;margin-bottom:0;">
-                        <div style="font-size:2rem;font-weight:700;color:var(--success);">
-                            ${data.working_groups.reduce((s,w) => s + w.confirmed, 0)}
-                        </div>
+                        <div style="font-size:2rem;font-weight:700;color:var(--success);">${esc(String(totalC))}</div>
                         <div style="font-size:0.8rem;color:var(--gray-500);">Confirmed</div>
                     </div>
                     <div class="card" style="text-align:center;margin-bottom:0;">
-                        <div style="font-size:2rem;font-weight:700;color:var(--primary);">
-                            ${data.working_groups.reduce((s,w) => s + w.r1_participants, 0)}
-                        </div>
+                        <div style="font-size:2rem;font-weight:700;color:var(--primary);">${esc(String(totalR1))}</div>
                         <div style="font-size:0.8rem;color:var(--gray-500);">R1 Participants</div>
                     </div>
                     <div class="card" style="text-align:center;margin-bottom:0;">
-                        <div style="font-size:2rem;font-weight:700;color:var(--warning);">
-                            ${data.ai_synthesis.pending_review}
-                        </div>
+                        <div style="font-size:2rem;font-weight:700;color:var(--warning);">${esc(String(pendingReview))}</div>
                         <div style="font-size:0.8rem;color:var(--gray-500);">Pending AI Review</div>
                     </div>
                 `;
@@ -136,35 +288,41 @@
                 // WG table
                 document.getElementById('wg-tbody').innerHTML = data.working_groups.map(wg => `
                     <tr>
-                        <td style="font-weight:700;">${wg.wg_number}</td>
+                        <td style="font-weight:700;">${esc(String(wg.wg_number))}</td>
                         <td>
-                            <div style="font-weight:500;">${wg.short_name}</div>
-                            <div style="font-size:0.75rem;color:var(--gray-500);">${wg.pillar}</div>
+                            <div style="font-weight:500;">${esc(wg.short_name)}</div>
+                            <div style="font-size:0.75rem;color:var(--gray-500);">${esc(wg.pillar)}</div>
                         </td>
-                        <td>${wg.total_questions}</td>
-                        <td><span class="status status-confirmed">${wg.confirmed}</span></td>
-                        <td>${wg.r1_responses} <span style="color:var(--gray-500);font-size:0.75rem;">(${wg.r1_participants}p)</span></td>
-                        <td>${wg.r2_responses}</td>
-                        <td>${wg.pairwise_votes}</td>
+                        <td>${esc(String(wg.total_questions))}</td>
+                        <td><span class="status status-confirmed">${esc(String(wg.confirmed))}</span></td>
+                        <td>${esc(String(wg.r1_responses))} <span style="color:var(--gray-500);font-size:0.75rem;">(${esc(String(wg.r1_participants))}p)</span></td>
+                        <td>${esc(String(wg.r2_responses))}</td>
+                        <td>${esc(String(wg.pairwise_votes))}</td>
                         <td>
-                            <a href="/results/${wg.wg_number}" style="color:var(--primary);font-size:0.85rem;">Results</a>
+                            <a href="/results/${encodeURIComponent(wg.wg_number)}" style="color:var(--primary);font-size:0.85rem;">Results</a>
                         </td>
                     </tr>
                 `).join('');
 
                 // Synthesis stats
-                document.getElementById('synthesis-stats').textContent =
-                    `${data.ai_synthesis.total_runs} runs, ${data.ai_synthesis.total_items} items (${data.ai_synthesis.reviewed_items} reviewed)`;
+                if (data.ai_synthesis) {
+                    document.getElementById('synthesis-stats').textContent =
+                        `${data.ai_synthesis.total_runs} runs, ${data.ai_synthesis.total_items} items (${data.ai_synthesis.reviewed_items} reviewed)`;
+                }
             } catch (e) {
                 document.getElementById('overview-cards').innerHTML =
-                    '<div class="card" style="text-align:center;"><p style="color:var(--gray-500);">Could not load dashboard data.</p></div>';
+                    '<div class="card" style="text-align:center;"><p style="color:var(--gray-500);">Could not load dashboard data. Check your connection and try again.</p></div>';
             }
         }
 
+        // ---------------------------------------------------------------
+        // Conference Sessions
+        // ---------------------------------------------------------------
+
         async function loadSessions() {
+            const container = document.getElementById('sessions-container');
             try {
-                const sessions = await api('/api/conference/sessions');
-                const container = document.getElementById('sessions-container');
+                const sessions = await api('/api/conference/sessions', { silent: true });
                 if (!sessions || sessions.length === 0) {
                     container.innerHTML = '<p style="color:var(--gray-500);font-size:0.9rem;">No sessions created yet.</p>';
                     return;
@@ -175,74 +333,97 @@
                         <tbody>
                             ${sessions.map(s => `
                                 <tr>
-                                    <td>${s.id}</td>
-                                    <td>${s.session_type.replace(/_/g, ' ')}</td>
-                                    <td>${s.phase.replace(/_/g, ' ')}</td>
+                                    <td>${esc(String(s.id))}</td>
+                                    <td>${esc(s.session_type.replace(/_/g, ' '))}</td>
+                                    <td>${esc(s.phase.replace(/_/g, ' '))}</td>
                                     <td><span class="status ${s.is_active ? 'status-active' : 'status-removed'}">${s.is_active ? 'LIVE' : 'Closed'}</span></td>
-                                    <td>${s.vote_count}</td>
+                                    <td>${esc(String(s.vote_count))}</td>
                                     <td style="display:flex;gap:4px;">
                                         ${s.is_active
-                                            ? `<button class="btn btn-outline" style="font-size:0.75rem;padding:2px 8px;" onclick="toggleSession(${s.id},'stop')">Stop</button>`
-                                            : `<button class="btn btn-outline" style="font-size:0.75rem;padding:2px 8px;" onclick="toggleSession(${s.id},'start')">Start</button>`
+                                            ? `<button class="btn btn-outline" style="font-size:0.75rem;padding:2px 8px;" data-session-toggle="${esc(String(s.id))}" data-action="stop">Stop</button>`
+                                            : `<button class="btn btn-outline" style="font-size:0.75rem;padding:2px 8px;" data-session-toggle="${esc(String(s.id))}" data-action="start">Start</button>`
                                         }
-                                        <a href="/vote/${s.id}" class="btn btn-outline" style="font-size:0.75rem;padding:2px 8px;">Open</a>
+                                        <a href="/vote/${encodeURIComponent(s.id)}" class="btn btn-outline" style="font-size:0.75rem;padding:2px 8px;">Open</a>
                                     </td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                 `;
+                // Attach toggle listeners via delegation
+                container.querySelectorAll('[data-session-toggle]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        toggleSession(btn.dataset.sessionToggle, btn.dataset.action);
+                    });
+                });
             } catch (e) {
-                document.getElementById('sessions-container').innerHTML =
-                    '<p style="color:var(--gray-500);">Could not load sessions.</p>';
+                container.innerHTML = '<p style="color:var(--gray-500);">Could not load sessions.</p>';
             }
         }
 
-        async function createSession() {
-            const wg = prompt('Working group number (leave blank for cross-WG):');
-            const type = prompt('Session type: wg_presentation or cross_wg_prioritization', 'wg_presentation');
-            if (!type) return;
+        // New session form toggle
+        document.getElementById('toggle-new-session-btn').addEventListener('click', () => {
+            const form = document.getElementById('new-session-form');
+            form.style.display = form.style.display === 'none' ? '' : 'none';
+        });
+
+        document.getElementById('cancel-session-btn').addEventListener('click', () => {
+            document.getElementById('new-session-form').style.display = 'none';
+        });
+
+        document.getElementById('create-session-btn').addEventListener('click', async () => {
+            const type = document.getElementById('session-type').value;
+            const wgVal = document.getElementById('session-wg').value;
+            const phase = document.getElementById('session-phase').value;
             try {
                 await api('/api/conference/sessions', {
                     method: 'POST',
                     body: {
-                        wg_number: wg ? parseInt(wg) : null,
+                        wg_number: wgVal ? parseInt(wgVal, 10) : null,
                         session_type: type,
-                        phase: 'pre_discussion'
+                        phase: phase
                     }
                 });
-                showToast('Session created!');
+                showToast('Session created.');
+                document.getElementById('new-session-form').style.display = 'none';
                 loadSessions();
             } catch (e) {
                 showToast('Error creating session.');
             }
-        }
+        });
 
         async function toggleSession(id, action) {
             try {
-                await api(`/api/conference/sessions/${id}/${action}`, { method: 'POST' });
-                showToast(`Session ${action === 'start' ? 'started' : 'stopped'}!`);
+                await api(`/api/conference/sessions/${encodeURIComponent(id)}/${encodeURIComponent(action)}`, { method: 'POST' });
+                showToast(action === 'start' ? 'Session started.' : 'Session stopped.');
                 loadSessions();
             } catch (e) {
                 showToast('Error updating session.');
             }
         }
 
-        async function activateQuestions() {
+        // ---------------------------------------------------------------
+        // Question Management
+        // ---------------------------------------------------------------
+
+        document.getElementById('activate-btn').addEventListener('click', async () => {
             const wg = document.getElementById('mgmt-wg').value;
             try {
-                const result = await api(`/api/surveys/questions/${wg}/activate`, { method: 'POST' });
+                const result = await api(`/api/surveys/questions/${encodeURIComponent(wg)}/activate`, { method: 'POST' });
                 showToast(`${result.activated} questions activated.`);
                 loadDashboard();
             } catch (e) {
                 showToast('Error activating questions.');
             }
-        }
+        });
+
+        document.getElementById('compute-r1-btn').addEventListener('click', () => computeResults('round_1'));
+        document.getElementById('compute-r2-btn').addEventListener('click', () => computeResults('round_2'));
 
         async function computeResults(round) {
             const wg = document.getElementById('mgmt-wg').value;
             try {
-                const result = await api(`/api/surveys/compute-results/${wg}/${round}`, { method: 'POST' });
+                const result = await api(`/api/surveys/compute-results/${encodeURIComponent(wg)}/${encodeURIComponent(round)}`, { method: 'POST' });
                 showToast(`Computed results for ${result.questions.length} questions.`);
                 loadDashboard();
             } catch (e) {
@@ -250,21 +431,20 @@
             }
         }
 
-        async function runSynthesis() {
+        document.getElementById('run-synthesis-btn').addEventListener('click', async () => {
             const wg = document.getElementById('mgmt-wg').value;
-            const round = prompt('Round (round_1 or round_2):', 'round_1');
-            if (!round) return;
+            const round = document.getElementById('synthesis-round').value;
             showToast('Running AI synthesis... this may take a minute.');
             try {
-                const result = await api(`/api/analysis/synthesize/all/${wg}/${round}`, { method: 'POST' });
+                const result = await api(`/api/analysis/synthesize/all/${encodeURIComponent(wg)}/${encodeURIComponent(round)}`, { method: 'POST' });
                 showToast(`Synthesis complete: ${result.tasks_completed} tasks.`);
                 loadSynthesisRuns();
             } catch (e) {
                 showToast('Error running synthesis. Check API key.');
             }
-        }
+        });
 
-        async function runCrossWG() {
+        document.getElementById('run-cross-wg-btn').addEventListener('click', async () => {
             showToast('Running cross-WG analysis...');
             try {
                 const result = await api('/api/analysis/synthesize/cross-wg', { method: 'POST' });
@@ -273,43 +453,24 @@
             } catch (e) {
                 showToast('Error running cross-WG analysis.');
             }
-        }
+        });
 
-        async function loadSynthesisRuns() {
-            try {
-                const runs = await api('/api/analysis/runs');
-                const container = document.getElementById('synthesis-runs');
-                if (!runs || runs.length === 0) {
-                    container.innerHTML = '<p style="color:var(--gray-500);font-size:0.85rem;">No synthesis runs yet.</p>';
-                    return;
-                }
-                container.innerHTML = runs.slice(0, 10).map(r => `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:0.85rem;">
-                        <span>
-                            <span class="status status-active">${r.synthesis_type.replace(/_/g, ' ')}</span>
-                            ${r.wg_id ? `WG${r.wg_id}` : 'Cross-WG'}
-                        </span>
-                        <span style="color:var(--gray-500);">${r.items_count} items, ${r.reviewed} reviewed</span>
-                    </div>
-                `).join('');
-            } catch (e) {
-                // No synthesis runs yet
-            }
-        }
-
-        async function addQuestions() {
+        document.getElementById('add-questions-btn').addEventListener('click', async () => {
             const wg = document.getElementById('mgmt-wg').value;
             const text = document.getElementById('new-questions').value.trim();
-            if (!text) { showToast('Paste some questions first.'); return; }
+            if (!text) {
+                showToast('Paste some questions first.');
+                return;
+            }
 
             const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             const questions = lines.map(line => ({
-                text: line.replace(/^\d+[\.\)]\s*/, ''),  // strip numbering
+                text: line.replace(/^\d+[\.\)]\s*/, ''),
                 source: 'manual'
             }));
 
             try {
-                const result = await api(`/api/surveys/questions/${wg}/bulk`, {
+                const result = await api(`/api/surveys/questions/${encodeURIComponent(wg)}/bulk`, {
                     method: 'POST',
                     body: questions
                 });
@@ -319,14 +480,54 @@
             } catch (e) {
                 showToast('Error adding questions.');
             }
+        });
+
+        // ---------------------------------------------------------------
+        // AI Synthesis Runs
+        // ---------------------------------------------------------------
+
+        async function loadSynthesisRuns() {
+            const container = document.getElementById('synthesis-runs');
+            try {
+                const runs = await api('/api/analysis/runs', { silent: true });
+                if (!runs || runs.length === 0) {
+                    container.innerHTML = '<p style="color:var(--gray-500);font-size:0.85rem;">No synthesis runs yet.</p>';
+                    return;
+                }
+                container.innerHTML = runs.slice(0, 10).map(r => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:0.85rem;">
+                        <span>
+                            <span class="status status-active">${esc(r.synthesis_type.replace(/_/g, ' '))}</span>
+                            ${r.wg_id ? esc('WG' + r.wg_id) : 'Cross-WG'}
+                        </span>
+                        <span style="color:var(--gray-500);">${esc(String(r.items_count))} items, ${esc(String(r.reviewed))} reviewed</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                // Silently ignore — synthesis runs may not exist yet
+            }
         }
+
+        // ---------------------------------------------------------------
+        // Exports
+        // ---------------------------------------------------------------
+
+        document.getElementById('export-r1-btn').addEventListener('click', () => exportData('delphi', 'round_1'));
+        document.getElementById('export-r2-btn').addEventListener('click', () => exportData('delphi', 'round_2'));
+        document.getElementById('export-pairwise-btn').addEventListener('click', () => exportData('pairwise'));
+        document.getElementById('export-ai-btn').addEventListener('click', () => {
+            window.open('/api/admin/export/ai-synthesis');
+        });
+        document.getElementById('export-full-btn').addEventListener('click', () => {
+            window.open('/api/admin/export/full-results');
+        });
 
         function exportData(type, round) {
             const wg = document.getElementById('export-wg').value;
             if (type === 'delphi') {
-                window.open(`/api/admin/export/delphi/${wg}/${round}`);
+                window.open(`/api/admin/export/delphi/${encodeURIComponent(wg)}/${encodeURIComponent(round)}`);
             } else if (type === 'pairwise') {
-                window.open(`/api/admin/export/pairwise/${wg}`);
+                window.open(`/api/admin/export/pairwise/${encodeURIComponent(wg)}`);
             }
         }
     </script>

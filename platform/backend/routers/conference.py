@@ -3,13 +3,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
 from ..database import (
     get_db, WorkingGroup, Question, Participant, ConferenceSession,
-    ConferenceVote, ConferenceComment, BreakoutNote, QuestionStatus
+    ConferenceVote, ConferenceComment, BreakoutNote, QuestionStatus,
+    AuditLog, write_audit_log,
+)
+from ..auth import require_admin, get_participant_token, verify_participant_token
+from ..validators import (
+    validate_session_type, validate_importance, sanitize_text,
+    validate_comment_type, safe_csv_value, VALID_PHASES,
 )
 
 router = APIRouter()
@@ -49,11 +56,49 @@ class BreakoutNoteSubmit(BaseModel):
     surprises: Optional[str] = None
 
 
-# --- Session Management ---
+# --- Helpers ---
+
+def _validate_phase(phase: str) -> str:
+    """Validate phase value against allowed set."""
+    if phase not in VALID_PHASES:
+        raise HTTPException(400, f"Invalid phase: {phase}. Must be one of: {VALID_PHASES}")
+    return phase
+
+
+def _upsert_votes(
+    db: Session,
+    session_id: int,
+    participant_id: int,
+    vote_type: str,
+    votes: list[ConferenceVote],
+):
+    """Delete existing votes for (session, participant, vote_type) then insert new ones.
+
+    Handles the UniqueConstraint on ConferenceVote by replacing rather than
+    duplicating.  Wrapped in the caller's transaction so the delete+insert is
+    atomic.
+    """
+    db.query(ConferenceVote).filter(
+        ConferenceVote.session_id == session_id,
+        ConferenceVote.participant_id == participant_id,
+        ConferenceVote.vote_type == vote_type,
+    ).delete(synchronize_session="fetch")
+    for v in votes:
+        db.add(v)
+
+
+# --- Session Management (admin-only) ---
 
 @router.post("/sessions")
-def create_session(session: SessionCreate, db: Session = Depends(get_db)):
+def create_session(
+    session: SessionCreate,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Create a conference-day voting session."""
+    validate_session_type(session.session_type)
+    _validate_phase(session.phase)
+
     wg = None
     if session.wg_number:
         wg = db.query(WorkingGroup).filter(WorkingGroup.number == session.wg_number).first()
@@ -73,7 +118,11 @@ def create_session(session: SessionCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/sessions/{session_id}/start")
-def start_session(session_id: int, db: Session = Depends(get_db)):
+def start_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Activate a voting session (opens it for responses)."""
     cs = db.query(ConferenceSession).get(session_id)
     if not cs:
@@ -81,11 +130,21 @@ def start_session(session_id: int, db: Session = Depends(get_db)):
     cs.is_active = True
     cs.started_at = datetime.utcnow()
     db.commit()
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="session_start",
+        detail=f"Started session {session_id} (type={cs.session_type})",
+    )
     return {"session_id": cs.id, "is_active": True}
 
 
 @router.post("/sessions/{session_id}/stop")
-def stop_session(session_id: int, db: Session = Depends(get_db)):
+def stop_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Close a voting session."""
     cs = db.query(ConferenceSession).get(session_id)
     if not cs:
@@ -93,12 +152,24 @@ def stop_session(session_id: int, db: Session = Depends(get_db)):
     cs.is_active = False
     cs.ended_at = datetime.utcnow()
     db.commit()
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="session_stop",
+        detail=f"Stopped session {session_id} (type={cs.session_type})",
+    )
     return {"session_id": cs.id, "is_active": False}
 
 
 @router.post("/sessions/{session_id}/phase")
-def update_phase(session_id: int, phase: str, db: Session = Depends(get_db)):
+def update_phase(
+    session_id: int,
+    phase: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Update the phase of a session (pre_discussion -> post_discussion)."""
+    _validate_phase(phase)
     cs = db.query(ConferenceSession).get(session_id)
     if not cs:
         raise HTTPException(404, "Session not found")
@@ -161,56 +232,83 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
 # --- Voting ---
 
 @router.post("/vote/{session_id}/ranking")
-def submit_ranking(session_id: int, vote: RankingVoteSubmit, token: str, db: Session = Depends(get_db)):
+def submit_ranking(
+    session_id: int,
+    vote: RankingVoteSubmit,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(get_participant_token),
+):
     """Submit a priority ranking (top N)."""
     cs = db.query(ConferenceSession).get(session_id)
     if not cs or not cs.is_active:
         raise HTTPException(400, "Session not active")
 
-    participant = db.query(Participant).filter(Participant.token == token).first()
-    if not participant:
-        raise HTTPException(401, "Invalid token")
+    participant = verify_participant_token(token, db)
 
-    for question_id, rank in vote.rankings.items():
-        cv = ConferenceVote(
+    vote_type = f"ranking_{cs.phase}"
+    new_votes = [
+        ConferenceVote(
             session_id=session_id,
             participant_id=participant.id,
             question_id=int(question_id),
-            vote_type=f"ranking_{cs.phase}",
+            vote_type=vote_type,
             value=float(rank),
         )
-        db.add(cv)
+        for question_id, rank in vote.rankings.items()
+    ]
+
+    _upsert_votes(db, session_id, participant.id, vote_type, new_votes)
     db.commit()
     return {"status": "recorded", "count": len(vote.rankings)}
 
 
 @router.post("/vote/{session_id}/importance")
-def submit_importance(session_id: int, vote: ImportanceVoteSubmit, token: str, db: Session = Depends(get_db)):
+def submit_importance(
+    session_id: int,
+    vote: ImportanceVoteSubmit,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(get_participant_token),
+):
     """Submit importance ratings (1-9)."""
     cs = db.query(ConferenceSession).get(session_id)
     if not cs or not cs.is_active:
         raise HTTPException(400, "Session not active")
 
-    participant = db.query(Participant).filter(Participant.token == token).first()
-    if not participant:
-        raise HTTPException(401, "Invalid token")
+    participant = verify_participant_token(token, db)
 
-    for question_id, rating in vote.ratings.items():
-        cv = ConferenceVote(
+    # Validate every rating
+    for rating in vote.ratings.values():
+        validate_importance(rating)
+
+    new_votes = [
+        ConferenceVote(
             session_id=session_id,
             participant_id=participant.id,
             question_id=int(question_id),
             vote_type="importance",
             value=float(rating),
         )
-        db.add(cv)
+        for question_id, rating in vote.ratings.items()
+    ]
+
+    _upsert_votes(db, session_id, participant.id, "importance", new_votes)
     db.commit()
     return {"status": "recorded", "count": len(vote.ratings)}
 
 
 @router.post("/vote/{session_id}/allocate")
-def submit_allocation(session_id: int, vote: PointAllocationSubmit, token: str, db: Session = Depends(get_db)):
+def submit_allocation(
+    session_id: int,
+    vote: PointAllocationSubmit,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(get_participant_token),
+):
     """Submit point allocation (must sum to budget)."""
+    # Validate non-negative values
+    for qid, points in vote.allocations.items():
+        if points < 0:
+            raise HTTPException(400, f"Allocation for question {qid} must be non-negative")
+
     total = sum(vote.allocations.values())
     if abs(total - vote.budget) > 1.0:  # allow small rounding errors
         raise HTTPException(400, f"Points must sum to {vote.budget}, got {total}")
@@ -219,20 +317,21 @@ def submit_allocation(session_id: int, vote: PointAllocationSubmit, token: str, 
     if not cs or not cs.is_active:
         raise HTTPException(400, "Session not active")
 
-    participant = db.query(Participant).filter(Participant.token == token).first()
-    if not participant:
-        raise HTTPException(401, "Invalid token")
+    participant = verify_participant_token(token, db)
 
-    for question_id, points in vote.allocations.items():
-        if points > 0:
-            cv = ConferenceVote(
-                session_id=session_id,
-                participant_id=participant.id,
-                question_id=int(question_id),
-                vote_type="point_allocation",
-                value=float(points),
-            )
-            db.add(cv)
+    new_votes = [
+        ConferenceVote(
+            session_id=session_id,
+            participant_id=participant.id,
+            question_id=int(question_id),
+            vote_type="point_allocation",
+            value=float(points),
+        )
+        for question_id, points in vote.allocations.items()
+        if points > 0
+    ]
+
+    _upsert_votes(db, session_id, participant.id, "point_allocation", new_votes)
     db.commit()
     return {"status": "recorded", "total_points": total}
 
@@ -240,8 +339,18 @@ def submit_allocation(session_id: int, vote: PointAllocationSubmit, token: str, 
 # --- Comments and Breakout Notes ---
 
 @router.post("/comment/{session_id}")
-def submit_comment(session_id: int, comment: CommentSubmit, token: Optional[str] = None, db: Session = Depends(get_db)):
+def submit_comment(
+    session_id: int,
+    comment: CommentSubmit,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(get_participant_token),
+):
     """Submit a conference-day comment or suggestion."""
+    validate_comment_type(comment.comment_type)
+    sanitized_text = sanitize_text(comment.comment_text)
+    if not sanitized_text:
+        raise HTTPException(400, "Comment text must not be empty")
+
     participant = None
     if token:
         participant = db.query(Participant).filter(Participant.token == token).first()
@@ -249,7 +358,7 @@ def submit_comment(session_id: int, comment: CommentSubmit, token: Optional[str]
     cc = ConferenceComment(
         session_id=session_id,
         participant_id=participant.id if participant else None,
-        comment_text=comment.comment_text,
+        comment_text=sanitized_text,
         comment_type=comment.comment_type,
     )
     db.add(cc)
@@ -263,12 +372,12 @@ def submit_breakout_note(session_id: int, note: BreakoutNoteSubmit, db: Session 
     bn = BreakoutNote(
         session_id=session_id,
         table_number=note.table_number,
-        facilitator_name=note.facilitator_name,
-        themes=note.themes,
-        agreements=note.agreements,
-        disagreements=note.disagreements,
-        suggestions=note.suggestions,
-        surprises=note.surprises,
+        facilitator_name=sanitize_text(note.facilitator_name, max_length=200),
+        themes=sanitize_text(note.themes) if note.themes else None,
+        agreements=sanitize_text(note.agreements) if note.agreements else None,
+        disagreements=sanitize_text(note.disagreements) if note.disagreements else None,
+        suggestions=sanitize_text(note.suggestions) if note.suggestions else None,
+        surprises=sanitize_text(note.surprises) if note.surprises else None,
     )
     db.add(bn)
     db.commit()

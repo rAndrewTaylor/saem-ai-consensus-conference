@@ -1,37 +1,140 @@
 """AI synthesis service — Claude API integration for consensus analysis."""
 
-import os
-import anthropic
+import asyncio
+import logging
 from typing import Optional
 
-# Initialize client — uses ANTHROPIC_API_KEY env var
-client = anthropic.Anthropic()
+import anthropic
+
+from ..config import ANTHROPIC_API_KEY
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 
+# Timeout and retry settings
+REQUEST_TIMEOUT_SECONDS = 60
+MAX_RETRIES = 2
+INITIAL_BACKOFF_SECONDS = 2
 
-async def run_synthesis(prompt: str, input_data: dict, model: Optional[str] = None) -> dict:
-    """Run a synthesis prompt through Claude and return the result."""
-    model = model or DEFAULT_MODEL
 
-    message = client.messages.create(
-        model=model,
-        max_tokens=8192,
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        system="You are an expert research methodologist assisting with a medical consensus conference. Your role is to organize and synthesize data, not to make decisions. Be precise, structured, and neutral. Follow the output format specified in the prompt exactly.",
+def _get_client() -> anthropic.AsyncAnthropic:
+    """Return an AsyncAnthropic client, or raise a clear error if the key is missing."""
+    if not ANTHROPIC_API_KEY:
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY is not set.  Add it to your .env file or "
+            "set the environment variable before running synthesis."
+        )
+    return anthropic.AsyncAnthropic(
+        api_key=ANTHROPIC_API_KEY,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
-    return {
-        "model": model,
-        "model_version": message.model,
-        "output": message.content[0].text,
-        "usage": {
-            "input_tokens": message.usage.input_tokens,
-            "output_tokens": message.usage.output_tokens,
-        },
-    }
+
+async def run_synthesis(prompt: str, input_data: dict, model: Optional[str] = None) -> dict:
+    """Run a synthesis prompt through Claude and return the result.
+
+    Uses AsyncAnthropic for proper async execution, with timeout and
+    exponential-backoff retry logic (max 2 retries).
+    """
+    model = model or DEFAULT_MODEL
+    client = _get_client()
+
+    last_error: Exception | None = None
+
+    for attempt in range(1 + MAX_RETRIES):
+        try:
+            message = await client.messages.create(
+                model=model,
+                max_tokens=8192,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                system=(
+                    "You are an expert research methodologist assisting with a "
+                    "medical consensus conference. Your role is to organize and "
+                    "synthesize data, not to make decisions. Be precise, structured, "
+                    "and neutral. Follow the output format specified in the prompt exactly."
+                ),
+            )
+
+            # Log successful call
+            logger.info(
+                "Synthesis complete: model=%s input_tokens=%d output_tokens=%d attempt=%d",
+                message.model,
+                message.usage.input_tokens,
+                message.usage.output_tokens,
+                attempt + 1,
+            )
+
+            return {
+                "model": model,
+                "model_version": message.model,
+                "output": message.content[0].text,
+                "usage": {
+                    "input_tokens": message.usage.input_tokens,
+                    "output_tokens": message.usage.output_tokens,
+                },
+            }
+
+        except anthropic.AuthenticationError as exc:
+            # No point retrying auth failures
+            logger.error("Anthropic authentication failed: %s", exc)
+            raise RuntimeError(
+                "Anthropic API authentication failed.  Check that ANTHROPIC_API_KEY "
+                "is valid and has not been revoked."
+            ) from exc
+
+        except anthropic.RateLimitError as exc:
+            last_error = exc
+            logger.warning(
+                "Rate-limited by Anthropic API (attempt %d/%d): %s",
+                attempt + 1, 1 + MAX_RETRIES, exc,
+            )
+
+        except anthropic.APITimeoutError as exc:
+            last_error = exc
+            logger.warning(
+                "Anthropic API request timed out after %ds (attempt %d/%d)",
+                REQUEST_TIMEOUT_SECONDS, attempt + 1, 1 + MAX_RETRIES,
+            )
+
+        except anthropic.APIStatusError as exc:
+            # 5xx → retriable; 4xx (other than rate-limit) → not
+            if exc.status_code >= 500:
+                last_error = exc
+                logger.warning(
+                    "Anthropic server error %d (attempt %d/%d): %s",
+                    exc.status_code, attempt + 1, 1 + MAX_RETRIES, exc,
+                )
+            else:
+                logger.error("Anthropic API error %d: %s", exc.status_code, exc)
+                raise RuntimeError(
+                    f"Anthropic API returned error {exc.status_code}: {exc.message}"
+                ) from exc
+
+        except anthropic.APIConnectionError as exc:
+            last_error = exc
+            logger.warning(
+                "Connection error to Anthropic API (attempt %d/%d): %s",
+                attempt + 1, 1 + MAX_RETRIES, exc,
+            )
+
+        # Exponential backoff before next attempt (skip if last attempt)
+        if attempt < MAX_RETRIES:
+            backoff = INITIAL_BACKOFF_SECONDS * (2 ** attempt)
+            logger.info("Retrying in %ds...", backoff)
+            await asyncio.sleep(backoff)
+
+    # All retries exhausted
+    logger.error(
+        "Synthesis failed after %d attempts.  Last error: %s",
+        1 + MAX_RETRIES, last_error,
+    )
+    raise RuntimeError(
+        f"AI synthesis failed after {1 + MAX_RETRIES} attempts.  "
+        f"Last error: {last_error}"
+    )
 
 
 # --- Prompt Templates ---

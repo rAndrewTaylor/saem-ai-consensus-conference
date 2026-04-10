@@ -3,14 +3,39 @@
 from datetime import datetime
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, Float, Boolean,
-    DateTime, ForeignKey, JSON, Enum as SQLEnum, UniqueConstraint
+    DateTime, ForeignKey, JSON, Enum as SQLEnum, UniqueConstraint,
+    Index, event
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 import enum
 import os
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "consensus.db")
-engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
+from .config import DATABASE_URL
+
+# --- Engine setup ---
+
+_engine_kwargs: dict = {}
+
+if DATABASE_URL.startswith("sqlite"):
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+    _engine_kwargs["echo"] = False
+else:
+    # PostgreSQL (or other async-capable DB)
+    _engine_kwargs["pool_size"] = 10
+    _engine_kwargs["max_overflow"] = 20
+    _engine_kwargs["pool_pre_ping"] = True
+    _engine_kwargs["echo"] = False
+
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
+
+# Enable WAL mode for SQLite after connect
+if DATABASE_URL.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_wal(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
+
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -92,6 +117,8 @@ class Participant(Base):
     role = Column(String(100))  # EM physician, researcher, etc.
     career_stage = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
 
     delphi_responses = relationship("DelphiResponse", back_populates="participant")
     pairwise_votes = relationship("PairwiseVote", back_populates="participant")
@@ -193,6 +220,13 @@ class PairwiseVote(Base):
     response_time_ms = Column(Integer)  # how long they took to decide
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "participant_id", "question_a_id", "question_b_id", "wg_id",
+            name="uq_pairwise_vote",
+        ),
+    )
+
     participant = relationship("Participant", back_populates="pairwise_votes")
     question_a = relationship("Question", foreign_keys=[question_a_id])
     question_b = relationship("Question", foreign_keys=[question_b_id])
@@ -274,6 +308,13 @@ class ConferenceVote(Base):
     value = Column(Float, nullable=False)  # rank position, 1-9 rating, or points allocated
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id", "participant_id", "vote_type",
+            name="uq_conference_vote",
+        ),
+    )
+
     participant = relationship("Participant", back_populates="conference_votes")
 
 
@@ -327,16 +368,29 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+# --- Indexes for frequently queried columns ---
+
+Index("ix_delphi_resp_q_round", DelphiResponse.question_id, DelphiResponse.round)
+Index("ix_delphi_resp_participant", DelphiResponse.participant_id)
+Index("ix_pairwise_vote_wg", PairwiseVote.wg_id)
+Index("ix_conference_vote_session", ConferenceVote.session_id)
+Index("ix_question_wg_status", Question.wg_id, Question.status)
+
+
 # --- Initialize ---
 
 def init_db():
     """Create all tables."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    if DATABASE_URL.startswith("sqlite"):
+        db_path = DATABASE_URL.replace("sqlite:///", "")
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
     Base.metadata.create_all(engine)
 
 
 def get_db():
-    """Dependency for FastAPI routes."""
+    """FastAPI dependency that yields a database session."""
     db = SessionLocal()
     try:
         yield db
@@ -387,4 +441,11 @@ def seed_working_groups(db):
         ),
     ]
     db.add_all(groups)
+    db.commit()
+
+
+def write_audit_log(db, user_email: str, action: str, detail: str | None = None):
+    """Write an entry to the audit log."""
+    entry = AuditLog(user_email=user_email, action=action, detail=detail)
+    db.add(entry)
     db.commit()

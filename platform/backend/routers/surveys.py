@@ -1,7 +1,9 @@
 """Delphi survey routes — create surveys, collect responses, compute results."""
 
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from pydantic import BaseModel
 from typing import Optional
@@ -9,7 +11,15 @@ import secrets
 
 from ..database import (
     get_db, WorkingGroup, Question, Participant, DelphiResponse,
-    DelphiSuggestion, QuestionStatus, DelphiRound, DispositionVote, HumanDecision
+    DelphiSuggestion, QuestionStatus, DelphiRound, DispositionVote, HumanDecision,
+    write_audit_log,
+)
+from ..validators import (
+    validate_importance, validate_disposition, sanitize_text, MAX_QUESTION_LENGTH,
+)
+from ..auth import (
+    verify_participant_token, get_participant_token, require_admin,
+    PARTICIPANT_TOKEN_EXPIRY_HOURS,
 )
 
 router = APIRouter()
@@ -46,7 +56,11 @@ def get_or_create_token(wg_number: int, db: Session = Depends(get_db)):
     if not wg:
         raise HTTPException(404, "Working group not found")
     token = secrets.token_urlsafe(32)
-    participant = Participant(token=token, wg_id=wg.id)
+    participant = Participant(
+        token=token,
+        wg_id=wg.id,
+        expires_at=datetime.utcnow() + timedelta(hours=PARTICIPANT_TOKEN_EXPIRY_HOURS),
+    )
     db.add(participant)
     db.commit()
     return {"token": token, "wg_id": wg.id, "wg_number": wg_number}
@@ -91,42 +105,66 @@ def list_questions(wg_number: int, round_name: Optional[str] = None, db: Session
 
 
 @router.post("/questions/{wg_number}")
-def create_question(wg_number: int, q: QuestionCreate, db: Session = Depends(get_db)):
+def create_question(
+    wg_number: int, q: QuestionCreate,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Add a new question to a working group."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
+
+    cleaned_text = sanitize_text(q.text, max_length=MAX_QUESTION_LENGTH)
+    if not cleaned_text:
+        raise HTTPException(400, "Question text is required")
+
     question = Question(
         wg_id=wg.id,
-        text=q.text,
-        short_text=q.short_text or q.text[:200],
+        text=cleaned_text,
+        short_text=sanitize_text(q.short_text, max_length=200) if q.short_text else cleaned_text[:200],
         source=q.source,
         status=QuestionStatus.DRAFT,
     )
     db.add(question)
     db.commit()
     db.refresh(question)
+
+    write_audit_log(db, admin.get("sub", "unknown"), "question_create",
+                    f"Created question {question.id} in WG {wg_number}")
+
     return {"id": question.id, "text": question.text}
 
 
 @router.post("/questions/{wg_number}/bulk")
-def bulk_create_questions(wg_number: int, questions: list[QuestionCreate], db: Session = Depends(get_db)):
+def bulk_create_questions(
+    wg_number: int, questions: list[QuestionCreate],
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Bulk add questions to a working group."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
     created = []
     for q in questions:
+        cleaned_text = sanitize_text(q.text, max_length=MAX_QUESTION_LENGTH)
+        if not cleaned_text:
+            continue
         question = Question(
             wg_id=wg.id,
-            text=q.text,
-            short_text=q.short_text or q.text[:200],
+            text=cleaned_text,
+            short_text=sanitize_text(q.short_text, max_length=200) if q.short_text else cleaned_text[:200],
             source=q.source,
             status=QuestionStatus.DRAFT,
         )
         db.add(question)
         created.append(question)
     db.commit()
+
+    write_audit_log(db, admin.get("sub", "unknown"), "question_bulk_create",
+                    f"Created {len(created)} questions in WG {wg_number}")
+
     return {"created": len(created)}
 
 
@@ -137,10 +175,10 @@ def update_question(question_id: int, q: QuestionUpdate, db: Session = Depends(g
     if not question:
         raise HTTPException(404, "Question not found")
     if q.text is not None:
-        question.text = q.text
+        question.text = sanitize_text(q.text, max_length=MAX_QUESTION_LENGTH)
         question.version += 1
     if q.short_text is not None:
-        question.short_text = q.short_text
+        question.short_text = sanitize_text(q.short_text, max_length=200)
     if q.status is not None:
         question.status = QuestionStatus(q.status)
     db.commit()
@@ -148,7 +186,11 @@ def update_question(question_id: int, q: QuestionUpdate, db: Session = Depends(g
 
 
 @router.post("/questions/{wg_number}/activate")
-def activate_questions(wg_number: int, db: Session = Depends(get_db)):
+def activate_questions(
+    wg_number: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Set all DRAFT questions for a WG to ACTIVE (ready for Delphi)."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
@@ -158,6 +200,10 @@ def activate_questions(wg_number: int, db: Session = Depends(get_db)):
         Question.status == QuestionStatus.DRAFT
     ).update({Question.status: QuestionStatus.ACTIVE})
     db.commit()
+
+    write_audit_log(db, admin.get("sub", "unknown"), "questions_activate",
+                    f"Activated {updated} questions in WG {wg_number}")
+
     return {"activated": updated}
 
 
@@ -166,41 +212,51 @@ def activate_questions(wg_number: int, db: Session = Depends(get_db)):
 @router.post("/respond/{wg_number}/{round_name}/{question_id}")
 def submit_response(
     wg_number: int, round_name: str, question_id: int,
-    response: ResponseSubmit, token: str,
-    db: Session = Depends(get_db)
+    response: ResponseSubmit,
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
 ):
     """Submit a Delphi response for a question."""
-    participant = db.query(Participant).filter(Participant.token == token).first()
-    if not participant:
-        raise HTTPException(401, "Invalid token")
+    if not token:
+        raise HTTPException(401, "Authorization header required")
+    participant = verify_participant_token(token, db)
 
     question = db.query(Question).get(question_id)
     if not question:
         raise HTTPException(404, "Question not found")
 
+    # Validate inputs
+    validate_importance(response.importance_rating)
+    validate_disposition(response.disposition)
+    comment = sanitize_text(response.comment) if response.comment else response.comment
+
     delphi_round = DelphiRound.ROUND_1 if round_name == "round_1" else DelphiRound.ROUND_2
 
-    # Check for existing response
-    existing = db.query(DelphiResponse).filter(
-        DelphiResponse.question_id == question_id,
-        DelphiResponse.participant_id == participant.id,
-        DelphiResponse.round == delphi_round,
-    ).first()
-    if existing:
-        # Update existing response
-        existing.disposition = DispositionVote(response.disposition)
-        existing.importance_rating = response.importance_rating
-        existing.comment = response.comment
-    else:
+    try:
+        # Attempt insert
         dr = DelphiResponse(
             question_id=question_id,
             participant_id=participant.id,
             round=delphi_round,
             disposition=DispositionVote(response.disposition),
             importance_rating=response.importance_rating,
-            comment=response.comment,
+            comment=comment,
         )
         db.add(dr)
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        # Unique constraint hit — update existing response
+        existing = db.query(DelphiResponse).filter(
+            DelphiResponse.question_id == question_id,
+            DelphiResponse.participant_id == participant.id,
+            DelphiResponse.round == delphi_round,
+        ).first()
+        if existing:
+            existing.disposition = DispositionVote(response.disposition)
+            existing.importance_rating = response.importance_rating
+            existing.comment = comment
+
     db.commit()
     return {"status": "recorded"}
 
@@ -209,17 +265,22 @@ def submit_response(
 def submit_batch_responses(
     wg_number: int, round_name: str,
     responses: dict[int, ResponseSubmit],  # question_id -> response
-    token: str,
-    db: Session = Depends(get_db)
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
 ):
     """Submit all responses for a round at once."""
-    participant = db.query(Participant).filter(Participant.token == token).first()
-    if not participant:
-        raise HTTPException(401, "Invalid token")
+    if not token:
+        raise HTTPException(401, "Authorization header required")
+    participant = verify_participant_token(token, db)
 
     delphi_round = DelphiRound.ROUND_1 if round_name == "round_1" else DelphiRound.ROUND_2
 
     for question_id, response in responses.items():
+        # Validate each response
+        validate_importance(response.importance_rating)
+        validate_disposition(response.disposition)
+        comment = sanitize_text(response.comment) if response.comment else response.comment
+
         existing = db.query(DelphiResponse).filter(
             DelphiResponse.question_id == int(question_id),
             DelphiResponse.participant_id == participant.id,
@@ -228,7 +289,7 @@ def submit_batch_responses(
         if existing:
             existing.disposition = DispositionVote(response.disposition)
             existing.importance_rating = response.importance_rating
-            existing.comment = response.comment
+            existing.comment = comment
         else:
             dr = DelphiResponse(
                 question_id=int(question_id),
@@ -236,7 +297,7 @@ def submit_batch_responses(
                 round=delphi_round,
                 disposition=DispositionVote(response.disposition),
                 importance_rating=response.importance_rating,
-                comment=response.comment,
+                comment=comment,
             )
             db.add(dr)
     db.commit()
@@ -246,13 +307,15 @@ def submit_batch_responses(
 @router.post("/suggest/{wg_number}/{round_name}")
 def submit_suggestion(
     wg_number: int, round_name: str,
-    suggestion: SuggestionSubmit, token: str,
-    db: Session = Depends(get_db)
+    suggestion: SuggestionSubmit,
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
 ):
     """Submit a new question suggestion."""
-    participant = db.query(Participant).filter(Participant.token == token).first()
-    if not participant:
-        raise HTTPException(401, "Invalid token")
+    if not token:
+        raise HTTPException(401, "Authorization header required")
+    participant = verify_participant_token(token, db)
+
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
@@ -262,8 +325,8 @@ def submit_suggestion(
         participant_id=participant.id,
         wg_id=wg.id,
         round=delphi_round,
-        suggestion_text=suggestion.suggestion_text,
-        general_comment=suggestion.general_comment,
+        suggestion_text=sanitize_text(suggestion.suggestion_text),
+        general_comment=sanitize_text(suggestion.general_comment) if suggestion.general_comment else None,
     )
     db.add(s)
     db.commit()
@@ -273,7 +336,11 @@ def submit_suggestion(
 # --- Results Computation ---
 
 @router.post("/compute-results/{wg_number}/{round_name}")
-def compute_round_results(wg_number: int, round_name: str, db: Session = Depends(get_db)):
+def compute_round_results(
+    wg_number: int, round_name: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Compute and store aggregate results for a round."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
@@ -342,6 +409,10 @@ def compute_round_results(wg_number: int, round_name: str, db: Session = Depends
         })
 
     db.commit()
+
+    write_audit_log(db, admin.get("sub", "unknown"), "compute_results",
+                    f"Computed {round_name} results for WG {wg_number}: {len(results)} questions")
+
     return {"wg": wg_number, "round": round_name, "questions": results}
 
 

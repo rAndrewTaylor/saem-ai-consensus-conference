@@ -5,33 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Results &mdash; SAEM AI Consensus</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .concordance-value {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .concordance-strong { background: #ecfdf5; color: var(--success); }
+        .concordance-moderate { background: #fffbeb; color: var(--warning); }
+        .concordance-weak { background: #fef2f2; color: var(--danger); }
+        .concordance-hero {
+            font-size: 3rem;
+            font-weight: 700;
+            padding: 4px 16px;
+            border-radius: var(--radius);
+        }
+        .rank-diff-high { color: var(--warning); font-weight: 700; }
+        .rank-diff-low { color: var(--gray-500); }
+    </style>
 </head>
 <body>
-    <div class="header">
+    <header class="header" role="banner">
         <h1>Results</h1>
-        <div class="subtitle" id="results-subtitle">Loading...</div>
-    </div>
+        <p class="subtitle" id="results-subtitle" aria-label="Results context">Loading...</p>
+    </header>
 
-    <div class="container">
+    <main class="container" role="main">
         <!-- Round selector -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-            <button class="btn btn-primary" id="tab-r1" onclick="loadRound('round_1')">Round 1</button>
-            <button class="btn btn-outline" id="tab-r2" onclick="loadRound('round_2')">Round 2</button>
-            <button class="btn btn-outline" id="tab-pw" onclick="loadPairwise()">Pairwise</button>
-            <button class="btn btn-outline" id="tab-conc" onclick="loadConcordance()">Concordance</button>
-        </div>
+        <nav aria-label="Results view selection" style="margin-bottom:16px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" role="tablist">
+                <button class="btn btn-primary" id="tab-r1" role="tab" aria-selected="true" aria-controls="delphi-results" onclick="loadRound('round_1')">Round 1</button>
+                <button class="btn btn-outline" id="tab-r2" role="tab" aria-selected="false" aria-controls="delphi-results" onclick="loadRound('round_2')">Round 2</button>
+                <button class="btn btn-outline" id="tab-pw" role="tab" aria-selected="false" aria-controls="pairwise-results" onclick="loadPairwise()">Pairwise</button>
+                <button class="btn btn-outline" id="tab-conc" role="tab" aria-selected="false" aria-controls="concordance-results" onclick="loadConcordance()">Concordance</button>
+            </div>
+        </nav>
 
         <!-- Delphi Results -->
-        <div id="delphi-results"></div>
+        <section id="delphi-results" role="tabpanel" aria-labelledby="tab-r1" aria-label="Delphi round results"></section>
 
         <!-- Pairwise Rankings -->
-        <div id="pairwise-results" style="display:none;"></div>
+        <section id="pairwise-results" role="tabpanel" aria-labelledby="tab-pw" aria-label="Pairwise ranking results" style="display:none;"></section>
 
         <!-- Concordance -->
-        <div id="concordance-results" style="display:none;"></div>
-    </div>
+        <section id="concordance-results" role="tabpanel" aria-labelledby="tab-conc" aria-label="Concordance analysis" style="display:none;"></section>
+    </main>
 
-    <div class="toast" id="toast"></div>
+    <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
     <script src="/static/js/app.js"></script>
     <script>
@@ -42,12 +64,38 @@
             loadRound('round_1');
         });
 
+        // -----------------------------------------------------------------
+        // Tab management
+        // -----------------------------------------------------------------
         function setActiveTab(id) {
             ['tab-r1', 'tab-r2', 'tab-pw', 'tab-conc'].forEach(t => {
-                document.getElementById(t).className = t === id ? 'btn btn-primary' : 'btn btn-outline';
+                const btn = document.getElementById(t);
+                const isActive = t === id;
+                btn.className = isActive ? 'btn btn-primary' : 'btn btn-outline';
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
             });
         }
 
+        // -----------------------------------------------------------------
+        // Concordance color coding
+        // -----------------------------------------------------------------
+        function concordanceClass(rho) {
+            const abs = Math.abs(rho);
+            if (abs >= 0.7) return 'concordance-strong';
+            if (abs >= 0.4) return 'concordance-moderate';
+            return 'concordance-weak';
+        }
+
+        function concordanceLabel(rho) {
+            const abs = Math.abs(rho);
+            if (abs >= 0.7) return 'Strong agreement';
+            if (abs >= 0.4) return 'Moderate agreement';
+            return 'Weak agreement';
+        }
+
+        // -----------------------------------------------------------------
+        // Delphi round results
+        // -----------------------------------------------------------------
         async function loadRound(round) {
             currentView = round;
             setActiveTab(round === 'round_1' ? 'tab-r1' : 'tab-r2');
@@ -58,7 +106,7 @@
             try {
                 const data = await api(`/api/surveys/results/${WG_NUMBER}/${round}`);
                 document.getElementById('results-subtitle').textContent =
-                    `${data.wg_name} — ${round.replace('_', ' ')}`;
+                    esc(data.wg_name) + ' \u2014 ' + esc(round.replace('_', ' '));
 
                 const questions = data.questions;
                 if (!questions || questions.length === 0) {
@@ -73,11 +121,10 @@
                 const active = questions.filter(q => ['active', 'revised', 'near_consensus'].includes(q.status));
                 const removed = questions.filter(q => q.status === 'removed');
 
-                document.getElementById('delphi-results').innerHTML = `
-                    ${renderSection('Confirmed', confirmed, prefix, 'status-confirmed')}
-                    ${renderSection('Active / Gray Zone', active, prefix, 'status-active')}
-                    ${renderSection('Removed', removed, prefix, 'status-removed')}
-                `;
+                document.getElementById('delphi-results').innerHTML =
+                    renderSection('Confirmed', confirmed, prefix, 'status-confirmed') +
+                    renderSection('Active / Gray Zone', active, prefix, 'status-active') +
+                    renderSection('Removed', removed, prefix, 'status-removed');
             } catch (e) {
                 document.getElementById('delphi-results').innerHTML =
                     '<div class="card"><p style="color:var(--danger);">Error loading results.</p></div>';
@@ -86,45 +133,49 @@
 
         function renderSection(title, questions, prefix, statusClass) {
             if (questions.length === 0) return '';
+            const escapedTitle = esc(title);
             return `
-                <div class="card">
-                    <div class="card-header">
-                        ${title}
-                        <span class="status ${statusClass}" style="margin-left:8px;">${questions.length}</span>
-                    </div>
+                <article class="card" aria-label="${escapedTitle} questions">
+                    <h2 class="card-header">
+                        ${escapedTitle}
+                        <span class="status ${esc(statusClass)}" style="margin-left:8px;">${questions.length}</span>
+                    </h2>
                     ${questions.map(q => {
                         const incl = q[`${prefix}_include_pct`];
                         const mod = prefix === 'r1' ? q.r1_modify_pct : 0;
                         const excl = q[`${prefix}_exclude_pct`];
                         const imp = q[`${prefix}_importance_mean`];
                         return `
-                            <div class="question-card">
-                                <div class="question-text">${q.text}</div>
-                                ${incl !== null ? `
-                                    <div class="result-bar-container">
+                            <div class="question-card" aria-label="Question result">
+                                <p class="question-text">${esc(q.text)}</p>
+                                ${incl !== null && incl !== undefined ? `
+                                    <div class="result-bar-container" aria-label="Vote distribution">
                                         <div class="result-bar-label">
-                                            <span>Include: ${incl}%</span>
-                                            <span>Importance: ${imp ? imp.toFixed(1) : 'N/A'}</span>
+                                            <span>Include: ${esc(String(incl))}%</span>
+                                            <span>Importance: ${imp != null ? esc(imp.toFixed(1)) : 'N/A'}</span>
                                         </div>
-                                        <div class="result-bar">
+                                        <div class="result-bar" role="img" aria-label="Include ${incl}%, Modify ${mod || 0}%, Exclude ${excl || 0}%">
                                             <div class="include" style="width:${(incl || 0) - (mod || 0)}%"></div>
                                             <div class="modify" style="width:${mod || 0}%"></div>
                                             <div class="exclude" style="width:${excl || 0}%"></div>
                                         </div>
                                     </div>
-                                ` : '<div style="font-size:0.85rem;color:var(--gray-500);">No results computed yet</div>'}
+                                ` : '<p style="font-size:0.85rem;color:var(--gray-500);">No results computed yet</p>'}
                                 ${q.pairwise_score ? `
                                     <div class="question-meta">
-                                        <span>Pairwise score: ${q.pairwise_score.toFixed(1)}</span>
+                                        <span>Pairwise score: ${esc(q.pairwise_score.toFixed(1))}</span>
                                     </div>
                                 ` : ''}
                             </div>
                         `;
                     }).join('')}
-                </div>
+                </article>
             `;
         }
 
+        // -----------------------------------------------------------------
+        // Pairwise rankings
+        // -----------------------------------------------------------------
         async function loadPairwise() {
             setActiveTab('tab-pw');
             document.getElementById('delphi-results').style.display = 'none';
@@ -135,38 +186,47 @@
                 const data = await api(`/api/pairwise/rankings/${WG_NUMBER}`);
                 const stats = await api(`/api/pairwise/stats/${WG_NUMBER}`);
 
-                document.getElementById('results-subtitle').textContent = `${data.wg_name} — Pairwise Rankings`;
+                document.getElementById('results-subtitle').textContent =
+                    esc(data.wg_name) + ' \u2014 Pairwise Rankings';
 
                 document.getElementById('pairwise-results').innerHTML = `
-                    <div class="card">
-                        <div class="card-header">Pairwise Statistics</div>
+                    <article class="card" aria-label="Pairwise statistics">
+                        <h2 class="card-header">Pairwise Statistics</h2>
                         <div class="question-meta" style="font-size:0.9rem;">
-                            <span>Total votes: ${stats.total_votes}</span>
-                            <span>Participants: ${stats.unique_participants}</span>
-                            <span>Skips: ${stats.total_skips}</span>
-                            ${stats.avg_response_time_ms ? `<span>Avg time: ${(stats.avg_response_time_ms / 1000).toFixed(1)}s</span>` : ''}
+                            <span>Total votes: ${esc(String(stats.total_votes))}</span>
+                            <span>Participants: ${esc(String(stats.unique_participants))}</span>
+                            <span>Skips: ${esc(String(stats.total_skips))}</span>
+                            ${stats.avg_response_time_ms ? `<span>Avg time: ${esc((stats.avg_response_time_ms / 1000).toFixed(1))}s</span>` : ''}
                         </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">Rankings</div>
+                    </article>
+                    <article class="card" aria-label="Pairwise rankings table">
+                        <h2 class="card-header">Rankings</h2>
                         ${data.rankings.length === 0
                             ? '<p style="color:var(--gray-500);">No pairwise data yet.</p>'
-                            : `<table class="data-table">
-                                <thead><tr><th>#</th><th>Question</th><th>Score</th><th>W/L</th><th>Status</th></tr></thead>
+                            : `<table class="data-table" aria-label="Question rankings by pairwise comparison">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Question</th>
+                                        <th scope="col">Score</th>
+                                        <th scope="col">W/L</th>
+                                        <th scope="col">Status</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     ${data.rankings.map(r => `
                                         <tr>
-                                            <td style="font-weight:700;color:var(--primary);">${r.rank}</td>
-                                            <td style="font-size:0.85rem;">${r.text}</td>
-                                            <td style="font-weight:600;">${r.score.toFixed(1)}</td>
-                                            <td style="color:var(--gray-500);font-size:0.8rem;">${r.wins}W / ${r.losses}L</td>
-                                            <td><span class="status status-${r.delphi_status === 'confirmed' ? 'confirmed' : r.delphi_status === 'removed' ? 'removed' : 'active'}">${r.delphi_status}</span></td>
+                                            <td style="font-weight:700;color:var(--primary);">${esc(String(r.rank))}</td>
+                                            <td style="font-size:0.85rem;">${esc(r.text)}</td>
+                                            <td style="font-weight:600;">${esc(r.score.toFixed(1))}</td>
+                                            <td style="color:var(--gray-500);font-size:0.8rem;">${esc(String(r.wins))}W / ${esc(String(r.losses))}L</td>
+                                            <td><span class="status status-${r.delphi_status === 'confirmed' ? 'confirmed' : r.delphi_status === 'removed' ? 'removed' : 'active'}">${esc(r.delphi_status)}</span></td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>`
                         }
-                    </div>
+                    </article>
                 `;
             } catch (e) {
                 document.getElementById('pairwise-results').innerHTML =
@@ -174,48 +234,77 @@
             }
         }
 
+        // -----------------------------------------------------------------
+        // Concordance — admin only
+        // -----------------------------------------------------------------
         async function loadConcordance() {
             setActiveTab('tab-conc');
             document.getElementById('delphi-results').style.display = 'none';
             document.getElementById('pairwise-results').style.display = 'none';
             document.getElementById('concordance-results').style.display = 'block';
 
+            // Concordance is admin-only
+            const isAdmin = await requireAdminLogin();
+            if (!isAdmin) {
+                document.getElementById('concordance-results').innerHTML =
+                    '<div class="card"><p style="color:var(--gray-500);text-align:center;">Admin access required to view concordance analysis.</p></div>';
+                return;
+            }
+
             try {
                 const data = await api(`/api/analysis/concordance/${WG_NUMBER}`);
                 document.getElementById('results-subtitle').textContent =
-                    `Working Group ${WG_NUMBER} — Method Concordance`;
+                    'Working Group ' + esc(String(WG_NUMBER)) + ' \u2014 Method Concordance';
 
                 if (data.error) {
                     document.getElementById('concordance-results').innerHTML =
-                        `<div class="card"><p style="color:var(--gray-500);">${data.error}</p></div>`;
+                        `<div class="card"><p style="color:var(--gray-500);">${esc(data.error)}</p></div>`;
                     return;
                 }
 
+                const rho = data.spearman_rho;
+                const colorClass = concordanceClass(rho);
+
                 document.getElementById('concordance-results').innerHTML = `
-                    <div class="card">
-                        <div class="card-header">Delphi vs. Pairwise Concordance</div>
+                    <article class="card" aria-label="Concordance summary">
+                        <h2 class="card-header">Delphi vs. Pairwise Concordance</h2>
                         <div style="text-align:center;padding:16px;">
-                            <div style="font-size:3rem;font-weight:700;color:var(--primary);">${data.spearman_rho.toFixed(2)}</div>
-                            <div style="font-size:0.85rem;color:var(--gray-500);margin-top:4px;">Spearman's rho (${data.n_questions} questions)</div>
-                            <div style="font-size:0.9rem;color:var(--gray-700);margin-top:8px;">${data.interpretation}</div>
+                            <div class="concordance-hero ${colorClass}" aria-label="Spearman rho value">${esc(rho.toFixed(2))}</div>
+                            <p style="font-size:0.85rem;color:var(--gray-500);margin-top:8px;">
+                                Spearman's rho (${esc(String(data.n_questions))} questions)
+                            </p>
+                            <p style="margin-top:4px;">
+                                <span class="concordance-value ${colorClass}">${esc(concordanceLabel(rho))}</span>
+                            </p>
+                            <p style="font-size:0.9rem;color:var(--gray-700);margin-top:8px;">${esc(data.interpretation)}</p>
                         </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">Rank Comparison</div>
-                        <table class="data-table">
-                            <thead><tr><th>Question</th><th>Delphi Rank</th><th>Pairwise Rank</th><th>Difference</th></tr></thead>
+                    </article>
+                    <article class="card" aria-label="Rank comparison table">
+                        <h2 class="card-header">Rank Comparison</h2>
+                        <table class="data-table" aria-label="Delphi vs pairwise rank comparison">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Question</th>
+                                    <th scope="col">Delphi Rank</th>
+                                    <th scope="col">Pairwise Rank</th>
+                                    <th scope="col">Difference</th>
+                                </tr>
+                            </thead>
                             <tbody>
-                                ${data.comparison.map(c => `
-                                    <tr>
-                                        <td style="font-size:0.85rem;">${c.text}</td>
-                                        <td style="text-align:center;">${c.delphi_rank}</td>
-                                        <td style="text-align:center;">${c.pairwise_rank}</td>
-                                        <td style="text-align:center;font-weight:600;color:${c.rank_difference > 2 ? 'var(--warning)' : 'var(--gray-500)'};">${c.rank_difference}</td>
-                                    </tr>
-                                `).join('')}
+                                ${data.comparison.map(c => {
+                                    const diffClass = c.rank_difference > 2 ? 'rank-diff-high' : 'rank-diff-low';
+                                    return `
+                                        <tr>
+                                            <td style="font-size:0.85rem;">${esc(c.text)}</td>
+                                            <td style="text-align:center;">${esc(String(c.delphi_rank))}</td>
+                                            <td style="text-align:center;">${esc(String(c.pairwise_rank))}</td>
+                                            <td style="text-align:center;" class="${diffClass}">${esc(String(c.rank_difference))}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
-                    </div>
+                    </article>
                 `;
             } catch (e) {
                 document.getElementById('concordance-results').innerHTML =

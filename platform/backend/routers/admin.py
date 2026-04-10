@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -15,8 +15,10 @@ from ..database import (
     get_db, WorkingGroup, Question, Participant, DelphiResponse,
     DelphiSuggestion, PairwiseVote, ConferenceVote, ConferenceSession,
     AISynthesisRun, AISynthesisItem, QuestionStatus, DelphiRound,
-    DispositionVote, HumanDecision
+    DispositionVote, HumanDecision, AuditLog, write_audit_log,
 )
+from ..auth import require_admin
+from ..validators import safe_csv_value
 
 router = APIRouter()
 
@@ -24,47 +26,92 @@ router = APIRouter()
 # --- Dashboard ---
 
 @router.get("/dashboard")
-def dashboard_data(db: Session = Depends(get_db)):
+def dashboard_data(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Get overview data for the admin dashboard."""
     wgs = db.query(WorkingGroup).order_by(WorkingGroup.number).all()
 
+    # --- Batch-load question counts per WG using GROUP BY ---
+    question_counts = (
+        db.query(
+            Question.wg_id,
+            func.count(Question.id).label("total"),
+            func.sum(case((Question.status == QuestionStatus.CONFIRMED, 1), else_=0)).label("confirmed"),
+            func.sum(case((Question.status == QuestionStatus.ACTIVE, 1), else_=0)).label("active"),
+            func.sum(case((Question.status == QuestionStatus.REMOVED, 1), else_=0)).label("removed"),
+        )
+        .group_by(Question.wg_id)
+        .all()
+    )
+    q_map = {
+        row.wg_id: {
+            "total": row.total,
+            "confirmed": int(row.confirmed or 0),
+            "active": int(row.active or 0),
+            "removed": int(row.removed or 0),
+        }
+        for row in question_counts
+    }
+
+    # --- Batch-load R1/R2 response counts per WG using GROUP BY ---
+    r1_counts = (
+        db.query(
+            Question.wg_id,
+            func.count(DelphiResponse.id).label("responses"),
+            func.count(func.distinct(DelphiResponse.participant_id)).label("participants"),
+        )
+        .join(Question, DelphiResponse.question_id == Question.id)
+        .filter(DelphiResponse.round == DelphiRound.ROUND_1)
+        .group_by(Question.wg_id)
+        .all()
+    )
+    r1_map = {
+        row.wg_id: {"responses": row.responses, "participants": row.participants}
+        for row in r1_counts
+    }
+
+    r2_counts = (
+        db.query(
+            Question.wg_id,
+            func.count(DelphiResponse.id).label("responses"),
+        )
+        .join(Question, DelphiResponse.question_id == Question.id)
+        .filter(DelphiResponse.round == DelphiRound.ROUND_2)
+        .group_by(Question.wg_id)
+        .all()
+    )
+    r2_map = {row.wg_id: row.responses for row in r2_counts}
+
+    # --- Batch-load pairwise vote counts per WG ---
+    pw_counts = (
+        db.query(
+            PairwiseVote.wg_id,
+            func.count(PairwiseVote.id).label("votes"),
+        )
+        .group_by(PairwiseVote.wg_id)
+        .all()
+    )
+    pw_map = {row.wg_id: row.votes for row in pw_counts}
+
     wg_summaries = []
     for wg in wgs:
-        questions = db.query(Question).filter(Question.wg_id == wg.id).all()
-        total_q = len(questions)
-        confirmed = sum(1 for q in questions if q.status == QuestionStatus.CONFIRMED)
-        active = sum(1 for q in questions if q.status == QuestionStatus.ACTIVE)
-        removed = sum(1 for q in questions if q.status == QuestionStatus.REMOVED)
-
-        r1_responses = db.query(DelphiResponse).join(Question).filter(
-            Question.wg_id == wg.id,
-            DelphiResponse.round == DelphiRound.ROUND_1,
-        ).count()
-        r2_responses = db.query(DelphiResponse).join(Question).filter(
-            Question.wg_id == wg.id,
-            DelphiResponse.round == DelphiRound.ROUND_2,
-        ).count()
-
-        r1_participants = db.query(func.count(func.distinct(DelphiResponse.participant_id))).join(Question).filter(
-            Question.wg_id == wg.id,
-            DelphiResponse.round == DelphiRound.ROUND_1,
-        ).scalar() or 0
-
-        pairwise_votes = db.query(PairwiseVote).filter(PairwiseVote.wg_id == wg.id).count()
-
+        qdata = q_map.get(wg.id, {"total": 0, "confirmed": 0, "active": 0, "removed": 0})
+        r1 = r1_map.get(wg.id, {"responses": 0, "participants": 0})
         wg_summaries.append({
             "wg_number": wg.number,
             "name": wg.name,
             "short_name": wg.short_name,
             "pillar": wg.pillar,
-            "total_questions": total_q,
-            "confirmed": confirmed,
-            "active": active,
-            "removed": removed,
-            "r1_responses": r1_responses,
-            "r1_participants": r1_participants,
-            "r2_responses": r2_responses,
-            "pairwise_votes": pairwise_votes,
+            "total_questions": qdata["total"],
+            "confirmed": qdata["confirmed"],
+            "active": qdata["active"],
+            "removed": qdata["removed"],
+            "r1_responses": r1["responses"],
+            "r1_participants": r1["participants"],
+            "r2_responses": r2_map.get(wg.id, 0),
+            "pairwise_votes": pw_map.get(wg.id, 0),
             "co_leads": [{"name": cl.name, "email": cl.email} for cl in wg.co_leads],
         })
 
@@ -98,7 +145,12 @@ def dashboard_data(db: Session = Depends(get_db)):
 # --- Data Export ---
 
 @router.get("/export/delphi/{wg_number}/{round_name}")
-def export_delphi_data(wg_number: int, round_name: str, db: Session = Depends(get_db)):
+def export_delphi_data(
+    wg_number: int,
+    round_name: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Export Delphi responses as CSV."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
@@ -118,10 +170,21 @@ def export_delphi_data(wg_number: int, round_name: str, db: Session = Depends(ge
     ])
     for r in responses:
         writer.writerow([
-            r.question_id, r.question.text, r.participant_id,
-            r.disposition.value, r.importance_rating, r.comment or "",
-            r.created_at.isoformat()
+            safe_csv_value(str(r.question_id)),
+            safe_csv_value(r.question.text),
+            safe_csv_value(str(r.participant_id)),
+            safe_csv_value(r.disposition.value),
+            safe_csv_value(str(r.importance_rating) if r.importance_rating is not None else ""),
+            safe_csv_value(r.comment or ""),
+            safe_csv_value(r.created_at.isoformat()),
         ])
+
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="export_delphi",
+        detail=f"Exported delphi WG{wg_number} {round_name} ({len(responses)} rows)",
+    )
 
     output.seek(0)
     return StreamingResponse(
@@ -132,7 +195,11 @@ def export_delphi_data(wg_number: int, round_name: str, db: Session = Depends(ge
 
 
 @router.get("/export/pairwise/{wg_number}")
-def export_pairwise_data(wg_number: int, db: Session = Depends(get_db)):
+def export_pairwise_data(
+    wg_number: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Export pairwise comparison data as CSV."""
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
@@ -148,9 +215,21 @@ def export_pairwise_data(wg_number: int, db: Session = Depends(get_db)):
     ])
     for v in votes:
         writer.writerow([
-            v.id, v.participant_id, v.question_a_id, v.question_b_id,
-            v.winner_id or "skip", v.response_time_ms or "", v.created_at.isoformat()
+            safe_csv_value(str(v.id)),
+            safe_csv_value(str(v.participant_id)),
+            safe_csv_value(str(v.question_a_id)),
+            safe_csv_value(str(v.question_b_id)),
+            safe_csv_value(str(v.winner_id) if v.winner_id else "skip"),
+            safe_csv_value(str(v.response_time_ms) if v.response_time_ms else ""),
+            safe_csv_value(v.created_at.isoformat()),
         ])
+
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="export_pairwise",
+        detail=f"Exported pairwise WG{wg_number} ({len(votes)} rows)",
+    )
 
     output.seek(0)
     return StreamingResponse(
@@ -161,7 +240,11 @@ def export_pairwise_data(wg_number: int, db: Session = Depends(get_db)):
 
 
 @router.get("/export/conference/{session_id}")
-def export_conference_data(session_id: int, db: Session = Depends(get_db)):
+def export_conference_data(
+    session_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Export conference-day voting data as CSV."""
     votes = db.query(ConferenceVote).filter(ConferenceVote.session_id == session_id).all()
 
@@ -172,9 +255,20 @@ def export_conference_data(session_id: int, db: Session = Depends(get_db)):
     ])
     for v in votes:
         writer.writerow([
-            v.id, v.participant_id, v.question_id, v.vote_type,
-            v.value, v.created_at.isoformat()
+            safe_csv_value(str(v.id)),
+            safe_csv_value(str(v.participant_id)),
+            safe_csv_value(str(v.question_id)),
+            safe_csv_value(v.vote_type),
+            safe_csv_value(str(v.value)),
+            safe_csv_value(v.created_at.isoformat()),
         ])
+
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="export_conference",
+        detail=f"Exported conference session {session_id} ({len(votes)} rows)",
+    )
 
     output.seek(0)
     return StreamingResponse(
@@ -185,7 +279,10 @@ def export_conference_data(session_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/export/ai-synthesis")
-def export_ai_synthesis_log(db: Session = Depends(get_db)):
+def export_ai_synthesis_log(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Export full AI synthesis audit log as JSON."""
     runs = db.query(AISynthesisRun).order_by(AISynthesisRun.created_at).all()
     export = []
@@ -212,6 +309,13 @@ def export_ai_synthesis_log(db: Session = Depends(get_db)):
             } for i in run.items],
         })
 
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="export_ai_synthesis",
+        detail=f"Exported AI synthesis audit log ({len(runs)} runs)",
+    )
+
     return StreamingResponse(
         iter([json.dumps(export, indent=2)]),
         media_type="application/json",
@@ -220,7 +324,10 @@ def export_ai_synthesis_log(db: Session = Depends(get_db)):
 
 
 @router.get("/export/full-results")
-def export_full_results(db: Session = Depends(get_db)):
+def export_full_results(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
     """Export the complete results summary — all WGs, all methods."""
     wgs = db.query(WorkingGroup).order_by(WorkingGroup.number).all()
 
@@ -252,5 +359,12 @@ def export_full_results(db: Session = Depends(get_db)):
             } for q in questions],
         }
         results["working_groups"].append(wg_data)
+
+    write_audit_log(
+        db,
+        user_email=admin.get("sub", "unknown"),
+        action="export_full_results",
+        detail=f"Exported full results ({len(wgs)} working groups)",
+    )
 
     return results
