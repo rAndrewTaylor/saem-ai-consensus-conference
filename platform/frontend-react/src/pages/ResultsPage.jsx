@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   BarChart3, TrendingUp, GitCompare, ArrowLeft, ChevronDown, ChevronRight,
-  AlertCircle, Lock
+  AlertCircle, Lock, MessageSquare, Download
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -12,7 +12,7 @@ import {
   Cell, Legend
 } from 'recharts';
 import { useAdmin } from '@/hooks/useAdmin';
-import { api } from '@/lib/api';
+import { api, getAdminToken } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,6 +77,56 @@ function InlineBar({ include = 0, modify = 0, exclude = 0 }) {
 }
 
 // ---------------------------------------------------------------------------
+// Comment viewer for individual questions
+// ---------------------------------------------------------------------------
+function CommentViewer({ wgNumber, roundName, questionId }) {
+  const [comments, setComments] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    if (comments) { setOpen(!open); return; }
+    setLoading(true);
+    try {
+      const data = await api(`/api/surveys/comments/${wgNumber}/${roundName}`, {
+        params: { question_id: questionId }
+      });
+      setComments(data[0]?.comments || []);
+      setOpen(true);
+    } catch { setComments([]); setOpen(true); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="mt-3">
+      <button onClick={load} className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+        <MessageSquare className="h-3.5 w-3.5" />
+        {loading ? 'Loading...' : open ? 'Hide Comments' : 'View Comments'}
+      </button>
+      <AnimatePresence>
+        {open && comments && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="mt-2 space-y-2 border-l-2 border-gray-200 pl-4">
+              {comments.length === 0 && <p className="text-sm text-gray-400 italic">No comments for this question.</p>}
+              {comments.map((c, i) => (
+                <div key={i} className="text-sm">
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium mr-2 ${
+                    c.disposition === 'include' ? 'bg-emerald-100 text-emerald-700' :
+                    c.disposition === 'include_with_modifications' ? 'bg-amber-100 text-amber-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>{c.disposition.replace(/_/g, ' ')}</span>
+                  <span className="text-gray-600">{c.comment}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Stacked bar chart for a question group
 // ---------------------------------------------------------------------------
 function GroupChart({ questions }) {
@@ -123,7 +173,7 @@ function GroupChart({ questions }) {
 // ---------------------------------------------------------------------------
 // Question card
 // ---------------------------------------------------------------------------
-function QuestionCard({ question, index }) {
+function QuestionCard({ question, index, wgNumber, roundName }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -152,6 +202,9 @@ function QuestionCard({ question, index }) {
           <span>N = {question.n_responses}</span>
         )}
       </div>
+      {wgNumber && roundName && question.id && (
+        <CommentViewer wgNumber={wgNumber} roundName={roundName} questionId={question.id} />
+      )}
     </motion.div>
   );
 }
@@ -209,16 +262,29 @@ function DelphiTab({ wgNumber, round }) {
     );
   }
 
+  const currentRound = `round_${round}`;
+
   return (
     <div className="space-y-8">
-      {/* Vote color legend */}
-      <div className="flex flex-wrap gap-4 text-xs font-medium">
-        {Object.entries(VOTE_COLORS).map(([key, color]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-            <span className="capitalize text-gray-600">{key}</span>
-          </div>
-        ))}
+      {/* Vote color legend + export */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-4 text-xs font-medium">
+          {Object.entries(VOTE_COLORS).map(([key, color]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+              <span className="capitalize text-gray-600">{key}</span>
+            </div>
+          ))}
+        </div>
+        {getAdminToken() && (
+          <a
+            href={`/api/admin/export/delphi/${wgNumber}/${round}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-gray-800"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download Results
+          </a>
+        )}
       </div>
 
       {Object.entries(grouped).map(([status, qs]) => {
@@ -246,7 +312,7 @@ function DelphiTab({ wgNumber, round }) {
             {/* Individual question cards */}
             <div className="space-y-3">
               {qs.map((q, i) => (
-                <QuestionCard key={q.id || i} question={q} index={i} />
+                <QuestionCard key={q.id || i} question={q} index={i} wgNumber={wgNumber} roundName={currentRound} />
               ))}
             </div>
           </motion.section>
@@ -326,6 +392,19 @@ function PairwiseTab({ wgNumber }) {
 
   return (
     <div className="space-y-6">
+      {/* Export button */}
+      {getAdminToken() && (
+        <div className="flex justify-end">
+          <a
+            href={`/api/admin/export/pairwise/${wgNumber}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-gray-800"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download Results
+          </a>
+        </div>
+      )}
+
       {/* Stats */}
       {stats && (
         <motion.div
@@ -524,11 +603,15 @@ function ConcordanceTab({ wgNumber }) {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     return (
-      <div style={chartTooltipStyle} className="max-w-xs bg-white">
-        <p className="mb-1 text-xs font-semibold text-gray-800">{d.text}</p>
+      <div style={{ ...chartTooltipStyle, maxWidth: '20rem' }} className="bg-white">
+        <p className="mb-1 text-xs font-semibold leading-snug text-gray-800">{d.text}</p>
         <div className="flex gap-3 text-xs text-gray-600">
           <span>Delphi: #{d.delphi_rank}</span>
           <span>Pairwise: #{d.pairwise_rank}</span>
+          <span className={cn(
+            'font-semibold',
+            d.diff <= 1 ? 'text-emerald-600' : d.diff <= 3 ? 'text-blue-600' : d.diff <= 5 ? 'text-amber-600' : 'text-red-600'
+          )}>Diff: {d.diff}</span>
         </div>
       </div>
     );
@@ -572,6 +655,15 @@ function ConcordanceTab({ wgNumber }) {
               <div role="img" aria-label="Concordance scatter plot comparing Delphi rank to pairwise rank">
                 <ResponsiveContainer width="100%" height={380}>
                   <ScatterChart margin={{ top: 16, right: 24, bottom: 16, left: 16 }}>
+                    <defs>
+                      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis
                       type="number"
@@ -601,7 +693,31 @@ function ConcordanceTab({ wgNumber }) {
                       strokeDasharray="6 3"
                       strokeWidth={1.5}
                     />
-                    <Scatter data={scatterData} fill="#2563eb">
+                    <Scatter
+                      data={scatterData}
+                      fill="#2563eb"
+                      shape={(props) => {
+                        const { cx, cy, payload } = props;
+                        const color = diffToColor(payload.diff);
+                        return (
+                          <g>
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r={8}
+                              fill={color}
+                              fillOpacity={0.85}
+                              stroke={color}
+                              strokeWidth={2}
+                              strokeOpacity={0.3}
+                              style={{ cursor: 'pointer', transition: 'filter 0.2s, r 0.2s' }}
+                              onMouseEnter={(e) => { e.target.setAttribute('filter', 'url(#glow)'); e.target.setAttribute('r', '10'); }}
+                              onMouseLeave={(e) => { e.target.removeAttribute('filter'); e.target.setAttribute('r', '8'); }}
+                            />
+                          </g>
+                        );
+                      }}
+                    >
                       {scatterData.map((entry, i) => (
                         <Cell key={i} fill={diffToColor(entry.diff)} />
                       ))}

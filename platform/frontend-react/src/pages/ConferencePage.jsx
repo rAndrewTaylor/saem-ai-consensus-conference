@@ -15,9 +15,11 @@ import {
   MessageSquare,
   Home,
   CheckCircle2,
+  CheckCircle,
   Users,
   Wifi,
   WifiOff,
+  GripVertical,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -467,6 +469,7 @@ export function ConferencePage() {
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                           className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
                         >
+                          <GripVertical className="h-5 w-5 text-gray-300 cursor-grab shrink-0" />
                           <span className={cn(
                             'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
                             idx === 0 ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'
@@ -621,7 +624,14 @@ export function ConferencePage() {
                             onChange={(e) => setAllocation(qId, e.target.value)}
                             className="h-10 w-20 shrink-0 rounded-lg border border-gray-200 px-3 text-center font-mono text-sm font-semibold text-gray-800 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
                           />
-                          {/* Mini bar chart */}
+                          {/* Small absolute bar (out of 100) */}
+                          <div className="h-2 rounded-full bg-gray-100 flex-1 max-w-[120px]">
+                            <div
+                              className="h-full rounded-full bg-primary-500 transition-all duration-300"
+                              style={{ width: `${Math.min(100, (val / 100) * 100)}%` }}
+                            />
+                          </div>
+                          {/* Relative bar chart */}
                           <div className="relative h-6 flex-1 overflow-hidden rounded-full bg-gray-100">
                             <motion.div
                               className={cn(

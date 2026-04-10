@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   ClipboardList,
@@ -153,6 +153,64 @@ function WGSkeletons() {
   );
 }
 
+// ── Typing Effect ──────────────────────────────────────────────────
+const TYPING_PHRASES = [
+  'Technology \u00b7 Training \u00b7 Self \u00b7 Society',
+  'Defining the Next Decade of AI Research',
+  'Modified Delphi \u00b7 Pairwise Ranking \u00b7 Live Voting',
+];
+
+function TypingEffect() {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const phrase = TYPING_PHRASES[phraseIndex];
+    let timeout;
+
+    if (!deleting && charIndex < phrase.length) {
+      timeout = setTimeout(() => setCharIndex((c) => c + 1), 45);
+    } else if (!deleting && charIndex === phrase.length) {
+      timeout = setTimeout(() => setDeleting(true), 2000);
+    } else if (deleting && charIndex > 0) {
+      timeout = setTimeout(() => setCharIndex((c) => c - 1), 25);
+    } else if (deleting && charIndex === 0) {
+      setDeleting(false);
+      setPhraseIndex((p) => (p + 1) % TYPING_PHRASES.length);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [charIndex, deleting, phraseIndex]);
+
+  return (
+    <span>
+      {TYPING_PHRASES[phraseIndex].slice(0, charIndex)}
+      <span className="animate-pulse">|</span>
+    </span>
+  );
+}
+
+// ── Animated Number Counter ────────────────────────────────────────
+function AnimatedNumber({ value, duration = 600 }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+
+  useEffect(() => {
+    if (!inView || !value) return;
+    const start = performance.now();
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      setDisplay(Math.round(progress * value));
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }, [inView, value, duration]);
+
+  return <span ref={ref}>{display}</span>;
+}
+
 // ── Main Component ──────────────────────────────────────────────────
 export function HomePage() {
   usePageTitle(null);
@@ -186,9 +244,27 @@ export function HomePage() {
 
       {/* ─── Hero Section ──────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-800 via-primary-600 to-primary-500 px-4 py-24 text-white sm:px-6 sm:py-32">
-        {/* Decorative blurred circles */}
-        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-white/5 blur-3xl" />
+        {/* Animated floating orbs */}
+        <motion.div
+          className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white opacity-10 blur-3xl"
+          animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-white opacity-10 blur-3xl"
+          animate={{ x: [0, -25, 0], y: [0, 15, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="pointer-events-none absolute left-1/3 top-1/4 h-64 w-64 rounded-full bg-white opacity-[0.07] blur-3xl"
+          animate={{ x: [0, 20, 0], y: [0, -15, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="pointer-events-none absolute right-1/4 bottom-1/3 h-72 w-72 rounded-full bg-white opacity-[0.05] blur-3xl"
+          animate={{ x: [0, -15, 0], y: [0, 25, 0] }}
+          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
+        />
 
         <div className="relative mx-auto max-w-4xl text-center">
           <motion.h1
@@ -206,7 +282,7 @@ export function HomePage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="mx-auto mt-6 max-w-2xl text-lg font-medium text-primary-100 sm:text-xl"
           >
-            Artificial Intelligence and Emergency Medicine: Technology, Training, Self, and Society
+            AI &amp; Emergency Medicine: <TypingEffect />
           </motion.p>
 
           <motion.div
@@ -255,12 +331,10 @@ export function HomePage() {
               impact.
             </p>
             <p>
-              The conference is co-chaired by{' '}
-              <strong className="text-gray-800">R. Andrew Taylor, MD, MHS</strong> (Yale
-              University) and{' '}
-              <strong className="text-gray-800">Jeremiah S. Hinson, MD, PhD</strong>{' '}
-              (Johns Hopkins University), with support from SAEM, CORD, and the
-              University of Virginia.
+              The conference is chaired by{' '}
+              <strong className="text-gray-800">R. Andrew Taylor, MD, MHS</strong>{' '}
+              (University of Virginia), with support from SAEM, CORD, and the
+              University of Virginia School of Medicine.
             </p>
           </div>
         </motion.div>
@@ -414,8 +488,8 @@ export function HomePage() {
                   const pillarColor = PILLAR_COLORS[wg.pillar] || 'border-l-primary-500';
                   const badgeVariant = PILLAR_BADGE_VARIANT[wg.pillar] || 'default';
                   return (
-                    <motion.div key={wg.wg_number} variants={staggerItem}>
-                      <Card className={`h-full border-l-4 ${pillarColor}`}>
+                    <motion.div key={wg.wg_number} variants={staggerItem} whileHover={{ y: -4, transition: { duration: 0.2 } }} className="will-change-transform">
+                      <Card className={`h-full border-l-4 ${pillarColor} transition-shadow duration-200 hover:shadow-lg`}>
                         <CardContent className="flex h-full flex-col">
                           <div className="flex items-start justify-between">
                             <Badge variant={badgeVariant}>WG {wg.wg_number}</Badge>
@@ -437,19 +511,19 @@ export function HomePage() {
                             {wg.question_count != null && (
                               <span className="flex items-center gap-1">
                                 <ClipboardList className="h-3.5 w-3.5" />
-                                {wg.question_count} questions
+                                <AnimatedNumber value={wg.question_count} /> questions
                               </span>
                             )}
                             {wg.confirmed_count != null && (
                               <span className="flex items-center gap-1">
                                 <UserCheck className="h-3.5 w-3.5" />
-                                {wg.confirmed_count} confirmed
+                                <AnimatedNumber value={wg.confirmed_count} /> confirmed
                               </span>
                             )}
                             {wg.r1_participants != null && (
                               <span className="flex items-center gap-1">
                                 <BarChart3 className="h-3.5 w-3.5" />
-                                {wg.r1_participants} R1
+                                <AnimatedNumber value={wg.r1_participants} /> R1
                               </span>
                             )}
                           </div>
@@ -538,7 +612,10 @@ export function HomePage() {
                                 {session.title || `Session ${session.id}`}
                               </h3>
                               <Badge variant="live">
-                                <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                <span className="relative mr-1.5 flex h-3 w-3">
+                                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                  <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
+                                </span>
                                 LIVE
                               </Badge>
                             </div>

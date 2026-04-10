@@ -8,9 +8,9 @@
 
 ## AUTHORS
 
-R. Andrew Taylor, MD, MHS^1*; Jeremiah S. Hinson, MD, PhD^2*; [WG1 Co-Lead A]^3; [WG1 Co-Lead B]^4; [WG2 Co-Lead A]^5; [WG2 Co-Lead B]^6; [WG3 Co-Lead A]^7; [WG3 Co-Lead B]^8; [WG4 Co-Lead A]^9; [WG4 Co-Lead B]^10; [WG5 Co-Lead A]^11; [WG5 Co-Lead B]^12; [Planning Committee Members]; [Additional Working Group Members listed alphabetically]
+R. Andrew Taylor, MD, MHS^1*; [WG1 Co-Lead A]^2; [WG1 Co-Lead B]^3; [WG2 Co-Lead A]^4; [WG2 Co-Lead B]^5; [WG3 Co-Lead A]^6; [WG3 Co-Lead B]^7; [WG4 Co-Lead A]^8; [WG4 Co-Lead B]^9; [WG5 Co-Lead A]^10; [WG5 Co-Lead B]^11; [Planning Committee Members]; [Additional Working Group Members listed alphabetically]
 
-\* Co-chairs and co-first authors
+\* Conference chair and corresponding author
 
 ---
 
@@ -304,12 +304,12 @@ R. Andrew Taylor, MD, MHS^1*; Jeremiah S. Hinson, MD, PhD^2*; [WG1 Co-Lead A]^3;
 
 ## AUTHOR CONTRIBUTIONS
 
-- Conference conception and design: Taylor, Hinson, [planning committee]
+- Conference conception and design: Taylor, [planning committee]
 - Working group leadership and data collection: [co-leads by WG]
 - Literature reviews: [WG members and librarians]
 - AI synthesis pipeline design and execution: [names]
 - Data analysis: [names]
-- Manuscript drafting: Taylor, Hinson, [co-leads]
+- Manuscript drafting: Taylor, [co-leads]
 - Critical revision: All authors
 - Final approval: All authors
 
@@ -351,7 +351,7 @@ R. Andrew Taylor, MD, MHS^1*; Jeremiah S. Hinson, MD, PhD^2*; [WG1 Co-Lead A]^3;
 |---|---|
 | May 21, 2026 | Conference day — data collection complete |
 | May 22 - Jun 5 | Data cleaning, analysis, concordance computation |
-| Jun 5 - Jun 19 | First draft of Results and Tables (Taylor, Hinson) |
+| Jun 5 - Jun 19 | First draft of Results and Tables (Taylor) |
 | Jun 19 - Jul 3 | Co-leads draft WG-specific Results subsections |
 | Jul 3 - Jul 17 | Full manuscript draft circulated to all authors |
 | Jul 17 - Jul 31 | Author review and revision |

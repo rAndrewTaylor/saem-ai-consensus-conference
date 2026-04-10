@@ -2,14 +2,12 @@
 
 ## Authors
 
-R. Andrew Taylor, MD, MHS^1*; Jeremiah S. Hinson, MD, PhD^2*; [Working Group Co-Leads]^3-12; [Planning Committee Members]; [Methodologist]; [Librarian Team]
+R. Andrew Taylor, MD, MHS^1*; [Working Group Co-Leads]^2-11; [Planning Committee Members]; [Methodologist]; [Librarian Team]
 
-^1 Department of Emergency Medicine, Yale School of Medicine, New Haven, CT
-^2 Department of Emergency Medicine, Johns Hopkins University School of Medicine, Baltimore, MD
+^1 Department of Emergency Medicine, University of Virginia School of Medicine, Charlottesville, VA
 [Additional affiliations]
 
-\* Co-first authors
-Corresponding author: R. Andrew Taylor, MD, MHS [contact details]
+\* Corresponding author: R. Andrew Taylor, MD, MHS [contact details]
 
 ---
 

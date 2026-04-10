@@ -12,6 +12,8 @@ import {
   Send,
   ChevronUp,
   ChevronDown,
+  CheckCircle,
+  Sparkles,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,6 +52,13 @@ export function PairwisePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSide, setSelectedSide] = useState(null);
   const [lastResponseTime, setLastResponseTime] = useState(null);
+  const [showCheck, setShowCheck] = useState(null); // 'a' or 'b'
+
+  // Streak counter
+  const [streak, setStreak] = useState(0);
+
+  // Response time tracking for completion stats
+  const responseTimes = useRef([]);
 
   // Progress
   const [completed, setCompleted] = useState(0);
@@ -86,7 +95,7 @@ export function PairwisePage() {
       setDisplayedCompleted(data.completed ?? completed);
       pairStartTime.current = Date.now();
     } catch (err) {
-      if (err.status === 404 || err.message?.includes('No more pairs')) {
+      if (err.status === 404 || err.status === 400 || err.message?.includes('No more pairs') || err.message?.includes('Need at least 2')) {
         setPair(null);
         setPairError('all_done');
       } else {
@@ -140,10 +149,17 @@ export function PairwisePage() {
       });
 
       setCompleted(prev => prev + 1);
+      setStreak(prev => prev + 1);
+      responseTimes.current.push(responseTime);
       votesSinceRefresh.current += 1;
 
-      // Brief delay to show selection animation, then load next pair
+      // Show checkmark on the winning side
+      const winningSide = winnerId === pair.option_a?.id ? 'a' : 'b';
+      setShowCheck(winningSide);
+
+      // Brief delay to show check animation, then load next pair
       setTimeout(async () => {
+        setShowCheck(null);
         setSelectedSide(null);
         setPairKey(prev => prev + 1);
         await fetchPair();
@@ -181,6 +197,7 @@ export function PairwisePage() {
     } catch {
       // Skip failures are non-critical
     }
+    setStreak(0);
     setPairKey(prev => prev + 1);
     await fetchPair();
     setIsSubmitting(false);
@@ -276,12 +293,26 @@ export function PairwisePage() {
                 <span className="text-gray-400"> / {totalPairs} comparisons</span>
               )}
             </span>
-            {lastResponseTime != null && (
-              <Badge variant="default" className="gap-1">
-                <Timer className="h-3 w-3" />
-                {(lastResponseTime / 1000).toFixed(1)}s
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {streak >= 2 && (
+                <motion.div
+                  key={streak}
+                  initial={{ scale: 1.4 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                >
+                  <Badge variant="default" className="gap-1 bg-orange-100 text-orange-700 border-orange-200">
+                    <span aria-hidden>&#128293;</span> {streak} streak
+                  </Badge>
+                </motion.div>
+              )}
+              {lastResponseTime != null && (
+                <Badge variant="default" className="gap-1">
+                  <Timer className="h-3 w-3" />
+                  {(lastResponseTime / 1000).toFixed(1)}s
+                </Badge>
+              )}
+            </div>
           </div>
           <Progress value={progressPct} />
         </div>
@@ -300,13 +331,67 @@ export function PairwisePage() {
           <Skeleton className="h-52 rounded-xl" />
         </div>
       ) : pairError === 'all_done' ? (
-        <Card className="border-emerald-200 bg-emerald-50">
-          <CardContent className="py-12 text-center">
-            <Trophy className="mx-auto mb-4 h-12 w-12 text-emerald-500" />
-            <h2 className="text-xl font-bold text-emerald-800">All comparisons complete!</h2>
-            <p className="mt-2 text-sm text-emerald-600">
-              Thank you for ranking all {displayedCompleted} pairs. Your input helps build consensus.
-            </p>
+        <Card className="border-amber-200 bg-gradient-to-b from-amber-50 to-white">
+          <CardContent className="py-14 text-center">
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            >
+              <Sparkles className="mx-auto mb-4 h-16 w-16 text-amber-500 drop-shadow-md" />
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-2xl font-bold text-gray-900"
+            >
+              Amazing! You&apos;ve compared all available pairs.
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="mt-2 text-base text-gray-600"
+            >
+              Your input is shaping the research agenda.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mt-6 flex items-center justify-center gap-6"
+            >
+              <div className="text-center">
+                <p className="text-2xl font-bold tabular-nums text-gray-900">{displayedCompleted}</p>
+                <p className="text-xs text-gray-500">Comparisons</p>
+              </div>
+              {responseTimes.current.length > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl font-bold tabular-nums text-gray-900">
+                    {(responseTimes.current.reduce((a, b) => a + b, 0) / responseTimes.current.length / 1000).toFixed(1)}s
+                  </p>
+                  <p className="text-xs text-gray-500">Avg Response</p>
+                </div>
+              )}
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="mt-6"
+            >
+              <Button
+                variant="secondary"
+                className="gap-2"
+                onClick={() => {
+                  document.getElementById('rankings-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <Trophy className="h-4 w-4 text-amber-500" />
+                View Rankings
+              </Button>
+            </motion.div>
           </CardContent>
         </Card>
       ) : pairError ? (
@@ -332,10 +417,11 @@ export function PairwisePage() {
               {/* Option A */}
               <motion.div
                 key={`a-${pairKey}`}
-                initial={{ x: -60, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -60, opacity: 0 }}
+                initial={{ opacity: 0, x: 100, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -100, scale: 0.9 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="relative"
               >
                 <button
                   type="button"
@@ -359,6 +445,20 @@ export function PairwisePage() {
                     {pair.option_a?.text || pair.option_a?.question_text}
                   </p>
                 </button>
+                {/* Check overlay */}
+                <AnimatePresence>
+                  {showCheck === 'a' && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                    >
+                      <CheckCircle className="h-16 w-16 text-emerald-500 drop-shadow-lg" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
 
               {/* VS divider (mobile) */}
@@ -376,10 +476,11 @@ export function PairwisePage() {
               {/* Option B */}
               <motion.div
                 key={`b-${pairKey}`}
-                initial={{ x: 60, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 60, opacity: 0 }}
+                initial={{ opacity: 0, x: 100, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -100, scale: 0.9 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="relative"
               >
                 <button
                   type="button"
@@ -403,6 +504,20 @@ export function PairwisePage() {
                     {pair.option_b?.text || pair.option_b?.question_text}
                   </p>
                 </button>
+                {/* Check overlay */}
+                <AnimatePresence>
+                  {showCheck === 'b' && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                    >
+                      <CheckCircle className="h-16 w-16 text-emerald-500 drop-shadow-lg" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -424,7 +539,7 @@ export function PairwisePage() {
       ) : null}
 
       {/* Rankings table */}
-      <div className="mt-12">
+      <div id="rankings-section" className="mt-12">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
