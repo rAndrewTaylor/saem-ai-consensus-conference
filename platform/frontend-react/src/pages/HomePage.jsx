@@ -14,89 +14,137 @@ import {
   Radio,
   ChevronRight,
   ArrowRight,
+  ArrowDown,
   Sparkles,
   FileText,
   UserCheck,
   BarChart3,
+  CheckCircle2,
+  MessageSquare,
+  Vote,
+  ListChecks,
+  Target,
+  TrendingUp,
+  Calendar,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
+import {
+  HeroIllustration,
+  DelphiProcessIllustration,
+  PillarIllustration,
+  EmptyStateIllustration,
+  BackgroundPattern,
+} from '@/components/illustrations';
 
 // ── Pillar definitions ──────────────────────────────────────────────
 const PILLARS = [
   {
     name: 'Technology',
+    key: 'technology',
     icon: Cpu,
     color: 'pillar-technology',
     border: 'border-t-[var(--color-pillar-technology)]',
+    leftBorder: 'border-l-[var(--color-pillar-technology)]',
     bg: 'bg-blue-50',
+    tint: 'from-blue-50/80 to-transparent',
     iconColor: 'text-blue-600',
     description:
       'How AI tools are built, deployed, validated, and integrated into clinical systems and workflows.',
   },
   {
     name: 'Training',
+    key: 'training',
     icon: GraduationCap,
     color: 'pillar-training',
     border: 'border-t-[var(--color-pillar-training)]',
+    leftBorder: 'border-l-[var(--color-pillar-training)]',
     bg: 'bg-violet-50',
+    tint: 'from-violet-50/80 to-transparent',
     iconColor: 'text-violet-600',
     description:
       'How medical education and residency curricula must evolve to prepare clinicians for AI-augmented practice.',
   },
   {
     name: 'Self',
+    key: 'self',
     icon: Brain,
     color: 'pillar-self',
     border: 'border-t-[var(--color-pillar-self)]',
+    leftBorder: 'border-l-[var(--color-pillar-self)]',
     bg: 'bg-teal-50',
+    tint: 'from-teal-50/80 to-transparent',
     iconColor: 'text-teal-600',
     description:
       'How AI changes clinician cognition, decision-making, wellbeing, and professional identity.',
   },
   {
     name: 'Society',
+    key: 'society',
     icon: Scale,
     color: 'pillar-society',
     border: 'border-t-[var(--color-pillar-society)]',
+    leftBorder: 'border-l-[var(--color-pillar-society)]',
     bg: 'bg-amber-50',
+    tint: 'from-amber-50/80 to-transparent',
     iconColor: 'text-amber-600',
     description:
       'How AI in emergency medicine intersects with ethics, equity, law, policy, and public trust.',
   },
 ];
 
-// ── Process steps ───────────────────────────────────────────────────
-const STEPS = [
+// ── Process steps (detailed) ────────────────────────────────────────
+const PROCESS_STEPS = [
   {
     icon: ClipboardList,
     label: 'Delphi Survey Rounds',
-    description:
-      'Domain experts rate and refine research questions across two iterative survey rounds.',
+    color: 'blue',
+    borderColor: 'border-t-blue-500',
+    iconBg: 'bg-blue-50',
+    iconColor: 'text-blue-600',
+    bullets: [
+      'Domain experts independently rate research questions on importance and feasibility',
+      'After Round 1, AI-generated synthesis and group statistics inform Round 2 revisions',
+      'Two iterative rounds narrow and refine each working group\'s question set',
+    ],
   },
   {
     icon: GitCompare,
     label: 'Pairwise Ranking',
-    description:
-      'Head-to-head comparisons produce a rigorous priority ranking within each working group.',
+    color: 'violet',
+    borderColor: 'border-t-violet-500',
+    iconBg: 'bg-violet-50',
+    iconColor: 'text-violet-600',
+    bullets: [
+      'Head-to-head comparisons between top-rated questions from Delphi rounds',
+      'Bradley-Terry statistical model produces a rigorous priority ranking',
+      'Adaptive algorithm minimizes the number of comparisons each expert must make',
+    ],
   },
   {
     icon: Users,
     label: 'Conference Day Voting',
-    description:
-      'All participants convene to finalize the 10-year research agenda through live deliberation.',
+    color: 'emerald',
+    borderColor: 'border-t-emerald-500',
+    iconBg: 'bg-emerald-50',
+    iconColor: 'text-emerald-600',
+    bullets: [
+      'All participants convene for live deliberation and final voting',
+      'Real-time audience response with instant result visualization',
+      'Cross-working-group synthesis produces the unified 10-year research agenda',
+    ],
   },
 ];
 
 // ── Pillar color map for WG cards ───────────────────────────────────
 const PILLAR_COLORS = {
-  Technology: 'border-l-[var(--color-pillar-technology)]',
-  Training: 'border-l-[var(--color-pillar-training)]',
-  Self: 'border-l-[var(--color-pillar-self)]',
-  Society: 'border-l-[var(--color-pillar-society)]',
+  Technology: 'border-t-[var(--color-pillar-technology)]',
+  Training: 'border-t-[var(--color-pillar-training)]',
+  Self: 'border-t-[var(--color-pillar-self)]',
+  Society: 'border-t-[var(--color-pillar-society)]',
 };
 
 const PILLAR_BADGE_VARIANT = {
@@ -116,6 +164,21 @@ const fadeUp = {
   }),
 };
 
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.6, ease: 'easeOut' } },
+};
+
+const slideRight = {
+  hidden: { opacity: 0, x: -40 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+};
+
+const slideLeft = {
+  hidden: { opacity: 0, x: 40 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+};
+
 const staggerContainer = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1 } },
@@ -126,25 +189,26 @@ const staggerItem = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } },
 };
 
-const staggerLeft = {
-  hidden: { opacity: 0, x: -32 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.45, ease: 'easeOut' } },
+const scaleUp = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: 'easeOut' } },
 };
 
 // ── WG Skeleton loader ──────────────────────────────────────────────
 function WGSkeletons() {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 5 }).map((_, i) => (
         <Card key={i} className="overflow-hidden">
-          <CardContent className="space-y-3">
+          <div className="h-1.5 bg-gray-200" />
+          <CardContent className="space-y-4 p-6">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-2/3" />
-            <div className="flex gap-2 pt-2">
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-8 w-20" />
+            <div className="flex gap-3 pt-3">
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-24" />
             </div>
           </CardContent>
         </Card>
@@ -234,6 +298,10 @@ export function HomePage() {
       .finally(() => setLoadingSessions(false));
   }, []);
 
+  const scrollToWorkingGroups = () => {
+    document.getElementById('working-groups')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="flex flex-col">
       <Helmet>
@@ -242,198 +310,326 @@ export function HomePage() {
         <meta property="og:description" content="AI-Enhanced Consensus Building for Emergency Medicine Research" />
       </Helmet>
 
-      {/* ─── Hero Section ──────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary-800 via-primary-600 to-primary-500 px-4 py-24 text-white sm:px-6 sm:py-32">
+      {/* ─── Hero Section ──────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary-900 via-primary-700 to-primary-600 px-4 py-20 text-white sm:px-6 sm:py-28 lg:py-32">
+        {/* BackgroundPattern overlay */}
+        <div className="pointer-events-none absolute inset-0 text-white opacity-[0.04]">
+          <BackgroundPattern className="h-full w-full" style={{ width: '100%', height: '100%' }} />
+        </div>
+
         {/* Animated floating orbs */}
         <motion.div
-          className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white opacity-10 blur-3xl"
+          className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white opacity-[0.07] blur-3xl"
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-white opacity-10 blur-3xl"
+          className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-white opacity-[0.07] blur-3xl"
           animate={{ x: [0, -25, 0], y: [0, 15, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="pointer-events-none absolute left-1/3 top-1/4 h-64 w-64 rounded-full bg-white opacity-[0.07] blur-3xl"
+          className="pointer-events-none absolute left-1/4 top-1/3 h-64 w-64 rounded-full bg-primary-400 opacity-[0.06] blur-3xl"
           animate={{ x: [0, 20, 0], y: [0, -15, 0] }}
           transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <motion.div
-          className="pointer-events-none absolute right-1/4 bottom-1/3 h-72 w-72 rounded-full bg-white opacity-[0.05] blur-3xl"
-          animate={{ x: [0, -15, 0], y: [0, 25, 0] }}
-          transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
-        />
 
-        <div className="relative mx-auto max-w-4xl text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-5 lg:gap-16">
+          {/* Left side — text (60%) */}
+          <div className="lg:col-span-3">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+                SAEM 2026{' '}
+                <span className="block bg-gradient-to-r from-white to-primary-200 bg-clip-text text-transparent">
+                  AI Consensus Conference
+                </span>
+              </h1>
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="mt-6 max-w-xl text-lg font-medium text-primary-100 sm:text-xl"
+            >
+              AI &amp; Emergency Medicine: <TypingEffect />
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="mt-8 flex flex-wrap items-center gap-3"
+            >
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+                <Calendar className="h-4 w-4" />
+                May 21, 2026
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+                <Sparkles className="h-4 w-4" />
+                SAEM Annual Meeting
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+                <FileText className="h-4 w-4" />
+                Modified Delphi Method
+              </span>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.55 }}
+              className="mt-10"
+            >
+              <Button
+                size="lg"
+                onClick={scrollToWorkingGroups}
+                className="group bg-white text-primary-700 shadow-xl shadow-primary-900/30 hover:bg-primary-50 hover:text-primary-800"
+              >
+                Explore Working Groups
+                <ArrowDown className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-0.5" />
+              </Button>
+            </motion.div>
+          </div>
+
+          {/* Right side — illustration (40%) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, x: 40 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
+            className="hidden lg:col-span-2 lg:block"
           >
-            SAEM 2026 AI Consensus Conference
-          </motion.h1>
+            <div className="relative">
+              {/* Glow behind illustration */}
+              <div className="absolute inset-0 scale-110 rounded-full bg-white/10 blur-3xl" />
+              <HeroIllustration className="relative w-full drop-shadow-2xl" />
+            </div>
+          </motion.div>
 
-          <motion.p
+          {/* Mobile illustration (below text, smaller) */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mx-auto mt-6 max-w-2xl text-lg font-medium text-primary-100 sm:text-xl"
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mx-auto max-w-xs lg:hidden"
           >
-            AI &amp; Emergency Medicine: <TypingEffect />
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.45 }}
-            className="mt-8 flex flex-wrap items-center justify-center gap-3"
-          >
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
-              <Sparkles className="h-4 w-4" />
-              May 21, 2026 &middot; SAEM Annual Meeting
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
-              <FileText className="h-4 w-4" />
-              Modified Delphi Method
-            </span>
+            <HeroIllustration className="w-full opacity-80" />
           </motion.div>
+        </div>
+
+        {/* Curved divider at bottom */}
+        <div className="absolute -bottom-1 left-0 right-0">
+          <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="h-12 w-full sm:h-16 lg:h-20">
+            <path
+              d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80Z"
+              fill="#f9fafb"
+            />
+          </svg>
         </div>
       </section>
 
-      {/* ─── About Section ─────────────────────────────────────── */}
-      <section className="bg-white px-4 py-20 sm:px-6">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-80px' }}
-          variants={fadeUp}
-          className="mx-auto max-w-3xl"
-        >
-          <h2 className="text-3xl font-bold text-gray-900">About This Conference</h2>
-          <div className="mt-6 space-y-5 text-base leading-relaxed text-gray-600">
-            <p>
-              The Society for Academic Emergency Medicine (SAEM) has convened this
-              consensus conference to develop a <strong className="text-gray-800">10-year
-              research agenda for artificial intelligence in emergency medicine</strong>.
-              As AI systems rapidly advance from decision-support tools to autonomous
-              agents, the emergency medicine community needs a shared roadmap to guide
-              investigation, education, and policy.
-            </p>
-            <p>
-              Five working groups of domain experts are using a{' '}
-              <strong className="text-gray-800">modified Delphi method</strong> &mdash;
-              combining iterative surveys, pairwise comparison ranking, and AI-assisted
-              synthesis &mdash; to identify and prioritize the most important research
-              questions spanning technology, training, clinician cognition, and societal
-              impact.
-            </p>
-            <p>
-              The conference is chaired by{' '}
-              <strong className="text-gray-800">R. Andrew Taylor, MD, MHS</strong>{' '}
-              (University of Virginia), with support from SAEM, CORD, and the
-              University of Virginia School of Medicine.
-            </p>
+      {/* ─── About Section ─────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gray-50 px-4 py-20 sm:px-6 lg:py-28">
+        {/* Subtle background pattern */}
+        <div className="pointer-events-none absolute inset-0 text-gray-300 opacity-30">
+          <BackgroundPattern className="h-full w-full" style={{ width: '100%', height: '100%' }} />
+        </div>
+
+        <div className="relative mx-auto max-w-6xl">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+            {/* Text on left */}
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+              variants={slideRight}
+            >
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                About This Conference
+              </h2>
+              <div className="mt-6 space-y-4 text-base leading-relaxed text-gray-600">
+                <p>
+                  The Society for Academic Emergency Medicine has convened this consensus
+                  conference to develop a{' '}
+                  <strong className="text-gray-800">10-year research agenda for artificial
+                  intelligence in emergency medicine</strong>.
+                </p>
+                <p>
+                  Five working groups of domain experts use a{' '}
+                  <strong className="text-gray-800">modified Delphi method</strong> — combining
+                  iterative surveys, pairwise comparison ranking, and AI-assisted synthesis — to
+                  identify and prioritize the most critical research questions.
+                </p>
+                <p>
+                  As AI systems rapidly advance from decision-support tools to autonomous agents,
+                  the emergency medicine community needs a shared roadmap to guide investigation,
+                  education, and policy.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Illustration on right */}
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+              variants={slideLeft}
+              className="flex justify-center"
+            >
+              <DelphiProcessIllustration className="w-full max-w-md" />
+            </motion.div>
           </div>
-        </motion.div>
-      </section>
 
-      {/* ─── Process Steps ─────────────────────────────────────── */}
-      <section className="bg-gray-50 px-4 py-20 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <motion.h2
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-60px' }}
-            variants={fadeUp}
-            className="text-center text-3xl font-bold text-gray-900"
-          >
-            Our Process
-          </motion.h2>
-          <motion.p
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-60px' }}
-            variants={fadeUp}
-            custom={1}
-            className="mx-auto mt-3 max-w-xl text-center text-gray-500"
-          >
-            A rigorous, multi-stage consensus-building methodology
-          </motion.p>
-
+          {/* Key numbers row */}
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
             variants={staggerContainer}
-            className="mt-14 grid gap-8 md:grid-cols-3"
+            className="mt-16 grid gap-6 sm:grid-cols-3"
           >
-            {STEPS.map((step, idx) => (
-              <motion.div key={step.label} variants={staggerLeft} className="relative flex flex-col items-center text-center">
-                {/* Connector line (hidden on mobile, shown on md+) */}
-                {idx < STEPS.length - 1 && (
-                  <div className="pointer-events-none absolute left-[calc(50%+2.5rem)] top-8 hidden h-0.5 w-[calc(100%-5rem)] bg-gradient-to-r from-primary-300 to-primary-200 md:block">
-                    <ArrowRight className="absolute -right-2.5 -top-2 h-5 w-5 text-primary-400" />
-                  </div>
-                )}
-
-                {/* Step number + icon circle */}
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25">
-                  <step.icon className="h-7 w-7" />
-                  <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-primary-600 shadow">
-                    {idx + 1}
-                  </span>
-                </div>
-
-                <h3 className="mt-5 text-lg font-semibold text-gray-900">{step.label}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-500">{step.description}</p>
+            {[
+              { number: 5, label: 'Working Groups', suffix: '', icon: Users },
+              { number: 3, label: 'Consensus Methods', suffix: '', icon: ListChecks },
+              { number: 10, label: 'Year Agenda', suffix: '-Year', icon: Target },
+            ].map((stat) => (
+              <motion.div key={stat.label} variants={staggerItem}>
+                <Card className="group border-0 bg-white/80 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md">
+                  <CardContent className="flex items-center gap-5 p-6">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 transition-colors group-hover:bg-primary-100">
+                      <stat.icon className="h-7 w-7" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-extrabold text-gray-900">
+                        <AnimatedNumber value={stat.number} />
+                        {stat.suffix && <span className="text-lg font-bold text-gray-500">{stat.suffix}</span>}
+                      </p>
+                      <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ─── Four Pillars ──────────────────────────────────────── */}
-      <section className="bg-white px-4 py-20 sm:px-6">
+      {/* ─── Process Section ───────────────────────────────────────── */}
+      <section className="bg-white px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
-          <motion.h2
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
             variants={fadeUp}
-            className="text-center text-3xl font-bold text-gray-900"
+            className="text-center"
           >
-            Four Pillars of AI in Emergency Medicine
-          </motion.h2>
-          <motion.p
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Our Consensus Process
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-gray-500">
+              A rigorous, multi-stage methodology that combines expert judgment with
+              statistical rigor to build true consensus
+            </p>
+          </motion.div>
+
+          {/* Full-width Delphi illustration */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            variants={scaleUp}
+            className="mx-auto mt-12 max-w-3xl"
+          >
+            <DelphiProcessIllustration className="w-full" />
+          </motion.div>
+
+          {/* Detailed stage cards */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-40px' }}
+            variants={staggerContainer}
+            className="mt-14 grid gap-8 md:grid-cols-3"
+          >
+            {PROCESS_STEPS.map((step, idx) => (
+              <motion.div key={step.label} variants={staggerItem}>
+                <Card className={`h-full border-t-4 ${step.borderColor} transition-shadow duration-200 hover:shadow-lg`}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${step.iconBg}`}>
+                        <step.icon className={`h-5 w-5 ${step.iconColor}`} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                          Stage {idx + 1}
+                        </span>
+                        <h3 className="text-lg font-bold text-gray-900">{step.label}</h3>
+                      </div>
+                    </div>
+                    <ul className="mt-5 space-y-3">
+                      {step.bullets.map((bullet, bi) => (
+                        <li key={bi} className="flex items-start gap-2.5 text-sm leading-relaxed text-gray-600">
+                          <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${step.iconColor} opacity-60`} />
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ─── Four Pillars ──────────────────────────────────────────── */}
+      <section className="bg-gray-50 px-4 py-20 sm:px-6 lg:py-28">
+        <div className="mx-auto max-w-6xl">
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
             variants={fadeUp}
-            custom={1}
-            className="mx-auto mt-3 max-w-xl text-center text-gray-500"
+            className="text-center"
           >
-            Our research agenda spans four interconnected domains
-          </motion.p>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Four Pillars of AI in Emergency Medicine
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-gray-500">
+              Our research agenda spans four interconnected domains that together define
+              the future of AI-augmented emergency care
+            </p>
+          </motion.div>
 
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
             variants={staggerContainer}
-            className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
           >
             {PILLARS.map((pillar) => (
-              <motion.div key={pillar.name} variants={staggerItem}>
-                <Card className={`h-full border-t-4 ${pillar.border}`}>
-                  <CardContent className="pt-6">
-                    <div className={`inline-flex rounded-xl p-3 ${pillar.bg}`}>
-                      <pillar.icon className={`h-6 w-6 ${pillar.iconColor}`} />
+              <motion.div
+                key={pillar.name}
+                variants={staggerItem}
+                whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.2 } }}
+                className="will-change-transform"
+              >
+                <Card className={`group relative h-full overflow-hidden border-l-4 ${pillar.leftBorder} transition-shadow duration-300 hover:shadow-xl`}>
+                  {/* Subtle gradient tint */}
+                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${pillar.tint} opacity-50`} />
+                  <CardContent className="relative p-6">
+                    {/* PillarIllustration */}
+                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
+                      <PillarIllustration pillar={pillar.key} className="h-20 w-20" />
                     </div>
-                    <h3 className="mt-4 text-lg font-bold text-gray-900">{pillar.name}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-gray-500">
+                    <h3 className="text-center text-lg font-bold text-gray-900">{pillar.name}</h3>
+                    <p className="mt-2 text-center text-sm leading-relaxed text-gray-500">
                       {pillar.description}
                     </p>
                   </CardContent>
@@ -444,35 +640,31 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ─── Working Groups ────────────────────────────────────── */}
-      <section className="bg-gray-50 px-4 py-20 sm:px-6">
+      {/* ─── Working Groups ────────────────────────────────────────── */}
+      <section id="working-groups" className="scroll-mt-16 bg-white px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
-          <motion.h2
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
             variants={fadeUp}
-            className="text-center text-3xl font-bold text-gray-900"
+            className="text-center"
           >
-            Working Groups
-          </motion.h2>
-          <motion.p
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-60px' }}
-            variants={fadeUp}
-            custom={1}
-            className="mx-auto mt-3 max-w-xl text-center text-gray-500"
-          >
-            Five expert groups driving the consensus process
-          </motion.p>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Working Groups
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-gray-500">
+              Five expert groups driving the consensus process across complementary domains
+            </p>
+          </motion.div>
 
-          <div className="mt-12">
+          <div className="mt-14">
             {loadingWG ? (
               <WGSkeletons />
             ) : errorWG ? (
               <Card className="border-danger-light">
-                <CardContent className="py-10 text-center text-gray-500">
+                <CardContent className="py-12 text-center text-gray-500">
+                  <EmptyStateIllustration type="error" className="mx-auto mb-4 w-32" />
                   <p className="text-sm">Unable to load working groups. Please try again later.</p>
                 </CardContent>
               </Card>
@@ -482,76 +674,99 @@ export function HomePage() {
                 whileInView="visible"
                 viewport={{ once: true, margin: '-40px' }}
                 variants={staggerContainer}
-                className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
               >
                 {workingGroups.map((wg) => {
-                  const pillarColor = PILLAR_COLORS[wg.pillar] || 'border-l-primary-500';
+                  const pillarColor = PILLAR_COLORS[wg.pillar] || 'border-t-primary-500';
                   const badgeVariant = PILLAR_BADGE_VARIANT[wg.pillar] || 'default';
                   return (
-                    <motion.div key={wg.wg_number} variants={staggerItem} whileHover={{ y: -4, transition: { duration: 0.2 } }} className="will-change-transform">
-                      <Card className={`h-full border-l-4 ${pillarColor} transition-shadow duration-200 hover:shadow-lg`}>
-                        <CardContent className="flex h-full flex-col">
+                    <motion.div
+                      key={wg.wg_number}
+                      variants={staggerItem}
+                      whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                      className="will-change-transform"
+                    >
+                      <Card className={`group relative h-full overflow-hidden border-t-4 ${pillarColor} transition-shadow duration-300 hover:shadow-xl`}>
+                        {/* Large watermark WG number */}
+                        <span className="pointer-events-none absolute -bottom-4 -right-2 select-none text-[8rem] font-black leading-none text-gray-900 opacity-[0.03]">
+                          {wg.wg_number}
+                        </span>
+
+                        <CardContent className="relative flex h-full flex-col p-6">
                           <div className="flex items-start justify-between">
-                            <Badge variant={badgeVariant}>WG {wg.wg_number}</Badge>
+                            <Badge variant={badgeVariant} className="text-xs font-bold">
+                              WG {wg.wg_number}
+                            </Badge>
                             {wg.pillar && (
                               <span className="text-xs font-medium text-gray-400">{wg.pillar}</span>
                             )}
                           </div>
-                          <h3 className="mt-3 text-base font-semibold text-gray-900 leading-snug">
+
+                          <h3 className="mt-4 text-base font-semibold leading-snug text-gray-900">
                             {wg.name}
                           </h3>
+
                           {wg.description && (
-                            <p className="mt-2 text-sm leading-relaxed text-gray-500 line-clamp-2">
+                            <p className="mt-2 text-sm leading-relaxed text-gray-500 line-clamp-3">
                               {wg.description}
                             </p>
                           )}
 
                           {/* Stats row */}
-                          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
+                          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500">
                             {wg.question_count != null && (
-                              <span className="flex items-center gap-1">
-                                <ClipboardList className="h-3.5 w-3.5" />
-                                <AnimatedNumber value={wg.question_count} /> questions
+                              <span className="flex items-center gap-1.5">
+                                <ClipboardList className="h-4 w-4 text-gray-400" />
+                                <span className="font-semibold text-gray-700">
+                                  <AnimatedNumber value={wg.question_count} />
+                                </span>{' '}
+                                questions
                               </span>
                             )}
                             {wg.confirmed_count != null && (
-                              <span className="flex items-center gap-1">
-                                <UserCheck className="h-3.5 w-3.5" />
-                                <AnimatedNumber value={wg.confirmed_count} /> confirmed
+                              <span className="flex items-center gap-1.5">
+                                <UserCheck className="h-4 w-4 text-gray-400" />
+                                <span className="font-semibold text-gray-700">
+                                  <AnimatedNumber value={wg.confirmed_count} />
+                                </span>{' '}
+                                confirmed
                               </span>
                             )}
                             {wg.r1_participants != null && (
-                              <span className="flex items-center gap-1">
-                                <BarChart3 className="h-3.5 w-3.5" />
-                                <AnimatedNumber value={wg.r1_participants} /> R1
+                              <span className="flex items-center gap-1.5">
+                                <BarChart3 className="h-4 w-4 text-gray-400" />
+                                <span className="font-semibold text-gray-700">
+                                  <AnimatedNumber value={wg.r1_participants} />
+                                </span>{' '}
+                                R1
                               </span>
                             )}
                           </div>
 
                           {/* Action buttons */}
-                          <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                          <div className="mt-auto flex flex-wrap gap-2.5 pt-6">
                             <Link to={`/survey/${wg.wg_number}/round1`}>
-                              <Button variant="secondary" size="sm">
+                              <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
                                 Round 1
                                 <ChevronRight className="h-3.5 w-3.5" />
                               </Button>
                             </Link>
                             <Link to={`/survey/${wg.wg_number}/round2`}>
-                              <Button variant="secondary" size="sm">
+                              <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
                                 Round 2
                                 <ChevronRight className="h-3.5 w-3.5" />
                               </Button>
                             </Link>
                             <Link to={`/rank/${wg.wg_number}`}>
-                              <Button variant="secondary" size="sm">
+                              <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
                                 Pairwise
                                 <ChevronRight className="h-3.5 w-3.5" />
                               </Button>
                             </Link>
                             <Link to={`/results/${wg.wg_number}`}>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" className="gap-1">
                                 Results
-                                <ChevronRight className="h-3.5 w-3.5" />
+                                <ArrowRight className="h-3.5 w-3.5" />
                               </Button>
                             </Link>
                           </div>
@@ -566,27 +781,33 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ─── Active Sessions / Conference Day ──────────────────── */}
-      <section className="bg-white px-4 py-20 sm:px-6">
+      {/* ─── Active Sessions / Conference Day ──────────────────────── */}
+      <section className="bg-gray-50 px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-4xl">
-          <motion.h2
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
             variants={fadeUp}
-            className="text-center text-3xl font-bold text-gray-900"
+            className="text-center"
           >
-            Conference Day Voting
-          </motion.h2>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              Conference Day Voting
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg text-gray-500">
+              Live voting sessions will open on conference day for real-time audience response
+            </p>
+          </motion.div>
 
-          <div className="mt-10">
+          <div className="mt-12">
             {loadingSessions ? (
               <div className="flex flex-col items-center gap-3">
-                <Skeleton className="h-24 w-full max-w-md" />
+                <Skeleton className="h-28 w-full max-w-md rounded-xl" />
               </div>
             ) : errorSessions ? (
               <Card>
-                <CardContent className="py-10 text-center text-gray-500">
+                <CardContent className="py-12 text-center text-gray-500">
+                  <EmptyStateIllustration type="error" className="mx-auto mb-4 w-28" />
                   <p className="text-sm">Unable to load sessions.</p>
                 </CardContent>
               </Card>
@@ -596,15 +817,15 @@ export function HomePage() {
                 whileInView="visible"
                 viewport={{ once: true }}
                 variants={staggerContainer}
-                className="grid gap-4 sm:grid-cols-2"
+                className="grid gap-5 sm:grid-cols-2"
               >
                 {sessions.map((session) => (
                   <motion.div key={session.id} variants={staggerItem}>
                     <Link to={`/vote/${session.id}`}>
-                      <Card className="group cursor-pointer border-emerald-200 transition-all hover:border-emerald-300 hover:shadow-lg">
-                        <CardContent className="flex items-center gap-4">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                            <Radio className="h-6 w-6" />
+                      <Card className="group cursor-pointer border-emerald-200 transition-all duration-200 hover:border-emerald-300 hover:shadow-xl">
+                        <CardContent className="flex items-center gap-4 p-5">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100">
+                            <Radio className="h-7 w-7" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
@@ -620,12 +841,12 @@ export function HomePage() {
                               </Badge>
                             </div>
                             {session.description && (
-                              <p className="mt-0.5 truncate text-sm text-gray-500">
+                              <p className="mt-1 truncate text-sm text-gray-500">
                                 {session.description}
                               </p>
                             )}
                           </div>
-                          <ChevronRight className="h-5 w-5 shrink-0 text-gray-300 transition group-hover:text-gray-500" />
+                          <ChevronRight className="h-5 w-5 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-gray-500" />
                         </CardContent>
                       </Card>
                     </Link>
@@ -637,24 +858,51 @@ export function HomePage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                variants={fadeUp}
+                variants={scaleUp}
               >
-                <Card>
-                  <CardContent className="flex flex-col items-center py-14 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
-                      <Radio className="h-7 w-7" />
-                    </div>
-                    <h3 className="mt-4 text-base font-semibold text-gray-700">
+                <Card className="overflow-hidden">
+                  <CardContent className="flex flex-col items-center py-16 text-center">
+                    <EmptyStateIllustration type="no-sessions" className="mb-6 w-40" />
+                    <h3 className="text-lg font-semibold text-gray-700">
                       No active voting sessions
                     </h3>
-                    <p className="mt-1.5 max-w-xs text-sm text-gray-400">
-                      Live voting sessions will appear here on conference day, May 21, 2026.
+                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-gray-400">
+                      Live voting sessions will appear here on conference day,{' '}
+                      <strong className="text-gray-500">May 21, 2026</strong>. Check back during the
+                      SAEM Annual Meeting.
                     </p>
                   </CardContent>
                 </Card>
               </motion.div>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* ─── Sponsors / Credibility ────────────────────────────────── */}
+      <section className="bg-gray-100 px-4 py-16 sm:px-6">
+        <div className="mx-auto max-w-4xl">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-40px' }}
+            variants={fadeUp}
+            className="text-center"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+              Organized by
+            </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-base font-medium text-gray-500">
+              <span>SAEM</span>
+              <span className="text-gray-300" aria-hidden="true">&middot;</span>
+              <span>CORD</span>
+              <span className="text-gray-300" aria-hidden="true">&middot;</span>
+              <span>University of Virginia School of Medicine</span>
+            </div>
+            <p className="mt-4 text-sm text-gray-400">
+              Conference Chair: <strong className="font-semibold text-gray-500">R. Andrew Taylor, MD, MHS</strong>
+            </p>
+          </motion.div>
         </div>
       </section>
     </div>

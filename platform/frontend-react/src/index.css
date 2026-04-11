@@ -38,6 +38,49 @@ html { scroll-behavior: smooth; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
+/* Gradient text effect */
+.gradient-text {
+  background: linear-gradient(135deg, #60a5fa 0%, #a5b4fc 50%, #c4b5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Subtle hover glow */
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(37, 99, 235, 0.1), 0 10px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Wave divider */
+.wave-divider {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+
+/* Watermark number */
+.watermark {
+  position: absolute;
+  top: -10px;
+  right: 8px;
+  font-size: 6rem;
+  font-weight: 800;
+  opacity: 0.03;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Dark mode */
 .dark {
   color-scheme: dark;
