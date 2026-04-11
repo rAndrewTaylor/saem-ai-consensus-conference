@@ -47,6 +47,30 @@ class SuggestionSubmit(BaseModel):
     general_comment: Optional[str] = None
 
 
+# --- Public Working Group Info ---
+
+@router.get("/working-groups")
+def list_working_groups(db: Session = Depends(get_db)):
+    """Public endpoint: list working groups with basic stats."""
+    wgs = db.query(WorkingGroup).order_by(WorkingGroup.number).all()
+    result = []
+    for wg in wgs:
+        total = db.query(func.count(Question.id)).filter(Question.wg_id == wg.id).scalar() or 0
+        confirmed = db.query(func.count(Question.id)).filter(
+            Question.wg_id == wg.id, Question.status == QuestionStatus.CONFIRMED
+        ).scalar() or 0
+        result.append({
+            "wg_number": wg.number,
+            "name": wg.name,
+            "short_name": wg.short_name,
+            "pillar": wg.pillar,
+            "scope": wg.scope,
+            "total_questions": total,
+            "confirmed": confirmed,
+        })
+    return result
+
+
 # --- Participant Token Management ---
 
 @router.post("/token")

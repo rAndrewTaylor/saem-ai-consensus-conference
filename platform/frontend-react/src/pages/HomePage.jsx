@@ -287,8 +287,8 @@ export function HomePage() {
   const [errorSessions, setErrorSessions] = useState(null);
 
   useEffect(() => {
-    api('/api/admin/dashboard')
-      .then((data) => setWorkingGroups(data.working_groups || []))
+    api('/api/surveys/working-groups')
+      .then((data) => setWorkingGroups(Array.isArray(data) ? data : []))
       .catch((err) => setErrorWG(err.message))
       .finally(() => setLoadingWG(false));
 
@@ -367,16 +367,24 @@ export function HomePage() {
             >
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
                 <Calendar className="h-4 w-4" />
-                May 21, 2026
+                May 21, 2026 &middot; Atlanta
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+              <a
+                href="https://www.saem.org/annual-meeting"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/25"
+              >
                 <Sparkles className="h-4 w-4" />
                 SAEM Annual Meeting
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+              </a>
+              <button
+                onClick={() => document.getElementById('process')?.scrollIntoView({ behavior: 'smooth' })}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/25"
+              >
                 <FileText className="h-4 w-4" />
                 Modified Delphi Method
-              </span>
+              </button>
             </motion.div>
 
             <motion.div
@@ -519,7 +527,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Process Section ───────────────────────────────────────── */}
-      <section className="bg-white px-4 py-20 sm:px-6 lg:py-28">
+      <section id="process" className="bg-white px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
@@ -706,52 +714,43 @@ export function HomePage() {
                             {wg.name}
                           </h3>
 
-                          {wg.description && (
-                            <p className="mt-2 text-sm leading-relaxed text-gray-500 line-clamp-3">
-                              {wg.description}
+                          {wg.scope && (
+                            <p className="mt-2 text-sm leading-relaxed text-gray-500 line-clamp-2">
+                              {wg.scope}
                             </p>
                           )}
 
                           {/* Stats row */}
                           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500">
-                            {wg.question_count != null && (
+                            {wg.total_questions != null && (
                               <span className="flex items-center gap-1.5">
                                 <ClipboardList className="h-4 w-4 text-gray-400" />
                                 <span className="font-semibold text-gray-700">
-                                  <AnimatedNumber value={wg.question_count} />
+                                  <AnimatedNumber value={wg.total_questions} />
                                 </span>{' '}
                                 questions
                               </span>
                             )}
-                            {wg.confirmed_count != null && (
+                            {wg.confirmed != null && (
                               <span className="flex items-center gap-1.5">
                                 <UserCheck className="h-4 w-4 text-gray-400" />
                                 <span className="font-semibold text-gray-700">
-                                  <AnimatedNumber value={wg.confirmed_count} />
+                                  <AnimatedNumber value={wg.confirmed} />
                                 </span>{' '}
                                 confirmed
-                              </span>
-                            )}
-                            {wg.r1_participants != null && (
-                              <span className="flex items-center gap-1.5">
-                                <BarChart3 className="h-4 w-4 text-gray-400" />
-                                <span className="font-semibold text-gray-700">
-                                  <AnimatedNumber value={wg.r1_participants} />
-                                </span>{' '}
-                                R1
                               </span>
                             )}
                           </div>
 
                           {/* Action buttons */}
                           <div className="mt-auto flex flex-wrap gap-2.5 pt-6">
-                            <Link to={`/survey/${wg.wg_number}/round1`}>
+                            <Link to={`/survey/${wg.wg_number}/round_1`}>
                               <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
                                 Round 1
                                 <ChevronRight className="h-3.5 w-3.5" />
                               </Button>
                             </Link>
-                            <Link to={`/survey/${wg.wg_number}/round2`}>
+                            <Link to={`/survey/${wg.wg_number}/round_2`}>
                               <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
                                 Round 2
                                 <ChevronRight className="h-3.5 w-3.5" />
