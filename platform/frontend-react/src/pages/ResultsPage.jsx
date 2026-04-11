@@ -841,19 +841,29 @@ export function ResultsPage() {
   }, [activeTab]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 transition hover:text-gray-700"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-gray-900">
-          Working Group {wgNumber} Results
-        </h1>
+    <div className="flex flex-col">
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-primary-800 to-primary-600 px-4 py-12 text-white sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <Link
+            to="/dashboard"
+            className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-white/70 transition hover:text-white"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
+          </Link>
+          <Badge variant="default" className="mb-3 bg-white/15 text-white border-0">
+            Working Group {wgNumber}
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Results &amp; Analysis
+          </h1>
+          <p className="mt-2 text-primary-200">
+            Consensus outcomes, rankings, and method concordance
+          </p>
+        </div>
       </div>
+
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
 
       {/* Tabs */}
       <div className="relative mb-8 border-b border-gray-200">
@@ -898,6 +908,7 @@ export function ResultsPage() {
           {activeTab === 'concordance' && <ConcordanceTab wgNumber={wgNumber} />}
         </motion.div>
       </AnimatePresence>
+      </div>
     </div>
   );
 }

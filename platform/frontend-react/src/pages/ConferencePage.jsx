@@ -364,17 +364,30 @@ export function ConferencePage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
-      {/* Header */}
+    <div className="flex flex-col">
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-emerald-700 to-emerald-500 px-4 py-12 text-white sm:px-6">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Conference Day Voting
+          </h1>
+          <p className="mt-2 text-emerald-100">
+            Live audience response — rank, rate, and allocate
+          </p>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
+      {/* Session info + live indicator */}
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100">
             <Radio className="h-5 w-5 text-primary-600" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900">
               {session?.title || session?.name || `Session ${sessionId}`}
-            </h1>
+            </h2>
             {session?.description && (
               <p className="mt-0.5 text-sm text-gray-500">{session.description}</p>
             )}
@@ -734,6 +747,7 @@ export function ConferencePage() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

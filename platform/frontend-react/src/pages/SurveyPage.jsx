@@ -26,7 +26,7 @@ import { api } from '@/lib/api';
 // ── Constants ───────────────────────────────────────────────────────
 const DISPOSITIONS = [
   { value: 'include', label: 'Include', icon: CheckCircle, color: 'emerald', activeClass: 'bg-emerald-50 border-emerald-400 text-emerald-700 ring-emerald-200' },
-  { value: 'modify', label: 'Modify', icon: Edit3, color: 'amber', activeClass: 'bg-amber-50 border-amber-400 text-amber-700 ring-amber-200' },
+  { value: 'include_with_modifications', label: 'Modify', icon: Edit3, color: 'amber', activeClass: 'bg-amber-50 border-amber-400 text-amber-700 ring-amber-200' },
   { value: 'exclude', label: 'Exclude', icon: XCircle, color: 'red', activeClass: 'bg-red-50 border-red-400 text-red-700 ring-red-200' },
 ];
 
@@ -465,24 +465,24 @@ export function SurveyPage() {
 
   return (
     <div className="flex flex-col">
-      {/* ─── Header ────────────────────────────────────────────── */}
-      <div className="border-b border-gray-200 bg-white px-4 py-6 sm:px-6">
+      {/* ─── Hero Header ─────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-primary-700 to-primary-500 px-4 py-12 text-white sm:px-6">
         <div className="mx-auto max-w-3xl">
           <Link
             to="/"
-            className="inline-flex items-center gap-1 text-sm font-medium text-gray-400 transition hover:text-gray-600"
+            className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-white/70 transition hover:text-white"
           >
             <ChevronLeft className="h-4 w-4" />
             Back to Home
           </Link>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Working Group {wgNumber}
-            </h1>
-            <Badge variant="primary">{roundLabel}</Badge>
-          </div>
-          <p className="mt-1.5 text-sm text-gray-500">
-            Rate each research question below. Your responses shape the consensus agenda.
+          <Badge variant="default" className="mb-3 bg-white/15 text-white border-0">
+            Working Group {wgNumber}
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Delphi Survey — {roundName === 'round_1' ? 'Round 1' : 'Round 2'}
+          </h1>
+          <p className="mt-2 text-primary-100">
+            Rate each research question and help shape the 10-year agenda
           </p>
         </div>
       </div>

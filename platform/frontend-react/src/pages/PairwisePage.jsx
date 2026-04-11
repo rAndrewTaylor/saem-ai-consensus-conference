@@ -260,22 +260,25 @@ export function PairwisePage() {
   const progressPct = totalPairs > 0 ? (displayedCompleted / totalPairs) * 100 : 0;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100">
-            <ArrowLeftRight className="h-5 w-5 text-primary-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Pairwise Ranking
-            </h1>
-            <p className="text-sm text-gray-500">
-              WG {wgNum}: {WG_NAMES[wgNum] || `Working Group ${wgNum}`}
-            </p>
-          </div>
+    <div className="flex flex-col">
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-violet-700 to-violet-500 px-4 py-12 text-white sm:px-6">
+        <div className="mx-auto max-w-3xl">
+          <Badge variant="default" className="mb-3 bg-white/15 text-white border-0">
+            Working Group {wgNumber}
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Pairwise Ranking
+          </h1>
+          <p className="mt-2 text-violet-100">
+            Which research question is more important? Quick side-by-side comparisons.
+          </p>
         </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
+      {/* Progress + Stats */}
+      <div className="mb-8">
 
         {/* Progress bar */}
         <div className="mt-5 space-y-2">
@@ -653,6 +656,7 @@ export function PairwisePage() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

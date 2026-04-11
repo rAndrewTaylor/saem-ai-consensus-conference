@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
-  FileText, CheckCircle, Users, Brain, LogOut, Plus, Play, Square,
+  FileText, CheckCircle, Users, Brain, BrainCircuit, LogOut, Plus, Play, Square,
   Download, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, ExternalLink
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -118,16 +118,21 @@ function LoginForm({ onLogin }) {
   };
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
+    <div className="flex min-h-[70vh] items-center justify-center px-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-sm"
       >
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>Admin Login</CardTitle>
-          </CardHeader>
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-lg shadow-primary-500/25">
+            <BrainCircuit className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">Sign in to manage the consensus conference</p>
+        </div>
+        <Card>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
