@@ -67,6 +67,7 @@ def list_working_groups(db: Session = Depends(get_db)):
             "scope": wg.scope,
             "total_questions": total,
             "confirmed": confirmed,
+            "co_leads": [{"name": cl.name, "institution": cl.institution} for cl in wg.co_leads],
         })
     return result
 

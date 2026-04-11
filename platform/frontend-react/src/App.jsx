@@ -15,6 +15,7 @@ const PairwisePage = lazy(() => import('@/pages/PairwisePage').then(m => ({ defa
 const ConferencePage = lazy(() => import('@/pages/ConferencePage').then(m => ({ default: m.ConferencePage })));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const ResultsPage = lazy(() => import('@/pages/ResultsPage').then(m => ({ default: m.ResultsPage })));
+const GettingStartedPage = lazy(() => import('@/pages/GettingStartedPage').then(m => ({ default: m.GettingStartedPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function AnimatedRoutes() {
@@ -29,6 +30,7 @@ function AnimatedRoutes() {
           <Route path="/vote/:sessionId" element={<ConferencePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/results/:wgNumber" element={<ResultsPage />} />
+          <Route path="/guide" element={<GettingStartedPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>

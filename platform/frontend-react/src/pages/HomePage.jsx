@@ -26,6 +26,7 @@ import {
   Target,
   TrendingUp,
   Calendar,
+  HelpCircle,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -193,6 +194,48 @@ const scaleUp = {
   hidden: { opacity: 0, scale: 0.9 },
   visible: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: 'easeOut' } },
 };
+
+// ── Countdown Timer ────────────────────────────────────────────────
+function CountdownTimer({ targetDate }) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    const target = new Date(targetDate).getTime();
+    const update = () => {
+      const now = Date.now();
+      const diff = target - now;
+      if (diff <= 0) { setTimeLeft(null); return; }
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      setTimeLeft({ days, hours, minutes });
+    };
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  if (!timeLeft) return <span className="text-sm font-medium text-white/80">Conference Day is here!</span>;
+
+  return (
+    <div className="flex items-center gap-4 text-white">
+      <div className="text-center">
+        <div className="text-2xl font-bold">{timeLeft.days}</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/60">days</div>
+      </div>
+      <span className="text-white/30">:</span>
+      <div className="text-center">
+        <div className="text-2xl font-bold">{timeLeft.hours}</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/60">hours</div>
+      </div>
+      <span className="text-white/30">:</span>
+      <div className="text-center">
+        <div className="text-2xl font-bold">{timeLeft.minutes}</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/60">min</div>
+      </div>
+    </div>
+  );
+}
 
 // ── WG Skeleton loader ──────────────────────────────────────────────
 function WGSkeletons() {
@@ -387,6 +430,16 @@ export function HomePage() {
               </button>
             </motion.div>
 
+            {/* Countdown */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-white/10 px-6 py-3 backdrop-blur-sm"
+            >
+              <CountdownTimer targetDate="2026-05-21T08:00:00" />
+            </motion.div>
+
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -401,6 +454,10 @@ export function HomePage() {
                 Explore Working Groups
                 <ArrowDown className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-0.5" />
               </Button>
+              <Link to="/guide" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-white/70 transition hover:text-white">
+                <HelpCircle className="h-4 w-4" />
+                New participant? Read the guide
+              </Link>
             </motion.div>
           </div>
 
@@ -718,6 +775,17 @@ export function HomePage() {
                             <p className="mt-2 text-sm leading-relaxed text-gray-500 line-clamp-2">
                               {wg.scope}
                             </p>
+                          )}
+
+                          {wg.co_leads && wg.co_leads.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {wg.co_leads.map((cl, i) => (
+                                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                                  <Users className="h-3 w-3" />
+                                  {cl.name}
+                                </span>
+                              ))}
+                            </div>
                           )}
 
                           {/* Stats row */}

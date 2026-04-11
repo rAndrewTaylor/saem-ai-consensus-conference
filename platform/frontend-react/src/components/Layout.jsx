@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Home, LayoutDashboard, Menu, X, Sun, Moon } from 'lucide-react';
+import { BrainCircuit, Home, LayoutDashboard, BookOpen, Menu, X, Sun, Moon } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -7,6 +7,7 @@ import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 const navLinks = [
   { to: '/', label: 'Home', icon: Home },
+  { to: '/guide', label: 'Guide', icon: BookOpen },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
