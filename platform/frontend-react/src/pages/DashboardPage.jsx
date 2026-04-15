@@ -5,7 +5,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   FileText, CheckCircle, Users, Brain, BrainCircuit, LogOut, Plus, Play, Square,
-  Download, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, ExternalLink
+  Download, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, ExternalLink,
+  FlaskConical, RotateCcw,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -275,6 +276,118 @@ function SessionForm({ wgs, onCreated }) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Demo mode card — seed/reset synthetic data for walkthrough testing
+// ---------------------------------------------------------------------------
+function DemoModeCard({ onRefresh }) {
+  const toast = useToast();
+  const [loading, setLoading] = useState(null); // 'seed' | 'reset' | null
+  const [lastResult, setLastResult] = useState(null);
+
+  const handleSeed = async () => {
+    if (!confirm('Seed the demo data?\n\nThis adds ~50 demo questions, 40 synthetic participants, and hundreds of Delphi / pairwise responses. Any existing demo data is reset first. Real (non-demo) data is NOT touched.')) return;
+    setLoading('seed');
+    try {
+      const r = await api('/api/admin/demo/seed', { method: 'POST' });
+      setLastResult({ kind: 'seeded', ...r.created });
+      toast({ message: 'Demo data loaded', type: 'success' });
+      onRefresh?.();
+    } catch (err) {
+      toast({ message: err.message || 'Seed failed', type: 'error' });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!confirm('Remove all demo data?\n\nThis deletes every participant whose email ends in @demo.saem-ai.test and every question marked source=demo, along with their responses and pairwise votes. Real data is preserved.')) return;
+    setLoading('reset');
+    try {
+      const r = await api('/api/admin/demo/reset', { method: 'POST' });
+      setLastResult({ kind: 'reset', ...r.deleted });
+      toast({ message: 'Demo data cleared', type: 'success' });
+      onRefresh?.();
+    } catch (err) {
+      toast({ message: err.message || 'Reset failed', type: 'error' });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.52 }}
+      className="mt-8"
+    >
+      <Card>
+        <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <FlaskConical className="h-5 w-5 text-amber-400" />
+            Demo Mode
+          </CardTitle>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={loading === 'seed'}
+              disabled={loading !== null}
+              onClick={handleSeed}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Load demo data
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={loading === 'reset'}
+              disabled={loading !== null}
+              onClick={handleReset}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Clear demo data
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-white/60">
+            Populate the platform with synthetic questions, named participants, Delphi responses, and pairwise votes so you can walk through every screen end-to-end.
+          </p>
+          <p className="mt-2 text-xs text-white/40">
+            Demo records are tagged (participant emails end in{' '}
+            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-white/60">@demo.saem-ai.test</code>
+            {' '}and questions carry <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-white/60">source=demo</code>) so they can be safely cleared before going live. Real data is never touched by these actions.
+          </p>
+
+          {lastResult && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
+                Last action &mdash; {lastResult.kind === 'seeded' ? 'Created' : 'Deleted'}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                {Object.entries(lastResult)
+                  .filter(([k]) => k !== 'kind')
+                  .map(([k, v]) => (
+                    <span key={k} className="text-white/70">
+                      <span className="font-mono font-semibold text-white">{v}</span>{' '}
+                      <span className="text-white/40">{k.replace(/_/g, ' ')}</span>
+                    </span>
+                  ))}
+              </div>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 
 // ---------------------------------------------------------------------------
 // Main Dashboard
@@ -861,6 +974,9 @@ export function DashboardPage() {
 
       {/* Participants & Invites */}
       <ParticipantsSection wgs={wgs} />
+
+      {/* Demo Mode */}
+      <DemoModeCard onRefresh={() => { fetchDashboard(); fetchSessions(); }} />
 
       {/* Data Exports */}
       <motion.div

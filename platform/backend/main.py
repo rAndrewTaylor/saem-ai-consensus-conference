@@ -207,6 +207,41 @@ async def admin_me(admin: dict = Depends(require_admin)):
 
 
 # ---------------------------------------------------------------------------
+# Demo data management (admin only)
+# ---------------------------------------------------------------------------
+
+@app.post("/api/admin/demo/seed")
+async def admin_demo_seed(admin: dict = Depends(require_admin)):
+    """Populate the DB with demo questions, participants, responses, and votes.
+    Idempotent — existing demo rows are reset first. Real (non-demo) data
+    is untouched.
+    """
+    from .demo_seed import seed_demo_data
+    from .database import write_audit_log
+    db = SessionLocal()
+    try:
+        summary = seed_demo_data(db)
+        write_audit_log(db, admin.get("sub", "admin"), "demo_seed", str(summary))
+        return {"ok": True, "created": summary}
+    finally:
+        db.close()
+
+
+@app.post("/api/admin/demo/reset")
+async def admin_demo_reset(admin: dict = Depends(require_admin)):
+    """Delete every record tagged as demo data. Real records are preserved."""
+    from .demo_seed import reset_demo_data
+    from .database import write_audit_log
+    db = SessionLocal()
+    try:
+        deleted = reset_demo_data(db)
+        write_audit_log(db, admin.get("sub", "admin"), "demo_reset", str(deleted))
+        return {"ok": True, "deleted": deleted}
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
 # SSE — live conference voting updates
 # ---------------------------------------------------------------------------
 
