@@ -21,6 +21,7 @@ export function TryPage() {
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [diag, setDiag] = useState(null);
 
   // Tester form
   const [testerName, setTesterName] = useState('');
@@ -32,33 +33,48 @@ export function TryPage() {
   useEffect(() => {
     let cancelled = false;
 
+    const tryPersonas = async () => {
+      const data = await api('/api/participants/demo/personas');
+      return Array.isArray(data) ? data : [];
+    };
+
     const loadOrSeed = async () => {
+      let list = [];
+      let lastErr = null;
+
+      // Attempt 1: plain fetch
       try {
-        // First attempt: just load personas
-        let data = await api('/api/participants/demo/personas');
-        let list = Array.isArray(data) ? data : [];
-
-        // If empty (startup seed didn't run, or data was cleared), seed now then retry
-        if (list.length === 0 && !cancelled) {
-          try {
-            await api('/api/participants/demo/ensure-seeded', { method: 'POST' });
-            data = await api('/api/participants/demo/personas');
-            list = Array.isArray(data) ? data : [];
-          } catch (seedErr) {
-            if (!cancelled) setLoadError(`${seedErr.status ? 'HTTP ' + seedErr.status + ' ' : ''}${seedErr.message || 'seed failed'}`);
-          }
-        }
-
-        if (!cancelled) setPersonas(list);
-      } catch (err) {
-        if (!cancelled) {
-          // Include HTTP status if available so we can diagnose
-          const statusPart = err.status ? `HTTP ${err.status} — ` : '';
-          setLoadError(`${statusPart}${err.message || 'Could not load'}`);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        list = await tryPersonas();
+      } catch (e) {
+        lastErr = e;
       }
+
+      // Attempt 2: if empty or errored, run ensure-seeded (which also
+      // triggers the additive migration on the backend) and retry
+      if (!cancelled && (lastErr || list.length === 0)) {
+        try {
+          await api('/api/participants/demo/ensure-seeded', { method: 'POST' });
+          list = await tryPersonas();
+          lastErr = null;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+
+      if (cancelled) return;
+
+      if (lastErr) {
+        const statusPart = lastErr.status ? `HTTP ${lastErr.status} — ` : '';
+        setLoadError(`${statusPart}${lastErr.message || 'Could not load'}`);
+        // Fetch diagnostic info so user can share it with support
+        try {
+          const d = await api('/api/diag');
+          if (!cancelled) setDiag(d);
+        } catch { /* diag unavailable — that's fine */ }
+      } else {
+        setPersonas(list);
+      }
+      setLoading(false);
     };
 
     loadOrSeed();
@@ -214,9 +230,18 @@ export function TryPage() {
             </div>
           ) : loadError ? (
             <Card className="border-red-400/30 bg-red-500/5">
-              <CardContent className="py-8 text-center">
-                <p className="text-sm text-red-300">Could not load demo data: {loadError}</p>
-                <p className="mt-2 text-xs text-white/40">Try refreshing the page.</p>
+              <CardContent className="py-8">
+                <p className="text-center text-sm font-medium text-red-300">
+                  Could not load demo data: {loadError}
+                </p>
+                <p className="mt-2 text-center text-xs text-white/40">
+                  Try refreshing. If the problem persists, share the diagnostic below with support.
+                </p>
+                {diag && (
+                  <pre className="mt-4 max-h-64 overflow-auto rounded-lg border border-white/[0.08] bg-black/40 p-3 text-[11px] leading-relaxed text-white/60">
+                    {JSON.stringify(diag, null, 2)}
+                  </pre>
+                )}
               </CardContent>
             </Card>
           ) : !hasPersonas ? (

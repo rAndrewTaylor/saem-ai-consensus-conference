@@ -264,19 +264,35 @@ def participant_me(token: str, db: Session = Depends(get_db)):
 def ensure_demo_seeded(db: Session = Depends(get_db)):
     """Public: idempotently seed demo data if none exists.
 
-    Called from the /try lobby so sharing the URL with testers "just works"
-    without requiring an admin to click Load-demo-data first. If demo data
-    already exists this is a no-op and returns the current counts.
+    Also runs the additive-column migration first (belt-and-suspenders) in
+    case the startup migration didn't complete — makes this endpoint a
+    reliable self-heal from the /try lobby.
     """
+    from ..database import _apply_additive_migrations
     from ..demo_seed import seed_demo_data
-    existing = (
-        db.query(Participant)
-        .filter(Participant.email.like(f"%{DEMO_EMAIL_SUFFIX}"))
-        .count()
-    )
+
+    # Re-run the migration to be safe — no-op if columns already exist
+    try:
+        _apply_additive_migrations()
+    except Exception as e:
+        raise HTTPException(500, f"Schema migration failed: {e!r}")
+
+    try:
+        existing = (
+            db.query(Participant)
+            .filter(Participant.email.like(f"%{DEMO_EMAIL_SUFFIX}"))
+            .count()
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Count query failed (schema issue?): {e!r}")
+
     if existing > 0:
         return {"already_seeded": True, "demo_participants": existing}
-    summary = seed_demo_data(db)
+
+    try:
+        summary = seed_demo_data(db)
+    except Exception as e:
+        raise HTTPException(500, f"Seed failed: {e!r}")
     return {"already_seeded": False, "created": summary}
 
 
