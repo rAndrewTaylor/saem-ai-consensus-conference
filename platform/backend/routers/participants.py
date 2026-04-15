@@ -260,6 +260,26 @@ def participant_me(token: str, db: Session = Depends(get_db)):
 
 # --- Demo lobby (public, for group testing before real rollout) ---
 
+@router.post("/demo/ensure-seeded")
+def ensure_demo_seeded(db: Session = Depends(get_db)):
+    """Public: idempotently seed demo data if none exists.
+
+    Called from the /try lobby so sharing the URL with testers "just works"
+    without requiring an admin to click Load-demo-data first. If demo data
+    already exists this is a no-op and returns the current counts.
+    """
+    from ..demo_seed import seed_demo_data
+    existing = (
+        db.query(Participant)
+        .filter(Participant.email.like(f"%{DEMO_EMAIL_SUFFIX}"))
+        .count()
+    )
+    if existing > 0:
+        return {"already_seeded": True, "demo_participants": existing}
+    summary = seed_demo_data(db)
+    return {"already_seeded": False, "created": summary}
+
+
 @router.get("/demo/personas")
 def list_demo_personas(db: Session = Depends(get_db)):
     """Public: list every pre-seeded demo persona so testers can step
