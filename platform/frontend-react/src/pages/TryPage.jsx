@@ -20,7 +20,6 @@ export function TryPage() {
 
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [seedingStatus, setSeedingStatus] = useState(null); // null | 'seeding' | 'ready'
   const [loadError, setLoadError] = useState(null);
 
   // Tester form
@@ -33,40 +32,19 @@ export function TryPage() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadPersonas = async () => {
-      try {
-        const data = await api('/api/participants/demo/personas');
+    api('/api/participants/demo/personas')
+      .then((data) => {
         if (cancelled) return;
-        const list = Array.isArray(data) ? data : [];
-
-        if (list.length === 0) {
-          // Empty — auto-seed on first visit so the group-testing flow "just works"
-          setSeedingStatus('seeding');
-          try {
-            await api('/api/participants/demo/ensure-seeded', { method: 'POST' });
-          } catch (err) {
-            if (!cancelled) setLoadError(err.message || 'Could not seed demo data');
-          }
-          if (cancelled) return;
-          const seeded = await api('/api/participants/demo/personas');
-          if (cancelled) return;
-          setPersonas(Array.isArray(seeded) ? seeded : []);
-          setSeedingStatus('ready');
-        } else {
-          setPersonas(list);
-          setSeedingStatus('ready');
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setLoadError(err.message || 'Could not load demo data');
-          setPersonas([]);
-        }
-      } finally {
+        setPersonas(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setLoadError(err.message || 'Could not load demo data');
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    };
+      });
 
-    loadPersonas();
     return () => { cancelled = true; };
   }, []);
 
@@ -211,21 +189,12 @@ export function TryPage() {
             </div>
           </div>
 
-          {loading || seedingStatus === 'seeding' ? (
-            <Card>
-              <CardContent className="flex flex-col items-center py-10 text-center">
-                <Loader2 className="mb-3 h-7 w-7 animate-spin text-purple-400" />
-                <p className="text-sm font-medium text-white/80">
-                  {seedingStatus === 'seeding' ? 'Loading demo data for first time...' : 'Loading demo personas...'}
-                </p>
-                {seedingStatus === 'seeding' && (
-                  <p className="mt-1 max-w-md text-xs text-white/40">
-                    Creating 50 synthetic research questions, 40 named expert personas, and a few hundred
-                    Delphi and pairwise responses. Usually takes a few seconds.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+          {loading ? (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
+                <Skeleton key={i} className="h-14" />
+              ))}
+            </div>
           ) : loadError ? (
             <Card className="border-red-400/30 bg-red-500/5">
               <CardContent className="py-8 text-center">

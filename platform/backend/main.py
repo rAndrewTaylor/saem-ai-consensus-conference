@@ -116,6 +116,21 @@ def startup():
     db = SessionLocal()
     try:
         seed_working_groups(db)
+        # Pre-seed demo data so /try is ready instantly for testers.
+        # Set AUTO_SEED_DEMO=0 in Railway env to disable before real rollout.
+        if os.environ.get("AUTO_SEED_DEMO", "1") != "0":
+            from .demo_seed import seed_demo_if_empty
+            try:
+                result = seed_demo_if_empty(db)
+                if result.get("seeded"):
+                    logger.info("Demo data pre-seeded at startup: %s", result.get("created"))
+                else:
+                    logger.info(
+                        "Demo data already present (%d personas); skipping pre-seed",
+                        result.get("existing_personas", 0),
+                    )
+            except Exception:
+                logger.exception("Demo pre-seed failed (non-fatal)")
     finally:
         db.close()
     logger.info("Database initialised and working groups seeded")

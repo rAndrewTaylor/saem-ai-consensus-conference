@@ -166,6 +166,21 @@ SAMPLE_COMMENTS = [
 # Seeder
 # ---------------------------------------------------------------------------
 
+def seed_demo_if_empty(db: Session) -> dict:
+    """Idempotent seed — only creates demo data if none exists yet. Fast
+    no-op when data is already present, so safe to call on every startup.
+    """
+    existing = (
+        db.query(Participant)
+        .filter(Participant.email.like(f"%{DEMO_EMAIL_SUFFIX}"))
+        .count()
+    )
+    if existing > 0:
+        return {"seeded": False, "existing_personas": existing}
+    summary = seed_demo_data(db)
+    return {"seeded": True, "created": summary}
+
+
 def seed_demo_data(db: Session, seed: int = 42) -> dict:
     """Populate the database with demo data. Idempotent — if demo data
     already exists it is reset first.
