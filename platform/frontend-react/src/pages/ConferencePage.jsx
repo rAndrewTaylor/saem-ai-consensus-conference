@@ -211,10 +211,13 @@ export function ConferencePage() {
   const submitRanking = async () => {
     setRankSubmitting(true);
     try {
+      // Backend expects {rankings: {question_id: rank}} — convert array order to dict
+      const rankings = {};
+      rankOrder.forEach((qId, idx) => { rankings[qId] = idx + 1; });
       await api(`/api/conference/vote/${sessionId}/ranking`, {
         method: 'POST',
         token,
-        body: { ranking: rankOrder },
+        body: { rankings },
       });
       setSubmittedTabs(prev => ({ ...prev, ranking: true }));
       toast({ message: 'Priority ranking submitted!', type: 'success' });
@@ -292,7 +295,7 @@ export function ConferencePage() {
       await api(`/api/conference/comment/${sessionId}`, {
         method: 'POST',
         token,
-        body: { type: commentType, text: commentText.trim() },
+        body: { comment_type: commentType, comment_text: commentText.trim() },
       });
       toast({ message: 'Comment submitted!', type: 'success' });
       setCommentText('');

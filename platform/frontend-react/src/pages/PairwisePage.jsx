@@ -142,8 +142,9 @@ export function PairwisePage() {
         method: 'POST',
         token,
         body: {
+          question_a_id: pair.question_a?.id,
+          question_b_id: pair.question_b?.id,
           winner_id: winnerId,
-          loser_id: winnerId === pair.option_a?.id ? pair.option_b?.id : pair.option_a?.id,
           response_time_ms: responseTime,
         },
       });
@@ -154,7 +155,7 @@ export function PairwisePage() {
       votesSinceRefresh.current += 1;
 
       // Show checkmark on the winning side
-      const winningSide = winnerId === pair.option_a?.id ? 'a' : 'b';
+      const winningSide = winnerId === pair.question_a?.id ? 'a' : 'b';
       setShowCheck(winningSide);
 
       // Brief delay to show check animation, then load next pair
@@ -187,11 +188,9 @@ export function PairwisePage() {
         method: 'POST',
         token,
         body: {
+          question_a_id: pair?.question_a?.id,
+          question_b_id: pair?.question_b?.id,
           winner_id: null,
-          loser_id: null,
-          skipped: true,
-          option_a_id: pair?.option_a?.id,
-          option_b_id: pair?.option_b?.id,
         },
       });
     } catch {
@@ -212,10 +211,10 @@ export function PairwisePage() {
 
       if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
         e.preventDefault();
-        submitVote(pair.option_a?.id);
+        submitVote(pair.question_a?.id);
       } else if (e.key === 'b' || e.key === 'B' || e.key === 'ArrowRight') {
         e.preventDefault();
-        submitVote(pair.option_b?.id);
+        submitVote(pair.question_b?.id);
       } else if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
         skipPair();
@@ -233,7 +232,7 @@ export function PairwisePage() {
       await api(`/api/pairwise/suggest/${wgNum}`, {
         method: 'POST',
         token,
-        body: { text: suggestion.trim() },
+        body: { suggestion_text: suggestion.trim() },
       });
       toast({ message: 'Suggestion submitted. Thank you!', type: 'success' });
       setSuggestion('');
@@ -432,14 +431,14 @@ export function PairwisePage() {
               >
                 <button
                   type="button"
-                  onClick={() => submitVote(pair.option_a?.id)}
+                  onClick={() => submitVote(pair.question_a?.id)}
                   disabled={isSubmitting}
                   className={cn(
                     'group w-full cursor-pointer rounded-xl border bg-[#1C1A2E] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13111C]',
-                    selectedSide === pair.option_a?.id
+                    selectedSide === pair.question_a?.id
                       ? 'border-emerald-400/70 shadow-emerald-500/20 shadow-xl ring-2 ring-emerald-400/40'
                       : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#252340]',
-                    isSubmitting && selectedSide !== pair.option_a?.id && 'opacity-50'
+                    isSubmitting && selectedSide !== pair.question_a?.id && 'opacity-50'
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between">
@@ -449,7 +448,7 @@ export function PairwisePage() {
                     </kbd>
                   </div>
                   <p className="text-base leading-relaxed text-white/90">
-                    {pair.option_a?.text || pair.option_a?.question_text}
+                    {pair.question_a?.text || pair.question_a?.short_text}
                   </p>
                 </button>
                 {/* Check overlay */}
@@ -491,14 +490,14 @@ export function PairwisePage() {
               >
                 <button
                   type="button"
-                  onClick={() => submitVote(pair.option_b?.id)}
+                  onClick={() => submitVote(pair.question_b?.id)}
                   disabled={isSubmitting}
                   className={cn(
                     'group w-full cursor-pointer rounded-xl border bg-[#1C1A2E] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13111C]',
-                    selectedSide === pair.option_b?.id
+                    selectedSide === pair.question_b?.id
                       ? 'border-emerald-400/70 shadow-emerald-500/20 shadow-xl ring-2 ring-emerald-400/40'
                       : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#252340]',
-                    isSubmitting && selectedSide !== pair.option_b?.id && 'opacity-50'
+                    isSubmitting && selectedSide !== pair.question_b?.id && 'opacity-50'
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between">
@@ -508,7 +507,7 @@ export function PairwisePage() {
                     </kbd>
                   </div>
                   <p className="text-base leading-relaxed text-white/90">
-                    {pair.option_b?.text || pair.option_b?.question_text}
+                    {pair.question_b?.text || pair.question_b?.short_text}
                   </p>
                 </button>
                 {/* Check overlay */}

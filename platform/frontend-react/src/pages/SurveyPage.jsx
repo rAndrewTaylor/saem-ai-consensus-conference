@@ -408,8 +408,8 @@ export function SurveyPage() {
         method: 'POST',
         token,
         body: {
-          question_text: suggestionText.trim(),
-          context: suggestionContext.trim() || undefined,
+          suggestion_text: suggestionText.trim(),
+          general_comment: suggestionContext.trim() || undefined,
         },
       });
       localStorage.removeItem(SUGGESTION_KEY(wgNumber, roundName));
