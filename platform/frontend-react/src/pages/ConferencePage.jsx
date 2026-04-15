@@ -340,13 +340,13 @@ export function ConferencePage() {
   if (pageError || !isActive) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100">
-          <WifiOff className="h-8 w-8 text-gray-400" />
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.06]">
+          <WifiOff className="h-8 w-8 text-white/40" />
         </div>
-        <h1 className="text-xl font-bold text-gray-900">
+        <h1 className="text-xl font-bold text-white">
           {pageError ? 'Unable to Load Session' : 'Session Not Active'}
         </h1>
-        <p className="mt-2 text-gray-500">
+        <p className="mt-2 text-white/50">
           {pageError || 'This voting session is not currently active. Check back when the session is live.'}
         </p>
         <Link to="/">
@@ -364,15 +364,16 @@ export function ConferencePage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col bg-[#13111C]">
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-emerald-700 to-emerald-500 px-4 py-12 text-white sm:px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-3xl font-bold tracking-tight">
+      <div className="relative overflow-hidden px-4 py-12 sm:px-6">
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-500/15 to-transparent blur-3xl" />
+        <div className="relative mx-auto max-w-3xl text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Conference Day Voting
           </h1>
-          <p className="mt-2 text-emerald-100">
-            Live audience response — rank, rate, and allocate
+          <p className="mt-2 text-white/50">
+            Live audience response &mdash; rank, rate, and allocate
           </p>
         </div>
       </div>
@@ -381,15 +382,15 @@ export function ConferencePage() {
       {/* Session info + live indicator */}
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100">
-            <Radio className="h-5 w-5 text-primary-600" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15">
+            <Radio className="h-5 w-5 text-emerald-400" />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-white">
               {session?.title || session?.name || `Session ${sessionId}`}
             </h2>
             {session?.description && (
-              <p className="mt-0.5 text-sm text-gray-500">{session.description}</p>
+              <p className="mt-0.5 text-sm text-white/50">{session.description}</p>
             )}
           </div>
 
@@ -402,13 +403,13 @@ export function ConferencePage() {
               </span>
               LIVE
             </Badge>
-            <div className="flex items-center gap-1.5 text-sm text-gray-500">
+            <div className="flex items-center gap-1.5 text-sm text-white/50">
               <Users className="h-4 w-4" />
               <motion.span
                 key={voterCount}
                 initial={{ y: -6, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="font-semibold tabular-nums text-gray-700"
+                className="font-semibold tabular-nums text-white/80"
               >
                 {voterCount}
               </motion.span>
@@ -420,22 +421,22 @@ export function ConferencePage() {
 
       {/* Tabs */}
       <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-        <Tabs.List className="relative mb-6 flex gap-1 rounded-xl bg-gray-100 p-1">
+        <Tabs.List className="relative mb-6 flex gap-1 rounded-xl border border-white/[0.06] bg-[#1C1A2E] p-1">
           {TAB_CONFIG.map(({ value, label, icon: Icon }) => (
             <Tabs.Trigger
               key={value}
               value={value}
               className={cn(
-                'relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+                'relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50',
                 activeTab === value
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white/[0.08] text-white shadow-sm'
+                  : 'text-white/50 hover:text-white/80'
               )}
             >
               <Icon className="h-4 w-4" />
               <span className="hidden sm:inline">{label}</span>
               {submittedTabs[value] && (
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
               )}
             </Tabs.Trigger>
           ))}
@@ -461,7 +462,7 @@ export function ConferencePage() {
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+                      className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-300"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Submitted successfully! You can update and resubmit.
@@ -480,16 +481,16 @@ export function ConferencePage() {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                          className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
+                          className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3"
                         >
-                          <GripVertical className="h-5 w-5 text-gray-300 cursor-grab shrink-0" />
+                          <GripVertical className="h-5 w-5 text-white/25 cursor-grab shrink-0" />
                           <span className={cn(
                             'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
-                            idx === 0 ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'
+                            idx === 0 ? 'bg-purple-600 text-white' : 'bg-white/[0.08] text-white/70'
                           )}>
                             {idx + 1}
                           </span>
-                          <span className="flex-1 text-sm text-gray-800">
+                          <span className="flex-1 text-sm text-white/90">
                             {q.text || q.question_text}
                           </span>
                           <div className="flex shrink-0 gap-1">
@@ -497,7 +498,7 @@ export function ConferencePage() {
                               type="button"
                               onClick={() => moveItem(idx, -1)}
                               disabled={idx === 0}
-                              className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
+                              className="rounded-md p-1.5 text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30"
                               aria-label="Move up"
                             >
                               <ArrowUp className="h-4 w-4" />
@@ -506,7 +507,7 @@ export function ConferencePage() {
                               type="button"
                               onClick={() => moveItem(idx, 1)}
                               disabled={idx === rankOrder.length - 1}
-                              className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30"
+                              className="rounded-md p-1.5 text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30"
                               aria-label="Move down"
                             >
                               <ArrowDown className="h-4 w-4" />
@@ -538,7 +539,7 @@ export function ConferencePage() {
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+                      className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-300"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Submitted successfully! You can update and resubmit.
@@ -549,12 +550,12 @@ export function ConferencePage() {
                     const qId = q.id || q.question_id;
                     const val = importanceValues[qId] ?? 5;
                     return (
-                      <div key={qId} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <p className="mb-3 text-sm font-medium text-gray-800">
+                      <div key={qId} className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-4">
+                        <p className="mb-3 text-sm font-medium text-white/90">
                           {q.text || q.question_text}
                         </p>
                         <div className="flex items-center gap-4">
-                          <span className="shrink-0 text-xs text-gray-400 w-20 text-right">Not important</span>
+                          <span className="shrink-0 text-xs text-white/40 w-20 text-right">Not important</span>
                           <input
                             type="range"
                             min={1}
@@ -562,12 +563,12 @@ export function ConferencePage() {
                             step={1}
                             value={val}
                             onChange={(e) => setImportance(qId, Number(e.target.value))}
-                            className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-gray-200 accent-primary-600 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-600 [&::-webkit-slider-thumb]:shadow-md"
+                            className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-purple-500 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md"
                           />
-                          <span className="shrink-0 text-xs text-gray-400 w-12">Critical</span>
+                          <span className="shrink-0 text-xs text-white/40 w-12">Critical</span>
                           <span className={cn(
                             'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
-                            val >= 7 ? 'bg-primary-100 text-primary-700' : val >= 4 ? 'bg-gray-100 text-gray-700' : 'bg-red-50 text-red-600'
+                            val >= 7 ? 'bg-purple-500/15 text-purple-300' : val >= 4 ? 'bg-white/[0.08] text-white/70' : 'bg-red-500/10 text-red-400'
                           )}>
                             {val}
                           </span>
@@ -592,14 +593,14 @@ export function ConferencePage() {
                 <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <CardTitle>Allocate 100 points across questions</CardTitle>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">Total:</span>
+                    <span className="text-sm text-white/50">Total:</span>
                     <span className={cn(
                       'rounded-lg px-3 py-1 text-lg font-bold tabular-nums transition-colors',
                       allocTotal === 100
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'bg-emerald-500/15 text-emerald-300'
                         : allocTotal > 100
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-500'
+                          ? 'bg-red-500/15 text-red-300'
+                          : 'bg-white/[0.08] text-white/50'
                     )}>
                       {allocTotal} / 100
                     </span>
@@ -610,7 +611,7 @@ export function ConferencePage() {
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+                      className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-300"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Submitted successfully! You can update and resubmit.
@@ -624,8 +625,8 @@ export function ConferencePage() {
                     const barPct = (val / maxVal) * 100;
 
                     return (
-                      <div key={qId} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <p className="mb-3 text-sm font-medium text-gray-800">
+                      <div key={qId} className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-4">
+                        <p className="mb-3 text-sm font-medium text-white/90">
                           {q.text || q.question_text}
                         </p>
                         <div className="flex items-center gap-3">
@@ -635,28 +636,28 @@ export function ConferencePage() {
                             max={100}
                             value={val}
                             onChange={(e) => setAllocation(qId, e.target.value)}
-                            className="h-10 w-20 shrink-0 rounded-lg border border-gray-200 px-3 text-center font-mono text-sm font-semibold text-gray-800 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                            className="h-10 w-20 shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 text-center font-mono text-sm font-semibold text-white/90 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                           />
                           {/* Small absolute bar (out of 100) */}
-                          <div className="h-2 rounded-full bg-gray-100 flex-1 max-w-[120px]">
+                          <div className="h-2 rounded-full bg-white/[0.06] flex-1 max-w-[120px]">
                             <div
-                              className="h-full rounded-full bg-primary-500 transition-all duration-300"
+                              className="h-full rounded-full bg-purple-500 transition-all duration-300"
                               style={{ width: `${Math.min(100, (val / 100) * 100)}%` }}
                             />
                           </div>
                           {/* Relative bar chart */}
-                          <div className="relative h-6 flex-1 overflow-hidden rounded-full bg-gray-100">
+                          <div className="relative h-6 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                             <motion.div
                               className={cn(
                                 'h-full rounded-full',
-                                allocTotal > 100 ? 'bg-red-400' : 'bg-primary-500'
+                                allocTotal > 100 ? 'bg-red-400' : 'bg-purple-500'
                               )}
                               initial={false}
                               animate={{ width: `${barPct}%` }}
                               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                             />
                           </div>
-                          <span className="w-10 shrink-0 text-right font-mono text-xs text-gray-400">
+                          <span className="w-10 shrink-0 text-right font-mono text-xs text-white/40">
                             {val}pt
                           </span>
                         </div>
@@ -668,7 +669,7 @@ export function ConferencePage() {
                     {allocTotal !== 100 && (
                       <p className={cn(
                         'text-sm font-medium',
-                        allocTotal > 100 ? 'text-red-600' : 'text-gray-400'
+                        allocTotal > 100 ? 'text-red-400' : 'text-white/40'
                       )}>
                         {allocTotal > 100
                           ? `${allocTotal - 100} points over budget`
@@ -700,20 +701,20 @@ export function ConferencePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary-500" />
+              <MessageSquare className="h-5 w-5 text-purple-400" />
               Comments &amp; Feedback
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label htmlFor="comment-type" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="comment-type" className="mb-1 block text-sm font-medium text-white/70">
                 Comment type
               </label>
               <select
                 id="comment-type"
                 value={commentType}
                 onChange={(e) => setCommentType(e.target.value)}
-                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                className="h-10 w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 text-sm text-white/90 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
               >
                 <option value="general">General</option>
                 <option value="modification">Modification</option>
@@ -721,7 +722,7 @@ export function ConferencePage() {
               </select>
             </div>
             <div>
-              <label htmlFor="comment-text" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="comment-text" className="mb-1 block text-sm font-medium text-white/70">
                 Your comment
               </label>
               <textarea
@@ -730,7 +731,7 @@ export function ConferencePage() {
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Share your thoughts, suggest modifications, or propose new questions..."
-                className="w-full resize-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                className="w-full resize-none rounded-lg border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-sm text-white/90 placeholder-white/30 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
               />
             </div>
             <div className="flex justify-end">

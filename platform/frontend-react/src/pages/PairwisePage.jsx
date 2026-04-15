@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
@@ -260,17 +260,21 @@ export function PairwisePage() {
   const progressPct = totalPairs > 0 ? (displayedCompleted / totalPairs) * 100 : 0;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col bg-[#13111C]">
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-violet-700 to-violet-500 px-4 py-12 text-white sm:px-6">
-        <div className="mx-auto max-w-3xl">
-          <Badge variant="default" className="mb-3 bg-white/15 text-white border-0">
-            Working Group {wgNumber}
+      <div className="relative overflow-hidden px-4 py-12 sm:px-6">
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-pink-500/10 to-transparent blur-3xl" />
+        <div className="relative mx-auto max-w-3xl">
+          <Link to={`/wg/${wgNumber}`} className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-white/50 transition hover:text-white/80">
+            Back to working group
+          </Link>
+          <Badge variant="primary" className="mb-3">
+            Working Group {wgNumber} {WG_NAMES[wgNumber] ? '\u00B7 ' + WG_NAMES[wgNumber] : ''}
           </Badge>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Pairwise Ranking
           </h1>
-          <p className="mt-2 text-violet-100">
+          <p className="mt-2 text-white/50">
             Which research question is more important? Quick side-by-side comparisons.
           </p>
         </div>
@@ -283,7 +287,7 @@ export function PairwisePage() {
         {/* Progress bar */}
         <div className="mt-5 space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-white/70">
               <motion.span
                 key={displayedCompleted}
                 initial={{ y: -8, opacity: 0 }}
@@ -293,7 +297,7 @@ export function PairwisePage() {
                 {displayedCompleted}
               </motion.span>
               {totalPairs > 0 && (
-                <span className="text-gray-400"> / {totalPairs} comparisons</span>
+                <span className="text-white/40"> / {totalPairs} comparisons</span>
               )}
             </span>
             <div className="flex items-center gap-2">
@@ -304,7 +308,7 @@ export function PairwisePage() {
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 15 }}
                 >
-                  <Badge variant="default" className="gap-1 bg-orange-100 text-orange-700 border-orange-200">
+                  <Badge variant="warning" className="gap-1">
                     <span aria-hidden>&#128293;</span> {streak} streak
                   </Badge>
                 </motion.div>
@@ -321,9 +325,9 @@ export function PairwisePage() {
         </div>
 
         {/* Keyboard hint */}
-        <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+        <div className="mt-3 flex items-center gap-2 text-xs text-white/40">
           <Keyboard className="h-3.5 w-3.5" />
-          <span>Press <kbd className="rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 font-mono text-xs font-medium text-gray-600">A</kbd> or <kbd className="rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 font-mono text-xs font-medium text-gray-600">B</kbd> to vote, <kbd className="rounded border border-gray-300 bg-gray-50 px-1.5 py-0.5 font-mono text-xs font-medium text-gray-600">S</kbd> to skip</span>
+          <span>Press <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5 font-mono text-xs font-medium text-white/70">A</kbd> or <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5 font-mono text-xs font-medium text-white/70">B</kbd> to vote, <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5 font-mono text-xs font-medium text-white/70">S</kbd> to skip</span>
         </div>
       </div>
 
@@ -334,20 +338,20 @@ export function PairwisePage() {
           <Skeleton className="h-52 rounded-xl" />
         </div>
       ) : pairError === 'all_done' ? (
-        <Card className="border-amber-200 bg-gradient-to-b from-amber-50 to-white">
+        <Card className="border-amber-400/30">
           <CardContent className="py-14 text-center">
             <motion.div
               initial={{ scale: 0, rotate: -20 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
             >
-              <Sparkles className="mx-auto mb-4 h-16 w-16 text-amber-500 drop-shadow-md" />
+              <Sparkles className="mx-auto mb-4 h-16 w-16 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.4)]" />
             </motion.div>
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-2xl font-bold text-gray-900"
+              className="text-2xl font-bold text-white"
             >
               Amazing! You&apos;ve compared all available pairs.
             </motion.h2>
@@ -355,7 +359,7 @@ export function PairwisePage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
-              className="mt-2 text-base text-gray-600"
+              className="mt-2 text-base text-white/60"
             >
               Your input is shaping the research agenda.
             </motion.p>
@@ -366,15 +370,15 @@ export function PairwisePage() {
               className="mt-6 flex items-center justify-center gap-6"
             >
               <div className="text-center">
-                <p className="text-2xl font-bold tabular-nums text-gray-900">{displayedCompleted}</p>
-                <p className="text-xs text-gray-500">Comparisons</p>
+                <p className="text-2xl font-bold tabular-nums text-white">{displayedCompleted}</p>
+                <p className="text-xs text-white/50">Comparisons</p>
               </div>
               {responseTimes.current.length > 0 && (
                 <div className="text-center">
-                  <p className="text-2xl font-bold tabular-nums text-gray-900">
+                  <p className="text-2xl font-bold tabular-nums text-white">
                     {(responseTimes.current.reduce((a, b) => a + b, 0) / responseTimes.current.length / 1000).toFixed(1)}s
                   </p>
-                  <p className="text-xs text-gray-500">Avg Response</p>
+                  <p className="text-xs text-white/50">Avg Response</p>
                 </div>
               )}
             </motion.div>
@@ -391,16 +395,16 @@ export function PairwisePage() {
                   document.getElementById('rankings-section')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
-                <Trophy className="h-4 w-4 text-amber-500" />
+                <Trophy className="h-4 w-4 text-amber-400" />
                 View Rankings
               </Button>
             </motion.div>
           </CardContent>
         </Card>
       ) : pairError ? (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-400/30 bg-red-500/5">
           <CardContent className="py-8 text-center">
-            <p className="text-red-700">{pairError}</p>
+            <p className="text-red-300">{pairError}</p>
             <Button variant="secondary" className="mt-4" onClick={fetchPair}>
               Retry
             </Button>
@@ -411,7 +415,7 @@ export function PairwisePage() {
           <div className="relative grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
             {/* VS divider (desktop) */}
             <div className="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
-              <div className="z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-200 bg-white text-sm font-bold text-gray-400 shadow-sm">
+              <div className="z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.12] bg-[#252340] text-sm font-bold text-white/60 shadow-lg shadow-black/30">
                 VS
               </div>
             </div>
@@ -431,20 +435,20 @@ export function PairwisePage() {
                   onClick={() => submitVote(pair.option_a?.id)}
                   disabled={isSubmitting}
                   className={cn(
-                    'group w-full cursor-pointer rounded-xl border-2 bg-white p-6 text-left shadow-sm transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
+                    'group w-full cursor-pointer rounded-xl border bg-[#1C1A2E] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13111C]',
                     selectedSide === pair.option_a?.id
-                      ? 'border-emerald-400 shadow-emerald-100 shadow-lg ring-2 ring-emerald-300'
-                      : 'border-gray-200 hover:border-primary-300 hover:shadow-md',
+                      ? 'border-emerald-400/70 shadow-emerald-500/20 shadow-xl ring-2 ring-emerald-400/40'
+                      : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#252340]',
                     isSubmitting && selectedSide !== pair.option_a?.id && 'opacity-50'
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <Badge variant="primary" className="text-xs font-bold">Option A</Badge>
-                    <kbd className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-xs text-gray-400 transition group-hover:border-primary-300 group-hover:text-primary-600">
+                    <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-2 py-0.5 font-mono text-xs text-white/50 transition group-hover:border-purple-400/50 group-hover:text-purple-300">
                       A
                     </kbd>
                   </div>
-                  <p className="text-base leading-relaxed text-gray-800">
+                  <p className="text-base leading-relaxed text-white/90">
                     {pair.option_a?.text || pair.option_a?.question_text}
                   </p>
                 </button>
@@ -471,7 +475,7 @@ export function PairwisePage() {
                 animate={{ scale: 1, opacity: 1 }}
                 className="flex items-center justify-center py-1 md:hidden"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-200 bg-white text-xs font-bold text-gray-400 shadow-sm">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.12] bg-[#252340] text-xs font-bold text-white/60 shadow-lg shadow-black/30">
                   VS
                 </div>
               </motion.div>
@@ -490,20 +494,20 @@ export function PairwisePage() {
                   onClick={() => submitVote(pair.option_b?.id)}
                   disabled={isSubmitting}
                   className={cn(
-                    'group w-full cursor-pointer rounded-xl border-2 bg-white p-6 text-left shadow-sm transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
+                    'group w-full cursor-pointer rounded-xl border bg-[#1C1A2E] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13111C]',
                     selectedSide === pair.option_b?.id
-                      ? 'border-emerald-400 shadow-emerald-100 shadow-lg ring-2 ring-emerald-300'
-                      : 'border-gray-200 hover:border-primary-300 hover:shadow-md',
+                      ? 'border-emerald-400/70 shadow-emerald-500/20 shadow-xl ring-2 ring-emerald-400/40'
+                      : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#252340]',
                     isSubmitting && selectedSide !== pair.option_b?.id && 'opacity-50'
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <Badge variant="primary" className="text-xs font-bold">Option B</Badge>
-                    <kbd className="rounded border border-gray-200 bg-gray-50 px-2 py-0.5 font-mono text-xs text-gray-400 transition group-hover:border-primary-300 group-hover:text-primary-600">
+                    <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-2 py-0.5 font-mono text-xs text-white/50 transition group-hover:border-purple-400/50 group-hover:text-purple-300">
                       B
                     </kbd>
                   </div>
-                  <p className="text-base leading-relaxed text-gray-800">
+                  <p className="text-base leading-relaxed text-white/90">
                     {pair.option_b?.text || pair.option_b?.question_text}
                   </p>
                 </button>
@@ -532,7 +536,7 @@ export function PairwisePage() {
               size="sm"
               onClick={skipPair}
               disabled={isSubmitting}
-              className="gap-1.5 text-gray-400 hover:text-gray-600"
+              className="gap-1.5"
             >
               <SkipForward className="h-4 w-4" />
               Can&apos;t decide &mdash; skip
@@ -546,7 +550,7 @@ export function PairwisePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-500" />
+              <Trophy className="h-5 w-5 text-amber-400" />
               Current Rankings
             </CardTitle>
           </CardHeader>
@@ -558,14 +562,14 @@ export function PairwisePage() {
                 ))}
               </div>
             ) : rankings.length === 0 ? (
-              <div className="px-6 py-10 text-center text-sm text-gray-400">
+              <div className="px-6 py-10 text-center text-sm text-white/40">
                 Rankings will appear after votes are submitted.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 text-xs uppercase tracking-wider text-gray-400">
+                    <tr className="border-b border-white/[0.06] text-xs uppercase tracking-wider text-white/40">
                       <th className="px-6 py-3 font-medium">Rank</th>
                       <th className="px-6 py-3 font-medium">Question</th>
                       <th className="px-6 py-3 font-medium text-right">Score</th>
@@ -577,11 +581,11 @@ export function PairwisePage() {
                       {rankings.map((item, idx) => {
                         const rank = idx + 1;
                         const rankColors = [
-                          'bg-amber-500 text-white',
-                          'bg-gray-400 text-white',
+                          'bg-amber-400 text-black',
+                          'bg-white/60 text-black',
                           'bg-amber-700 text-white',
                         ];
-                        const rankColor = rank <= 3 ? rankColors[rank - 1] : 'bg-gray-100 text-gray-600';
+                        const rankColor = rank <= 3 ? rankColors[rank - 1] : 'bg-white/[0.08] text-white/70';
 
                         return (
                           <motion.tr
@@ -589,7 +593,7 @@ export function PairwisePage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.04 }}
-                            className="border-b border-gray-50 transition-colors hover:bg-gray-50"
+                            className="border-b border-white/[0.04] transition-colors hover:bg-white/[0.03]"
                           >
                             <td className="px-6 py-3">
                               <span className={cn(
@@ -599,16 +603,16 @@ export function PairwisePage() {
                                 {rank}
                               </span>
                             </td>
-                            <td className="max-w-xs truncate px-6 py-3 text-gray-700" title={item.text || item.question_text}>
+                            <td className="max-w-xs truncate px-6 py-3 text-white/80" title={item.text || item.question_text}>
                               {item.text || item.question_text}
                             </td>
-                            <td className="px-6 py-3 text-right font-mono text-sm font-semibold text-gray-800">
+                            <td className="px-6 py-3 text-right font-mono text-sm font-semibold text-white/90">
                               {item.score != null ? item.score.toFixed(1) : '--'}
                             </td>
                             <td className="px-6 py-3 text-right font-mono text-sm">
-                              <span className="text-emerald-600">{item.wins ?? 0}</span>
-                              <span className="text-gray-300"> / </span>
-                              <span className="text-red-500">{item.losses ?? 0}</span>
+                              <span className="text-emerald-400">{item.wins ?? 0}</span>
+                              <span className="text-white/25"> / </span>
+                              <span className="text-red-400">{item.losses ?? 0}</span>
                             </td>
                           </motion.tr>
                         );
@@ -627,12 +631,12 @@ export function PairwisePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Lightbulb className="h-5 w-5 text-amber-500" />
+              <Lightbulb className="h-5 w-5 text-amber-400" />
               Suggest a Question
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="mb-3 text-sm text-gray-500">
+            <p className="mb-3 text-sm text-white/50">
               Think something is missing? Suggest a new question for this working group.
             </p>
             <textarea
@@ -640,7 +644,7 @@ export function PairwisePage() {
               onChange={(e) => setSuggestion(e.target.value)}
               placeholder="Type your suggested question here..."
               rows={3}
-              className="w-full resize-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 placeholder-gray-400 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white/90 placeholder-white/30 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
             />
             <div className="mt-3 flex justify-end">
               <Button

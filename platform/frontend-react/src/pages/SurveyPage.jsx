@@ -25,9 +25,24 @@ import { api } from '@/lib/api';
 
 // ── Constants ───────────────────────────────────────────────────────
 const DISPOSITIONS = [
-  { value: 'include', label: 'Include', icon: CheckCircle, color: 'emerald', activeClass: 'bg-emerald-50 border-emerald-400 text-emerald-700 ring-emerald-200' },
-  { value: 'include_with_modifications', label: 'Modify', icon: Edit3, color: 'amber', activeClass: 'bg-amber-50 border-amber-400 text-amber-700 ring-amber-200' },
-  { value: 'exclude', label: 'Exclude', icon: XCircle, color: 'red', activeClass: 'bg-red-50 border-red-400 text-red-700 ring-red-200' },
+  {
+    value: 'include',
+    label: 'Include',
+    icon: CheckCircle,
+    activeClass: 'bg-emerald-500/15 border-emerald-400/60 text-emerald-300 ring-emerald-400/30',
+  },
+  {
+    value: 'include_with_modifications',
+    label: 'Modify',
+    icon: Edit3,
+    activeClass: 'bg-amber-500/15 border-amber-400/60 text-amber-300 ring-amber-400/30',
+  },
+  {
+    value: 'exclude',
+    label: 'Exclude',
+    icon: XCircle,
+    activeClass: 'bg-red-500/15 border-red-400/60 text-red-300 ring-red-400/30',
+  },
 ];
 
 const COMMENT_MAX = 2000;
@@ -39,7 +54,7 @@ const SUGGESTION_KEY = (wg, round) => `saem_suggest_wg${wg}_${round}`;
 function QuestionSkeleton() {
   return (
     <Card>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 py-6">
         <div className="flex items-start gap-3">
           <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
@@ -71,8 +86,8 @@ function R1ResultsBar({ results }) {
 
   return (
     <div className="mt-3 space-y-1.5">
-      <p className="text-xs font-medium text-gray-400">Round 1 Results ({total} responses)</p>
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-gray-100">
+      <p className="text-xs font-medium text-white/40">Round 1 Results ({total} responses)</p>
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/[0.06]">
         {pInclude > 0 && (
           <div
             className="bg-emerald-500 transition-all duration-500"
@@ -95,7 +110,7 @@ function R1ResultsBar({ results }) {
           />
         )}
       </div>
-      <div className="flex gap-4 text-xs text-gray-400">
+      <div className="flex gap-4 text-xs text-white/40">
         <span className="flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
           Include {Math.round(pInclude)}%
@@ -118,13 +133,13 @@ function ImportanceSlider({ value, onChange }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-700">Importance Rating</label>
-        <span className="rounded-md bg-primary-50 px-2 py-0.5 text-sm font-bold text-primary-700">
+        <label className="text-sm font-medium text-white/70">Importance Rating</label>
+        <span className="rounded-md bg-purple-500/15 px-2 py-0.5 text-sm font-bold text-purple-300">
           {value}
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <span className="shrink-0 text-xs font-medium text-gray-400">Low</span>
+        <span className="shrink-0 text-xs font-medium text-white/30">Low</span>
         <input
           type="range"
           min={1}
@@ -132,14 +147,13 @@ function ImportanceSlider({ value, onChange }) {
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-200 accent-primary-600 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-600 [&::-webkit-slider-thumb]:shadow-md"
+          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-purple-500 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md"
         />
-        <span className="shrink-0 text-xs font-medium text-gray-400">Critical</span>
+        <span className="shrink-0 text-xs font-medium text-white/30">Critical</span>
       </div>
-      {/* Tick marks */}
       <div className="flex justify-between px-0.5">
         {Array.from({ length: 9 }, (_, i) => (
-          <span key={i} className="text-[10px] text-gray-300">{i + 1}</span>
+          <span key={i} className="text-[10px] text-white/20">{i + 1}</span>
         ))}
       </div>
     </div>
@@ -156,15 +170,15 @@ function QuestionCard({ question, index, response, onUpdate, isRound2 }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.4), duration: 0.4 }}
     >
-      <Card className={response.disposition ? 'ring-1 ring-primary-200' : ''}>
+      <Card className={response.disposition ? 'ring-1 ring-purple-500/30' : ''}>
         <CardContent className="space-y-5 py-6">
           {/* Question header */}
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/15 text-sm font-bold text-purple-300">
               {index + 1}
             </div>
             <div className="flex-1">
-              <p className="text-base font-medium leading-relaxed text-gray-800">
+              <p className="text-base font-medium leading-relaxed text-white/90">
                 {question.text || question.question_text}
               </p>
               {question.category && (
@@ -188,10 +202,10 @@ function QuestionCard({ question, index, response, onUpdate, isRound2 }) {
                   key={d.value}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => onUpdate({ disposition: isActive ? null : d.value })}
-                  className={`inline-flex items-center gap-2 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                  className={`inline-flex items-center gap-2 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 ${
                     isActive
                       ? d.activeClass + ' ring-2'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+                      : 'border-white/[0.08] text-white/50 hover:border-white/[0.14] hover:bg-white/[0.04] hover:text-white/80'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -209,7 +223,7 @@ function QuestionCard({ question, index, response, onUpdate, isRound2 }) {
 
           {/* Comment textarea */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Comment (optional)</label>
+            <label className="text-sm font-medium text-white/70">Comment (optional)</label>
             <textarea
               value={response.comment || ''}
               onChange={(e) => {
@@ -219,9 +233,9 @@ function QuestionCard({ question, index, response, onUpdate, isRound2 }) {
               }}
               placeholder="Share your reasoning or suggest modifications..."
               rows={3}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 placeholder-gray-400 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 resize-y"
+              className="w-full resize-y rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-sm text-white/90 placeholder-white/30 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
             />
-            <p className={`text-right text-xs ${commentLength > COMMENT_MAX * 0.9 ? 'text-amber-500' : 'text-gray-300'}`}>
+            <p className={`text-right text-xs ${commentLength > COMMENT_MAX * 0.9 ? 'text-amber-400' : 'text-white/25'}`}>
               {commentLength}/{COMMENT_MAX}
             </p>
           </div>
@@ -248,7 +262,6 @@ export function SurveyPage() {
   const [submitted, setSubmitted] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
 
-  // Suggestion state
   const [suggestionText, setSuggestionText] = useState('');
   const [suggestionContext, setSuggestionContext] = useState('');
   const [submittingSuggestion, setSubmittingSuggestion] = useState(false);
@@ -301,7 +314,6 @@ export function SurveyPage() {
     } catch {}
   }, [responses, wgNumber, roundName]);
 
-  // Save suggestion drafts
   useEffect(() => {
     if (!suggestionText && !suggestionContext) return;
     try {
@@ -312,7 +324,6 @@ export function SurveyPage() {
     } catch {}
   }, [suggestionText, suggestionContext, wgNumber, roundName]);
 
-  // ── Update a single response ────────────────────────────────────
   const updateResponse = useCallback((questionId, updates) => {
     setResponses((prev) => ({
       ...prev,
@@ -320,7 +331,6 @@ export function SurveyPage() {
     }));
   }, []);
 
-  // ── Progress calculation ────────────────────────────────────────
   const { answered, total, percentage } = useMemo(() => {
     const t = questions.length;
     const a = questions.filter((q) => {
@@ -330,7 +340,6 @@ export function SurveyPage() {
     return { answered: a, total: t, percentage: t > 0 ? Math.round((a / t) * 100) : 0 };
   }, [questions, responses]);
 
-  // ── Submit all responses ────────────────────────────────────────
   const handleSubmit = async () => {
     if (answered === 0) {
       toast({ message: 'Please answer at least one question before submitting.', type: 'error' });
@@ -367,7 +376,6 @@ export function SurveyPage() {
       await Promise.all(promises);
 
       if (failures.length === 0) {
-        // Clear autosave on full success
         localStorage.removeItem(AUTOSAVE_KEY(wgNumber, roundName));
         setDraftSaved(false);
         setSubmitted(true);
@@ -386,7 +394,6 @@ export function SurveyPage() {
     }
   };
 
-  // ── Submit suggestion ───────────────────────────────────────────
   const handleSuggestion = async () => {
     if (!suggestionText.trim()) {
       toast({ message: 'Please enter a question suggestion.', type: 'error' });
@@ -414,19 +421,17 @@ export function SurveyPage() {
     }
   };
 
-  // ── Token loading state ─────────────────────────────────────────
   if (tokenLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
         <div className="flex flex-col items-center gap-4 py-20 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-          <p className="text-sm text-gray-500">Initializing session...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+          <p className="text-sm text-white/50">Initializing session...</p>
         </div>
       </div>
     );
   }
 
-  // ── Submitted success screen ────────────────────────────────────
   if (submitted) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
@@ -437,19 +442,19 @@ export function SurveyPage() {
         >
           <Card>
             <CardContent className="flex flex-col items-center py-16 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-500">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
                 <CheckCircle className="h-9 w-9" />
               </div>
-              <h2 className="mt-5 text-2xl font-bold text-gray-900">Responses Submitted</h2>
-              <p className="mt-2 max-w-md text-gray-500">
+              <h2 className="mt-5 text-2xl font-bold text-white">Responses Submitted</h2>
+              <p className="mt-2 max-w-md text-white/50">
                 Thank you for completing the {roundLabel} survey for Working Group {wgNumber}.
                 Your input is essential to building the AI in EM research agenda.
               </p>
               <div className="mt-8 flex gap-3">
-                <Link to="/">
+                <Link to={`/wg/${wgNumber}`}>
                   <Button variant="secondary">
                     <ChevronLeft className="h-4 w-4" />
-                    Back to Home
+                    Back to working group
                   </Button>
                 </Link>
                 <Link to={`/results/${wgNumber}`}>
@@ -464,24 +469,25 @@ export function SurveyPage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col bg-[#13111C]">
       {/* ─── Hero Header ─────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-primary-700 to-primary-500 px-4 py-12 text-white sm:px-6">
-        <div className="mx-auto max-w-3xl">
+      <div className="relative overflow-hidden px-4 py-12 sm:px-6">
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-purple-500/10 to-transparent blur-3xl" />
+        <div className="relative mx-auto max-w-3xl">
           <Link
-            to="/"
-            className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-white/70 transition hover:text-white"
+            to={`/wg/${wgNumber}`}
+            className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-white/50 transition hover:text-white/80"
           >
             <ChevronLeft className="h-4 w-4" />
-            Back to Home
+            Back to working group
           </Link>
-          <Badge variant="default" className="mb-3 bg-white/15 text-white border-0">
+          <Badge variant="primary" className="mb-3">
             Working Group {wgNumber}
           </Badge>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Delphi Survey — {roundName === 'round_1' ? 'Round 1' : 'Round 2'}
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Delphi Survey &mdash; {roundName === 'round_1' ? 'Round 1' : 'Round 2'}
           </h1>
-          <p className="mt-2 text-primary-100">
+          <p className="mt-2 text-white/50">
             Rate each research question and help shape the 10-year agenda
           </p>
         </div>
@@ -490,21 +496,21 @@ export function SurveyPage() {
       {/* ─── Sticky Progress Bar ───────────────────────────────── */}
       <div
         ref={progressRef}
-        className="sticky top-16 z-40 border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-6"
+        className="sticky top-16 z-40 border-b border-white/[0.06] bg-[#13111C]/90 px-4 py-3 backdrop-blur-md sm:px-6"
       >
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-white/70">
               {answered}/{total} questions answered
             </span>
             <div className="flex items-center gap-3">
               {draftSaved && (
-                <span className="flex items-center gap-1 text-xs text-gray-400">
+                <span className="flex items-center gap-1 text-xs text-white/40">
                   <Save className="h-3 w-3" />
                   Draft saved
                 </span>
               )}
-              <span className="font-semibold text-primary-600">{percentage}%</span>
+              <span className="font-semibold text-purple-400">{percentage}%</span>
             </div>
           </div>
           <Progress value={answered} max={total} className="mt-2" />
@@ -523,8 +529,8 @@ export function SurveyPage() {
           <Card>
             <CardContent className="flex flex-col items-center py-14 text-center">
               <AlertCircle className="h-10 w-10 text-red-400" />
-              <h3 className="mt-3 text-base font-semibold text-gray-800">Failed to Load Questions</h3>
-              <p className="mt-1.5 max-w-sm text-sm text-gray-500">{errorQ}</p>
+              <h3 className="mt-3 text-base font-semibold text-white/90">Failed to Load Questions</h3>
+              <p className="mt-1.5 max-w-sm text-sm text-white/50">{errorQ}</p>
               <Button
                 variant="secondary"
                 className="mt-6"
@@ -537,9 +543,9 @@ export function SurveyPage() {
         ) : questions.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center py-14 text-center">
-              <AlertCircle className="h-10 w-10 text-gray-300" />
-              <h3 className="mt-3 text-base font-semibold text-gray-700">No Questions Available</h3>
-              <p className="mt-1.5 max-w-sm text-sm text-gray-400">
+              <AlertCircle className="h-10 w-10 text-white/20" />
+              <h3 className="mt-3 text-base font-semibold text-white/70">No Questions Available</h3>
+              <p className="mt-1.5 max-w-sm text-sm text-white/40">
                 This survey round may not be open yet. Check back later.
               </p>
             </CardContent>
@@ -575,43 +581,43 @@ export function SurveyPage() {
                 Submit {answered} Response{answered !== 1 ? 's' : ''}
               </Button>
               {answered < total && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-white/40">
                   {total - answered} question{total - answered !== 1 ? 's' : ''} remaining &mdash; you can submit partial responses
                 </p>
               )}
             </div>
 
             {/* ─── Suggestion Section ─────────────────────────── */}
-            <div className="mt-16 border-t border-gray-200 pt-10">
+            <div className="mt-16 border-t border-white/[0.06] pt-10">
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
                   <Lightbulb className="h-5 w-5" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">Suggest a New Question</h2>
+                <h2 className="text-lg font-semibold text-white">Suggest a New Question</h2>
               </div>
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-white/50">
                 Think an important research question is missing? Propose it below and it may be included in the next round.
               </p>
 
               <div className="mt-5 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Proposed Research Question</label>
+                  <label className="text-sm font-medium text-white/70">Proposed Research Question</label>
                   <textarea
                     value={suggestionText}
                     onChange={(e) => setSuggestionText(e.target.value)}
                     placeholder="What research question should be added?"
                     rows={3}
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 placeholder-gray-400 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 resize-y"
+                    className="w-full resize-y rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-sm text-white/90 placeholder-white/30 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Additional Context (optional)</label>
+                  <label className="text-sm font-medium text-white/70">Additional Context (optional)</label>
                   <textarea
                     value={suggestionContext}
                     onChange={(e) => setSuggestionContext(e.target.value)}
                     placeholder="Why is this question important? Any supporting evidence or references?"
                     rows={2}
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-700 placeholder-gray-400 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 resize-y"
+                    className="w-full resize-y rounded-lg border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-sm text-white/90 placeholder-white/30 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
                   />
                 </div>
                 <Button
