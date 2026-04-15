@@ -21,7 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/api';
+import { api, getToken } from '@/lib/api';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { WG_EXTRAS, PHASE_INFO } from '@/lib/workingGroups';
 
@@ -81,6 +81,7 @@ export function WorkingGroupPage() {
   const [wg, setWg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [signedInName, setSignedInName] = useState(null);
 
   usePageTitle(wg ? `WG${wg.wg_number} \u00B7 ${wg.short_name || wg.name}` : `Working Group ${wgNumber}`);
 
@@ -98,6 +99,15 @@ export function WorkingGroupPage() {
       })
       .catch((err) => setError(err.message || 'error'))
       .finally(() => setLoading(false));
+
+    // If the user has a participant token for this WG, check if it's a
+    // named invite (not anonymous) so we can show "Signed in as [name]"
+    const existingToken = getToken(wgNum);
+    if (existingToken) {
+      api('/api/participants/me', { params: { token: existingToken } })
+        .then((data) => { if (data?.name) setSignedInName(data.name); })
+        .catch(() => { /* anonymous token, no name — ignore */ });
+    }
   }, [wgNum]);
 
   if (!Number.isInteger(wgNum) || wgNum < 1 || wgNum > 5) {
@@ -140,12 +150,20 @@ export function WorkingGroupPage() {
         <div className={`pointer-events-none absolute -top-32 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-b ${style.glow} blur-3xl`} />
 
         <div className="relative mx-auto max-w-5xl">
-          <Link
-            to="/#working-groups"
-            className="inline-flex items-center gap-1.5 text-sm text-white/40 transition hover:text-white/70"
-          >
-            <ArrowLeft className="h-4 w-4" /> All working groups
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link
+              to="/#working-groups"
+              className="inline-flex items-center gap-1.5 text-sm text-white/40 transition hover:text-white/70"
+            >
+              <ArrowLeft className="h-4 w-4" /> All working groups
+            </Link>
+            {signedInName && (
+              <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Signed in as {signedInName}
+              </div>
+            )}
+          </div>
 
           <motion.div
             initial="hidden"

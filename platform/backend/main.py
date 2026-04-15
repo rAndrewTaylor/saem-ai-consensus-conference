@@ -25,7 +25,7 @@ from .logging_config import get_logger
 from .middleware import RequestLoggingMiddleware
 from .database import init_db, get_db, seed_working_groups, SessionLocal, engine
 from .auth import create_admin_token, require_admin
-from .routers import surveys, pairwise, conference, analysis, admin
+from .routers import surveys, pairwise, conference, analysis, admin, participants
 
 logger = get_logger(__name__)
 
@@ -103,6 +103,7 @@ app.include_router(pairwise.router, prefix="/api/pairwise", tags=["Pairwise Comp
 app.include_router(conference.router, prefix="/api/conference", tags=["Conference Day"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["AI Analysis"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(participants.router, prefix="/api/participants", tags=["Participants"])
 
 # ---------------------------------------------------------------------------
 # Startup

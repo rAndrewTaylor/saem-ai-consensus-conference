@@ -17,6 +17,7 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ de
 const ResultsPage = lazy(() => import('@/pages/ResultsPage').then(m => ({ default: m.ResultsPage })));
 const GettingStartedPage = lazy(() => import('@/pages/GettingStartedPage').then(m => ({ default: m.GettingStartedPage })));
 const WorkingGroupPage = lazy(() => import('@/pages/WorkingGroupPage').then(m => ({ default: m.WorkingGroupPage })));
+const InvitePage = lazy(() => import('@/pages/InvitePage').then(m => ({ default: m.InvitePage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function AnimatedRoutes() {
@@ -28,6 +29,7 @@ function AnimatedRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/wg" element={<Navigate to="/#working-groups" replace />} />
           <Route path="/wg/:wgNumber" element={<WorkingGroupPage />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
           <Route path="/survey/:wgNumber/:roundName" element={<SurveyPage />} />
           <Route path="/rank/:wgNumber" element={<PairwisePage />} />
           <Route path="/vote/:sessionId" element={<ConferencePage />} />

@@ -15,6 +15,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ParticipantsSection } from '@/components/admin/ParticipantsSection';
 
 // ---------------------------------------------------------------------------
 // Animated counter hook
@@ -857,6 +858,9 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Participants & Invites */}
+      <ParticipantsSection wgs={wgs} />
 
       {/* Data Exports */}
       <motion.div

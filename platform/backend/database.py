@@ -108,15 +108,24 @@ class CoLead(Base):
 
 
 class Participant(Base):
-    """Anonymous participant. Linked by token, not name."""
+    """Participant. `token` is the invite token / session credential.
+
+    A participant may be anonymous (name/email null, self-created on first
+    visit) or invited (name/email set by an admin, token shared as an
+    invite link). `claimed_at` is set the first time an invited participant
+    clicks their link.
+    """
     __tablename__ = "participants"
 
     id = Column(Integer, primary_key=True)
-    token = Column(String(64), unique=True, nullable=False)  # anonymous access token
+    token = Column(String(64), unique=True, nullable=False)  # invite or anonymous token
     wg_id = Column(Integer, ForeignKey("working_groups.id"))
+    name = Column(String(200), nullable=True)
+    email = Column(String(200), nullable=True)
     role = Column(String(100))  # EM physician, researcher, etc.
     career_stage = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
+    claimed_at = Column(DateTime, nullable=True)  # first click of invite link
     expires_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
 
@@ -380,13 +389,40 @@ Index("ix_question_wg_status", Question.wg_id, Question.status)
 # --- Initialize ---
 
 def init_db():
-    """Create all tables."""
+    """Create all tables and apply lightweight additive migrations."""
     if DATABASE_URL.startswith("sqlite"):
         db_path = DATABASE_URL.replace("sqlite:///", "")
         db_dir = os.path.dirname(db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
     Base.metadata.create_all(engine)
+    _apply_additive_migrations()
+
+
+def _apply_additive_migrations():
+    """Add any columns defined on the ORM but missing from the live table.
+
+    Safe, idempotent, additive-only. Runs on every startup. For larger
+    schema changes use a real migration tool (e.g. Alembic).
+    """
+    from sqlalchemy import inspect, text as sa_text
+
+    inspector = inspect(engine)
+    is_sqlite = DATABASE_URL.startswith("sqlite")
+
+    # Columns to ensure exist on participants table
+    desired_participant_cols = {
+        "name": "VARCHAR(200)",
+        "email": "VARCHAR(200)",
+        "claimed_at": "TIMESTAMP" if not is_sqlite else "DATETIME",
+    }
+
+    if "participants" in inspector.get_table_names():
+        existing = {c["name"] for c in inspector.get_columns("participants")}
+        with engine.begin() as conn:
+            for col, col_type in desired_participant_cols.items():
+                if col not in existing:
+                    conn.execute(sa_text(f"ALTER TABLE participants ADD COLUMN {col} {col_type}"))
 
 
 def get_db():
