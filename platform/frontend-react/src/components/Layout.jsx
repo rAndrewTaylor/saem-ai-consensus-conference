@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Home, LayoutDashboard, BookOpen, Menu, X, Sun, Moon } from 'lucide-react';
+import { BrainCircuit, Home, LayoutDashboard, BookOpen, Menu, X, Sun, Moon, Beaker } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -8,6 +8,7 @@ import { Breadcrumbs } from '@/components/Breadcrumbs';
 const navLinks = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/guide', label: 'Guide', icon: BookOpen },
+  { to: '/try', label: 'Try it', icon: Beaker, highlight: true },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
@@ -38,21 +39,26 @@ export function Layout({ children }) {
 
           {/* Desktop nav */}
           <div className="hidden items-center gap-1 sm:flex">
-            {navLinks.map(({ to, label, icon: Icon }) => (
-              <Link
-                key={to}
-                to={to}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition",
-                  location.pathname === to
-                    ? "bg-white/[0.1] text-white"
-                    : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
+            {navLinks.map(({ to, label, icon: Icon, highlight }) => {
+              const isActive = location.pathname === to;
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition",
+                    isActive
+                      ? "bg-white/[0.1] text-white"
+                      : highlight
+                        ? "border border-amber-400/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/15 hover:text-amber-100"
+                        : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              );
+            })}
 
             {/* Dark mode toggle */}
             <button

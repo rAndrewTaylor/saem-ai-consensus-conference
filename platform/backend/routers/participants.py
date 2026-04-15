@@ -15,6 +15,10 @@ from ..database import (
 from ..auth import require_admin
 from ..validators import sanitize_text
 
+# Suffix used to tag self-service tester accounts (distinct from pre-seeded demo data)
+TESTER_EMAIL_SUFFIX = "@tester.saem-ai.test"
+DEMO_EMAIL_SUFFIX = "@demo.saem-ai.test"
+
 router = APIRouter()
 
 
@@ -243,8 +247,79 @@ def participant_me(token: str, db: Session = Depends(get_db)):
     if not p or not p.is_active:
         # Be quiet for anonymous/invalid tokens — this just means "no name to show"
         return {"name": None, "wg_number": None}
+    is_demo = bool(p.email and p.email.endswith(DEMO_EMAIL_SUFFIX))
+    is_tester = bool(p.email and p.email.endswith(TESTER_EMAIL_SUFFIX))
     return {
         "name": p.name,
         "wg_number": p.working_group.number if p.working_group else None,
         "wg_short_name": p.working_group.short_name if p.working_group else None,
+        "is_demo": is_demo,
+        "is_tester": is_tester,
+    }
+
+
+# --- Demo lobby (public, for group testing before real rollout) ---
+
+@router.get("/demo/personas")
+def list_demo_personas(db: Session = Depends(get_db)):
+    """Public: list every pre-seeded demo persona so testers can step
+    into one of them. Intended for the /try lobby during internal
+    testing — remove demo data before real rollout to hide this list.
+    """
+    personas = (
+        db.query(Participant)
+        .filter(
+            Participant.email.like(f"%{DEMO_EMAIL_SUFFIX}"),
+            Participant.is_active == True,  # noqa: E712
+        )
+        .order_by(Participant.wg_id, Participant.name)
+        .all()
+    )
+    return [
+        {
+            "name": p.name,
+            "wg_number": p.working_group.number if p.working_group else None,
+            "wg_short_name": p.working_group.short_name if p.working_group else None,
+            "token": p.token,
+            "claimed": p.claimed_at is not None,
+        }
+        for p in personas
+    ]
+
+
+class TesterCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    wg_number: int = Field(..., ge=1, le=5)
+
+
+@router.post("/demo/tester")
+def create_tester(body: TesterCreate, db: Session = Depends(get_db)):
+    """Public: create a self-service tester account for group walkthroughs.
+
+    Tester accounts are tagged with @tester.saem-ai.test so admins can
+    distinguish them from real invites and clear them before real rollout.
+    """
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+    name = sanitize_text(body.name, max_length=200)
+    # Slug the name for a readable email stub (e.g., "Jane Doe" -> "jane.doe.abc123")
+    slug = "".join(c.lower() if c.isalnum() else "." for c in name).strip(".")
+    email = f"{slug}.{secrets.token_hex(3)}{TESTER_EMAIL_SUFFIX}"
+    p = Participant(
+        token=secrets.token_urlsafe(24),
+        wg_id=wg.id,
+        name=name,
+        email=email,
+        is_active=True,
+        claimed_at=datetime.utcnow(),
+    )
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+    return {
+        "name": p.name,
+        "token": p.token,
+        "wg_number": wg.number,
+        "wg_short_name": wg.short_name,
     }

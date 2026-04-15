@@ -24,6 +24,7 @@ from .database import (
 )
 
 DEMO_EMAIL_SUFFIX = "@demo.saem-ai.test"
+TESTER_EMAIL_SUFFIX = "@tester.saem-ai.test"
 
 # ---------------------------------------------------------------------------
 # Demo content
@@ -336,10 +337,16 @@ def seed_demo_data(db: Session, seed: int = 42) -> dict:
 def reset_demo_data(db: Session) -> dict:
     """Delete every record tagged as demo data. Safe to run repeatedly."""
 
-    # Demo participants (by email suffix)
+    # Demo participants + self-service tester accounts (both tagged by email suffix)
+    from sqlalchemy import or_ as sa_or
     demo_participants = (
         db.query(Participant)
-        .filter(Participant.email.like(f"%{DEMO_EMAIL_SUFFIX}"))
+        .filter(
+            sa_or(
+                Participant.email.like(f"%{DEMO_EMAIL_SUFFIX}"),
+                Participant.email.like(f"%{TESTER_EMAIL_SUFFIX}"),
+            )
+        )
         .all()
     )
     demo_participant_ids = [p.id for p in demo_participants]

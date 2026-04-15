@@ -381,10 +381,12 @@ export function SurveyPage() {
         setSubmitted(true);
         toast({ message: 'All responses submitted successfully!', type: 'success' });
       } else {
+        const firstError = failures[0]?.error || 'unknown error';
+        console.error('Survey submit failures:', failures);
         toast({
-          message: `${failures.length} of ${answered} responses failed to submit. Please try again.`,
+          message: `${failures.length} of ${answered} responses failed: ${firstError}`,
           type: 'error',
-          duration: 6000,
+          duration: 8000,
         });
       }
     } catch (err) {
@@ -496,21 +498,24 @@ export function SurveyPage() {
       {/* ─── Sticky Progress Bar ───────────────────────────────── */}
       <div
         ref={progressRef}
-        className="sticky top-16 z-40 border-b border-white/[0.06] bg-[#13111C]/90 px-4 py-3 backdrop-blur-md sm:px-6"
+        className="sticky top-16 z-40 border-b border-white/[0.08] bg-[#1C1A2E] px-4 py-3.5 shadow-lg shadow-black/20 sm:px-6"
       >
         <div className="mx-auto max-w-3xl">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-white/70">
-              {answered}/{total} questions answered
-            </span>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-bold tabular-nums text-white">{answered}</span>
+              <span className="font-medium text-white/40">of {total} answered</span>
+            </div>
             <div className="flex items-center gap-3">
               {draftSaved && (
-                <span className="flex items-center gap-1 text-xs text-white/40">
+                <span className="hidden items-center gap-1 text-xs text-emerald-300 sm:flex">
                   <Save className="h-3 w-3" />
                   Draft saved
                 </span>
               )}
-              <span className="font-semibold text-purple-400">{percentage}%</span>
+              <span className="rounded-md bg-purple-500/15 px-2 py-0.5 text-sm font-bold tabular-nums text-purple-300">
+                {percentage}%
+              </span>
             </div>
           </div>
           <Progress value={answered} max={total} className="mt-2" />
