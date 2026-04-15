@@ -196,6 +196,52 @@ async def health():
     }
 
 
+@app.get("/api/diag")
+async def diag():
+    """Lightweight diagnostic: reports DB schema + demo data state.
+    Public endpoint — safe info only, no secrets.
+    """
+    from sqlalchemy import inspect as sa_inspect
+    from .database import Participant, Question, WorkingGroup
+
+    info = {"errors": []}
+    try:
+        inspector = sa_inspect(engine)
+        cols = {c["name"] for c in inspector.get_columns("participants")}
+        info["participants_columns"] = sorted(cols)
+        info["has_name_col"] = "name" in cols
+        info["has_email_col"] = "email" in cols
+        info["has_claimed_at_col"] = "claimed_at" in cols
+    except Exception as e:
+        info["errors"].append(f"schema inspect: {e!r}")
+
+    db = SessionLocal()
+    try:
+        info["working_groups"] = db.query(WorkingGroup).count()
+        info["total_participants"] = db.query(Participant).count()
+        try:
+            info["demo_participants"] = (
+                db.query(Participant)
+                .filter(Participant.email.like("%@demo.saem-ai.test"))
+                .count()
+            )
+        except Exception as e:
+            info["errors"].append(f"demo participant count: {e!r}")
+        try:
+            info["demo_questions"] = (
+                db.query(Question).filter(Question.source == "demo").count()
+            )
+        except Exception as e:
+            info["errors"].append(f"demo question count: {e!r}")
+        info["total_questions"] = db.query(Question).count()
+    except Exception as e:
+        info["errors"].append(f"db query: {e!r}")
+    finally:
+        db.close()
+
+    return info
+
+
 # ---------------------------------------------------------------------------
 # Admin auth endpoints
 # ---------------------------------------------------------------------------

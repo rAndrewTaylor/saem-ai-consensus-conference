@@ -405,7 +405,9 @@ def _apply_additive_migrations():
     Safe, idempotent, additive-only. Runs on every startup. For larger
     schema changes use a real migration tool (e.g. Alembic).
     """
+    import logging
     from sqlalchemy import inspect, text as sa_text
+    log = logging.getLogger(__name__)
 
     inspector = inspect(engine)
     is_sqlite = DATABASE_URL.startswith("sqlite")
@@ -419,10 +421,22 @@ def _apply_additive_migrations():
 
     if "participants" in inspector.get_table_names():
         existing = {c["name"] for c in inspector.get_columns("participants")}
+        added = []
         with engine.begin() as conn:
             for col, col_type in desired_participant_cols.items():
                 if col not in existing:
-                    conn.execute(sa_text(f"ALTER TABLE participants ADD COLUMN {col} {col_type}"))
+                    try:
+                        conn.execute(sa_text(f"ALTER TABLE participants ADD COLUMN {col} {col_type}"))
+                        added.append(col)
+                    except Exception:
+                        log.exception("Failed to add column %s to participants", col)
+                        raise
+        if added:
+            log.info("Added missing participants columns: %s", added)
+        else:
+            log.info("Participants schema up to date (has: %s)", sorted(existing))
+    else:
+        log.info("participants table not yet present; create_all will handle it")
 
 
 def get_db():

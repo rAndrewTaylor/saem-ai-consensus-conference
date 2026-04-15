@@ -32,19 +32,36 @@ export function TryPage() {
   useEffect(() => {
     let cancelled = false;
 
-    api('/api/participants/demo/personas')
-      .then((data) => {
-        if (cancelled) return;
-        setPersonas(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setLoadError(err.message || 'Could not load demo data');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const loadOrSeed = async () => {
+      try {
+        // First attempt: just load personas
+        let data = await api('/api/participants/demo/personas');
+        let list = Array.isArray(data) ? data : [];
 
+        // If empty (startup seed didn't run, or data was cleared), seed now then retry
+        if (list.length === 0 && !cancelled) {
+          try {
+            await api('/api/participants/demo/ensure-seeded', { method: 'POST' });
+            data = await api('/api/participants/demo/personas');
+            list = Array.isArray(data) ? data : [];
+          } catch (seedErr) {
+            if (!cancelled) setLoadError(`${seedErr.status ? 'HTTP ' + seedErr.status + ' ' : ''}${seedErr.message || 'seed failed'}`);
+          }
+        }
+
+        if (!cancelled) setPersonas(list);
+      } catch (err) {
+        if (!cancelled) {
+          // Include HTTP status if available so we can diagnose
+          const statusPart = err.status ? `HTTP ${err.status} — ` : '';
+          setLoadError(`${statusPart}${err.message || 'Could not load'}`);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadOrSeed();
     return () => { cancelled = true; };
   }, []);
 
