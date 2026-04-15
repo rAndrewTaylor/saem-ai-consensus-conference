@@ -9,6 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 import enum
 import os
+import threading
 
 from .config import DATABASE_URL
 
@@ -38,6 +39,8 @@ if DATABASE_URL.startswith("sqlite"):
 
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+_migrations_ensured = False
+_migrations_lock = threading.Lock()
 
 
 # --- Enums ---
@@ -93,6 +96,7 @@ class WorkingGroup(Base):
 
     questions = relationship("Question", back_populates="working_group")
     co_leads = relationship("CoLead", back_populates="working_group")
+    participants = relationship("Participant", back_populates="working_group")
 
 
 class CoLead(Base):
@@ -132,6 +136,7 @@ class Participant(Base):
     delphi_responses = relationship("DelphiResponse", back_populates="participant")
     pairwise_votes = relationship("PairwiseVote", back_populates="participant")
     conference_votes = relationship("ConferenceVote", back_populates="participant")
+    working_group = relationship("WorkingGroup", back_populates="participants")
 
 
 # --- Questions ---
@@ -416,7 +421,11 @@ def _apply_additive_migrations():
     desired_participant_cols = {
         "name": "VARCHAR(200)",
         "email": "VARCHAR(200)",
+        "role": "VARCHAR(100)",
+        "career_stage": "VARCHAR(100)",
         "claimed_at": "TIMESTAMP" if not is_sqlite else "DATETIME",
+        "expires_at": "TIMESTAMP" if not is_sqlite else "DATETIME",
+        "is_active": "BOOLEAN",
     }
 
     if "participants" in inspector.get_table_names():
@@ -441,6 +450,14 @@ def _apply_additive_migrations():
 
 def get_db():
     """FastAPI dependency that yields a database session."""
+    global _migrations_ensured
+    # Some execution paths (e.g., direct TestClient use) may skip FastAPI
+    # startup hooks. Ensure additive migrations still run at least once.
+    if not _migrations_ensured:
+        with _migrations_lock:
+            if not _migrations_ensured:
+                _apply_additive_migrations()
+                _migrations_ensured = True
     db = SessionLocal()
     try:
         yield db
