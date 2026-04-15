@@ -46,9 +46,9 @@ function useAnimatedCount(target, duration = 1200) {
 function StatCard({ icon: Icon, label, value, color, delay = 0 }) {
   const display = useAnimatedCount(value);
   const colorMap = {
-    primary: 'bg-primary-100 text-primary-600',
-    green: 'bg-emerald-100 text-emerald-600',
-    amber: 'bg-amber-100 text-amber-600',
+    primary: 'bg-purple-500/10 text-purple-400',
+    green: 'bg-emerald-500/10 text-emerald-400',
+    amber: 'bg-amber-500/10 text-amber-400',
   };
   return (
     <motion.div
@@ -62,8 +62,8 @@ function StatCard({ icon: Icon, label, value, color, delay = 0 }) {
             <Icon className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{label}</p>
-            <p className="text-3xl font-bold tracking-tight text-gray-900">{display}</p>
+            <p className="text-sm font-medium text-white/40">{label}</p>
+            <p className="text-3xl font-bold tracking-tight text-white">{display}</p>
           </div>
         </CardContent>
       </Card>
@@ -90,10 +90,10 @@ function pillarVariant(name) {
 // Donut chart colors
 // ---------------------------------------------------------------------------
 const STATUS_COLORS = {
-  confirmed: '#059669',
-  active: '#2563eb',
-  removed: '#dc2626',
-  draft: '#9ca3af',
+  confirmed: '#10b981',
+  active: '#a855f7',
+  removed: '#ef4444',
+  draft: '#6b6680',
 };
 
 // ---------------------------------------------------------------------------
@@ -126,31 +126,31 @@ function LoginForm({ onLogin }) {
         className="w-full max-w-sm"
       >
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-lg shadow-primary-500/25">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25">
             <BrainCircuit className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-500">Sign in to manage the consensus conference</p>
+          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-white/40">Sign in to manage the consensus conference</p>
         </div>
         <Card>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Email</label>
+                <label className="mb-1.5 block text-sm font-medium text-white/60">Email</label>
                 <input
                   type="text"
                   value="admin"
                   readOnly
-                  className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500 outline-none"
+                  className="w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white/40 outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Password</label>
+                <label className="mb-1.5 block text-sm font-medium text-white/60">Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                  className="w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
                   placeholder="Enter admin password"
                   autoFocus
                 />
@@ -216,13 +216,13 @@ function SessionForm({ wgs, onCreated }) {
             exit={{ opacity: 0, height: 0 }}
             className="mb-4 overflow-hidden"
           >
-            <div className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="flex flex-wrap items-end gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Type</label>
+                <label className="mb-1 block text-xs font-medium text-white/50">Type</label>
                 <select
                   value={sessionType}
                   onChange={(e) => setSessionType(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+                  className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 >
                   <option value="vote">Vote</option>
                   <option value="discussion">Discussion</option>
@@ -230,11 +230,11 @@ function SessionForm({ wgs, onCreated }) {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Working Group</label>
+                <label className="mb-1 block text-xs font-medium text-white/50">Working Group</label>
                 <select
                   value={wgNumber}
                   onChange={(e) => setWgNumber(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+                  className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 >
                   {(wgs || []).map((wg) => (
                     <option key={wg.wg_number} value={wg.wg_number}>
@@ -247,11 +247,11 @@ function SessionForm({ wgs, onCreated }) {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Phase</label>
+                <label className="mb-1 block text-xs font-medium text-white/50">Phase</label>
                 <select
                   value={phase}
                   onChange={(e) => setPhase(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+                  className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 >
                   <option value="deliberation">Deliberation</option>
                   <option value="final_vote">Final Vote</option>
@@ -450,8 +450,8 @@ export function DashboardPage() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold tracking-tight text-white">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-white/40">
             Manage the SAEM AI Consensus Conference platform
           </p>
         </div>
@@ -513,8 +513,10 @@ export function DashboardPage() {
                       <Tooltip
                         contentStyle={{
                           borderRadius: '0.75rem',
-                          border: '1px solid #e5e7eb',
-                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          backgroundColor: '#1C1A2E',
+                          color: '#F4F2FF',
+                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.3)',
                           fontSize: '0.875rem',
                           fontFamily: 'Inter, sans-serif',
                         }}
@@ -525,13 +527,13 @@ export function DashboardPage() {
                   {/* Center label */}
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
-                      <p className="text-3xl font-bold text-gray-900">{pieTotal}</p>
-                      <p className="text-xs font-medium text-gray-500">Total</p>
+                      <p className="text-3xl font-bold text-white">{pieTotal}</p>
+                      <p className="text-xs font-medium text-white/40">Total</p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex h-[220px] items-center justify-center text-sm text-gray-400">
+                <div className="flex h-[220px] items-center justify-center text-sm text-white/30">
                   No data yet
                 </div>
               )}
@@ -540,7 +542,7 @@ export function DashboardPage() {
                 {Object.entries(STATUS_COLORS).map(([key, color]) => (
                   <div key={key} className="flex items-center gap-1.5">
                     <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-xs font-medium capitalize text-gray-600">{key}</span>
+                    <span className="text-xs font-medium capitalize text-white/50">{key}</span>
                   </div>
                 ))}
               </div>
@@ -564,27 +566,27 @@ export function DashboardPage() {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 text-left">
-                      <th className="px-6 py-3 font-semibold text-gray-600">WG</th>
-                      <th className="px-6 py-3 font-semibold text-gray-600">Name</th>
-                      <th className="px-6 py-3 text-center font-semibold text-gray-600">Questions</th>
-                      <th className="px-6 py-3 text-center font-semibold text-gray-600">Confirmed</th>
-                      <th className="px-6 py-3 text-center font-semibold text-gray-600">R1</th>
-                      <th className="px-6 py-3 text-center font-semibold text-gray-600">R2</th>
-                      <th className="px-6 py-3 text-center font-semibold text-gray-600">Pairwise</th>
-                      <th className="px-6 py-3 font-semibold text-gray-600"></th>
+                    <tr className="border-b border-white/[0.06] text-left">
+                      <th className="px-6 py-3 font-semibold text-white/50">WG</th>
+                      <th className="px-6 py-3 font-semibold text-white/50">Name</th>
+                      <th className="px-6 py-3 text-center font-semibold text-white/50">Questions</th>
+                      <th className="px-6 py-3 text-center font-semibold text-white/50">Confirmed</th>
+                      <th className="px-6 py-3 text-center font-semibold text-white/50">R1</th>
+                      <th className="px-6 py-3 text-center font-semibold text-white/50">R2</th>
+                      <th className="px-6 py-3 text-center font-semibold text-white/50">Pairwise</th>
+                      <th className="px-6 py-3 font-semibold text-white/50"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {wgs.map((wg) => (
                       <tr
                         key={wg.wg_number}
-                        className="border-b border-gray-50 transition-colors hover:bg-gray-50/50"
+                        className="border-b border-white/[0.04] transition-colors hover:bg-white/[0.03]"
                       >
-                        <td className="px-6 py-3 font-semibold text-gray-900">{wg.wg_number}</td>
+                        <td className="px-6 py-3 font-semibold text-white">{wg.wg_number}</td>
                         <td className="px-6 py-3">
                           <div className="flex flex-col gap-1">
-                            <span className="font-medium text-gray-800">{wg.name}</span>
+                            <span className="font-medium text-white/80">{wg.name}</span>
                             {wg.pillar && (
                               <Badge variant={pillarVariant(wg.pillar)} className="w-fit text-[10px]">
                                 {wg.pillar}
@@ -592,11 +594,11 @@ export function DashboardPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-3 text-center text-gray-700">{wg.question_count ?? '-'}</td>
-                        <td className="px-6 py-3 text-center font-medium text-emerald-600">{wg.confirmed ?? '-'}</td>
-                        <td className="px-6 py-3 text-center text-gray-700">{wg.r1_responses ?? '-'}</td>
-                        <td className="px-6 py-3 text-center text-gray-700">{wg.r2_responses ?? '-'}</td>
-                        <td className="px-6 py-3 text-center text-gray-700">{wg.pairwise_votes ?? '-'}</td>
+                        <td className="px-6 py-3 text-center text-white/60">{wg.question_count ?? '-'}</td>
+                        <td className="px-6 py-3 text-center font-medium text-emerald-400">{wg.confirmed ?? '-'}</td>
+                        <td className="px-6 py-3 text-center text-white/60">{wg.r1_responses ?? '-'}</td>
+                        <td className="px-6 py-3 text-center text-white/60">{wg.r2_responses ?? '-'}</td>
+                        <td className="px-6 py-3 text-center text-white/60">{wg.pairwise_votes ?? '-'}</td>
                         <td className="px-6 py-3">
                           <Link to={`/results/${wg.wg_number}`}>
                             <Button variant="ghost" size="sm">
@@ -608,7 +610,7 @@ export function DashboardPage() {
                     ))}
                     {wgs.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-400">
+                        <td colSpan={8} className="px-6 py-10 text-center text-sm text-white/30">
                           No working groups loaded yet
                         </td>
                       </tr>
@@ -622,11 +624,11 @@ export function DashboardPage() {
                 {wgs.map((wg) => (
                   <div
                     key={wg.wg_number}
-                    className="rounded-xl border border-gray-100 bg-gray-50/50 p-4"
+                    className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-semibold text-gray-900">WG {wg.wg_number}: {wg.name}</p>
+                        <p className="font-semibold text-white">WG {wg.wg_number}: {wg.name}</p>
                         {wg.pillar && (
                           <Badge variant={pillarVariant(wg.pillar)} className="mt-1 text-[10px]">
                             {wg.pillar}
@@ -641,16 +643,16 @@ export function DashboardPage() {
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                       <div>
-                        <p className="font-semibold text-gray-800">{wg.question_count ?? '-'}</p>
-                        <p className="text-gray-500">Questions</p>
+                        <p className="font-semibold text-white/80">{wg.question_count ?? '-'}</p>
+                        <p className="text-white/40">Questions</p>
                       </div>
                       <div>
-                        <p className="font-semibold text-emerald-600">{wg.confirmed ?? '-'}</p>
-                        <p className="text-gray-500">Confirmed</p>
+                        <p className="font-semibold text-emerald-400">{wg.confirmed ?? '-'}</p>
+                        <p className="text-white/40">Confirmed</p>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-800">{wg.r1_responses ?? '-'}</p>
-                        <p className="text-gray-500">R1 Resp</p>
+                        <p className="font-semibold text-white/80">{wg.r1_responses ?? '-'}</p>
+                        <p className="text-white/40">R1 Resp</p>
                       </div>
                     </div>
                   </div>
@@ -680,12 +682,12 @@ export function DashboardPage() {
                   {sessions.map((s) => (
                     <div
                       key={s.id}
-                      className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-3"
+                      className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] p-3"
                     >
                       <div className="flex items-center gap-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold capitalize text-gray-800">
+                            <span className="text-sm font-semibold capitalize text-white/80">
                               {s.session_type}
                             </span>
                             {s.status === 'live' ? (
@@ -694,7 +696,7 @@ export function DashboardPage() {
                               <Badge variant="default">Closed</Badge>
                             )}
                           </div>
-                          <p className="mt-0.5 text-xs text-gray-500">
+                          <p className="mt-0.5 text-xs text-white/40">
                             Phase: {s.phase} &middot; {s.vote_count ?? 0} votes
                           </p>
                         </div>
@@ -715,7 +717,7 @@ export function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <p className="py-4 text-center text-sm text-gray-400">No sessions yet</p>
+                <p className="py-4 text-center text-sm text-white/30">No sessions yet</p>
               )}
             </CardContent>
           </Card>
@@ -733,11 +735,11 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {aiStats && (
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-800">{aiStats.total_runs ?? 0}</span> runs,{' '}
-                  <span className="font-semibold text-gray-800">{aiStats.total_items ?? 0}</span> items
+                <p className="text-sm text-white/50">
+                  <span className="font-semibold text-white/80">{aiStats.total_runs ?? 0}</span> runs,{' '}
+                  <span className="font-semibold text-white/80">{aiStats.total_items ?? 0}</span> items
                   {aiStats.reviewed != null && (
-                    <> (<span className="font-semibold text-emerald-600">{aiStats.reviewed}</span> reviewed)</>
+                    <> (<span className="font-semibold text-emerald-400">{aiStats.reviewed}</span> reviewed)</>
                   )}
                 </p>
               )}
@@ -746,16 +748,16 @@ export function DashboardPage() {
               </Button>
               {aiStats?.recent_runs?.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Recent Runs</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Recent Runs</p>
                   {aiStats.recent_runs.map((run, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                      className="flex items-center gap-2 rounded-lg border border-white/[0.06] px-3 py-2 text-sm"
                     >
                       <Badge variant={run.type === 'cross_wg' ? 'primary' : 'default'}>
                         {run.type}
                       </Badge>
-                      <span className="text-gray-600">{run.summary || `${run.items_count ?? 0} items`}</span>
+                      <span className="text-white/50">{run.summary || `${run.items_count ?? 0} items`}</span>
                     </div>
                   ))}
                 </div>
@@ -780,11 +782,11 @@ export function DashboardPage() {
             {/* WG selector + action buttons */}
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Working Group</label>
+                <label className="mb-1 block text-xs font-medium text-white/50">Working Group</label>
                 <select
                   value={selectedWg}
                   onChange={(e) => setSelectedWg(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+                  className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 >
                   {(wgs.length > 0 ? wgs : [1, 2, 3, 4, 5].map((n) => ({ wg_number: n }))).map((wg) => (
                     <option key={wg.wg_number} value={wg.wg_number}>
@@ -831,14 +833,14 @@ export function DashboardPage() {
 
             {/* Bulk question add */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Bulk Add Questions <span className="text-gray-400">(one per line)</span>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">
+                Bulk Add Questions <span className="text-white/30">(one per line)</span>
               </label>
               <textarea
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
                 rows={4}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                className="w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
                 placeholder="Enter questions, one per line..."
               />
               <div className="mt-2">

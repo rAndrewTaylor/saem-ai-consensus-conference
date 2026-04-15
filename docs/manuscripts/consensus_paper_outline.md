@@ -84,7 +84,7 @@ R. Andrew Taylor, MD, MHS^1*; [WG1 Co-Lead A]^2; [WG1 Co-Lead B]^3; [WG2 Co-Lead
 
 ### Consensus-Building Process
 - Two-round modified Delphi with predefined thresholds (>=80% / <=20%)
-- Concurrent pairwise comparison ranking (All Our Ideas platform)
+- Concurrent pairwise comparison ranking (built-in Bradley-Terry model)
 - AI-assisted between-round synthesis (4 components) with human-in-the-loop review
 - [Reference companion methodology paper for full details]
 

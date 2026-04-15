@@ -386,10 +386,10 @@ SAEM 2026 AI Consensus Conference/
 
 This conference uses a novel, multi-layered approach to consensus building. Full details are in `docs/methodology/`. Key additions beyond the standard Delphi:
 
-### Pairwise Comparison Survey
-Alongside each Delphi round, participants complete a quick pairwise ranking exercise (All Our Ideas) that produces a continuous priority ranking. See `docs/methodology/Pairwise_Comparison_Setup_Guide.md`.
+### Pairwise Comparison Ranking
+Alongside each Delphi round, participants complete a quick pairwise ranking exercise through the conference platform that produces a continuous priority ranking using Bradley-Terry scoring. See `docs/methodology/Pairwise_Comparison_Setup_Guide.md`.
 
-**Co-lead action:** Distribute the pairwise survey link alongside the Delphi survey. Review pairwise rankings at Meeting 2 alongside Delphi results.
+**Co-lead action:** Direct participants to the pairwise section of the conference platform alongside the Delphi survey. Review pairwise rankings at Meeting 2 alongside Delphi results.
 
 ### AI-Augmented Inter-Round Synthesis
 Between Delphi rounds, AI synthesis tools process free-text comments to cluster themes, suggest question revisions, and detect cross-WG overlap. Co-leads receive a structured report and accept/reject/modify each AI suggestion.
@@ -399,7 +399,7 @@ Between Delphi rounds, AI synthesis tools process free-text comments to cluster 
 See `docs/methodology/AI_Synthesis_Prompts.md` for the full prompt library.
 
 ### Conference-Day Electronic Data Collection
-Audience voting captured electronically (Mentimeter) with pre/post deliberation comparison and cross-WG prioritization. Offline backup protocols in place.
+Audience voting captured electronically through the conference platform with real-time SSE updates, pre/post deliberation comparison, and cross-WG prioritization. Offline backup protocols in place.
 
 See `docs/methodology/Conference_Day_Data_Collection.md`.
 

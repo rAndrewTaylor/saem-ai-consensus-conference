@@ -116,7 +116,7 @@ Compare the three prioritization data streams:
 | Data Stream | Source | Scale |
 |---|---|---|
 | Delphi importance | Round 2 mean importance rating | 1-9 ordinal |
-| Pairwise ranking | All Our Ideas score | 0-100 ratio |
+| Pairwise ranking | Bradley-Terry score (conference platform) | 0-100 ratio |
 | (After conference) Audience priority | 100-point allocation | Ratio |
 
 **Analysis:**

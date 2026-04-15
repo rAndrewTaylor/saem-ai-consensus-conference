@@ -48,11 +48,11 @@ const PILLARS = [
     key: 'technology',
     icon: Cpu,
     color: 'pillar-technology',
-    border: 'border-t-[var(--color-pillar-technology)]',
-    leftBorder: 'border-l-[var(--color-pillar-technology)]',
-    bg: 'bg-blue-50',
-    tint: 'from-blue-50/80 to-transparent',
-    iconColor: 'text-blue-600',
+    border: 'border-t-cyan-400',
+    leftBorder: 'border-l-cyan-400',
+    bg: 'bg-cyan-500/10',
+    tint: 'from-cyan-500/10 to-transparent',
+    iconColor: 'text-cyan-400',
     description:
       'How AI tools are built, deployed, validated, and integrated into clinical systems and workflows.',
   },
@@ -61,11 +61,11 @@ const PILLARS = [
     key: 'training',
     icon: GraduationCap,
     color: 'pillar-training',
-    border: 'border-t-[var(--color-pillar-training)]',
-    leftBorder: 'border-l-[var(--color-pillar-training)]',
-    bg: 'bg-violet-50',
-    tint: 'from-violet-50/80 to-transparent',
-    iconColor: 'text-violet-600',
+    border: 'border-t-purple-400',
+    leftBorder: 'border-l-purple-400',
+    bg: 'bg-purple-500/10',
+    tint: 'from-purple-500/10 to-transparent',
+    iconColor: 'text-purple-400',
     description:
       'How medical education and residency curricula must evolve to prepare clinicians for AI-augmented practice.',
   },
@@ -74,11 +74,11 @@ const PILLARS = [
     key: 'self',
     icon: Brain,
     color: 'pillar-self',
-    border: 'border-t-[var(--color-pillar-self)]',
-    leftBorder: 'border-l-[var(--color-pillar-self)]',
-    bg: 'bg-teal-50',
-    tint: 'from-teal-50/80 to-transparent',
-    iconColor: 'text-teal-600',
+    border: 'border-t-emerald-400',
+    leftBorder: 'border-l-emerald-400',
+    bg: 'bg-emerald-500/10',
+    tint: 'from-emerald-500/10 to-transparent',
+    iconColor: 'text-emerald-400',
     description:
       'How AI changes clinician cognition, decision-making, wellbeing, and professional identity.',
   },
@@ -87,11 +87,11 @@ const PILLARS = [
     key: 'society',
     icon: Scale,
     color: 'pillar-society',
-    border: 'border-t-[var(--color-pillar-society)]',
-    leftBorder: 'border-l-[var(--color-pillar-society)]',
-    bg: 'bg-amber-50',
-    tint: 'from-amber-50/80 to-transparent',
-    iconColor: 'text-amber-600',
+    border: 'border-t-amber-400',
+    leftBorder: 'border-l-amber-400',
+    bg: 'bg-amber-500/10',
+    tint: 'from-amber-500/10 to-transparent',
+    iconColor: 'text-amber-400',
     description:
       'How AI in emergency medicine intersects with ethics, equity, law, policy, and public trust.',
   },
@@ -102,10 +102,10 @@ const PROCESS_STEPS = [
   {
     icon: ClipboardList,
     label: 'Delphi Survey Rounds',
-    color: 'blue',
-    borderColor: 'border-t-blue-500',
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-600',
+    color: 'cyan',
+    borderColor: 'border-t-cyan-500',
+    iconBg: 'bg-cyan-500/10',
+    iconColor: 'text-cyan-400',
     bullets: [
       'Domain experts independently rate research questions on importance and feasibility',
       'After Round 1, AI-generated synthesis and group statistics inform Round 2 revisions',
@@ -115,10 +115,10 @@ const PROCESS_STEPS = [
   {
     icon: GitCompare,
     label: 'Pairwise Ranking',
-    color: 'violet',
-    borderColor: 'border-t-violet-500',
-    iconBg: 'bg-violet-50',
-    iconColor: 'text-violet-600',
+    color: 'purple',
+    borderColor: 'border-t-purple-500',
+    iconBg: 'bg-purple-500/10',
+    iconColor: 'text-purple-400',
     bullets: [
       'Head-to-head comparisons between top-rated questions from Delphi rounds',
       'Bradley-Terry statistical model produces a rigorous priority ranking',
@@ -130,8 +130,8 @@ const PROCESS_STEPS = [
     label: 'Conference Day Voting',
     color: 'emerald',
     borderColor: 'border-t-emerald-500',
-    iconBg: 'bg-emerald-50',
-    iconColor: 'text-emerald-600',
+    iconBg: 'bg-emerald-500/10',
+    iconColor: 'text-emerald-400',
     bullets: [
       'All participants convene for live deliberation and final voting',
       'Real-time audience response with instant result visualization',
@@ -142,14 +142,14 @@ const PROCESS_STEPS = [
 
 // ── Pillar color map for WG cards ───────────────────────────────────
 const PILLAR_COLORS = {
-  Technology: 'border-t-[var(--color-pillar-technology)]',
-  Training: 'border-t-[var(--color-pillar-training)]',
-  Self: 'border-t-[var(--color-pillar-self)]',
-  Society: 'border-t-[var(--color-pillar-society)]',
+  Technology: 'border-t-cyan-400',
+  Training: 'border-t-purple-400',
+  Self: 'border-t-emerald-400',
+  Society: 'border-t-amber-400',
 };
 
 const PILLAR_BADGE_VARIANT = {
-  Technology: 'primary',
+  Technology: 'cyan',
   Training: 'primary',
   Self: 'success',
   Society: 'warning',
@@ -215,23 +215,23 @@ function CountdownTimer({ targetDate }) {
     return () => clearInterval(interval);
   }, [targetDate]);
 
-  if (!timeLeft) return <span className="text-sm font-medium text-white/80">Conference Day is here!</span>;
+  if (!timeLeft) return <span className="text-sm font-medium text-white/60">Conference Day is here!</span>;
 
   return (
     <div className="flex items-center gap-4 text-white">
       <div className="text-center">
         <div className="text-2xl font-bold">{timeLeft.days}</div>
-        <div className="text-[10px] uppercase tracking-wider text-white/60">days</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/40">days</div>
       </div>
-      <span className="text-white/30">:</span>
+      <span className="text-white/20">:</span>
       <div className="text-center">
         <div className="text-2xl font-bold">{timeLeft.hours}</div>
-        <div className="text-[10px] uppercase tracking-wider text-white/60">hours</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/40">hours</div>
       </div>
-      <span className="text-white/30">:</span>
+      <span className="text-white/20">:</span>
       <div className="text-center">
         <div className="text-2xl font-bold">{timeLeft.minutes}</div>
-        <div className="text-[10px] uppercase tracking-wider text-white/60">min</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/40">min</div>
       </div>
     </div>
   );
@@ -243,7 +243,7 @@ function WGSkeletons() {
     <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 5 }).map((_, i) => (
         <Card key={i} className="overflow-hidden">
-          <div className="h-1.5 bg-gray-200" />
+          <div className="h-1.5 bg-white/[0.04]" />
           <CardContent className="space-y-4 p-6">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="h-6 w-3/4" />
@@ -293,7 +293,7 @@ function TypingEffect() {
   return (
     <span>
       {TYPING_PHRASES[phraseIndex].slice(0, charIndex)}
-      <span className="animate-pulse">|</span>
+      <span className="animate-pulse text-purple-400">|</span>
     </span>
   );
 }
@@ -354,25 +354,37 @@ export function HomePage() {
       </Helmet>
 
       {/* ─── Hero Section ──────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary-900 via-primary-700 to-primary-600 px-4 py-20 text-white sm:px-6 sm:py-28 lg:py-32">
-        {/* BackgroundPattern overlay */}
-        <div className="pointer-events-none absolute inset-0 text-white opacity-[0.04]">
+      <section className="relative overflow-hidden bg-[#13111C] px-4 py-20 text-white sm:px-6 sm:py-28 lg:py-36">
+        {/* Railway-style gradient overlays */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `
+              linear-gradient(327.21deg, rgba(75, 0, 130, 0.24) 3.65%, rgba(136, 0, 204, 0) 40.32%),
+              linear-gradient(245.93deg, rgba(209, 21, 111, 0.16) 0%, rgba(209, 25, 80, 0) 36.63%),
+              linear-gradient(147.6deg, rgba(58, 19, 255, 0) 29.79%, rgba(98, 19, 255, 0.08) 85.72%)
+            `,
+          }}
+        />
+
+        {/* Subtle grid pattern */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.03]">
           <BackgroundPattern className="h-full w-full" style={{ width: '100%', height: '100%' }} />
         </div>
 
-        {/* Animated floating orbs */}
+        {/* Animated floating orbs — purple/pink tones */}
         <motion.div
-          className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-white opacity-[0.07] blur-3xl"
+          className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-purple-500 opacity-[0.06] blur-[120px]"
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-white opacity-[0.07] blur-3xl"
+          className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-pink-500 opacity-[0.06] blur-[120px]"
           animate={{ x: [0, -25, 0], y: [0, 15, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="pointer-events-none absolute left-1/4 top-1/3 h-64 w-64 rounded-full bg-primary-400 opacity-[0.06] blur-3xl"
+          className="pointer-events-none absolute left-1/4 top-1/3 h-64 w-64 rounded-full bg-cyan-500 opacity-[0.04] blur-[100px]"
           animate={{ x: [0, 20, 0], y: [0, -15, 0] }}
           transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -387,7 +399,7 @@ export function HomePage() {
             >
               <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
                 SAEM 2026{' '}
-                <span className="block bg-gradient-to-r from-white to-primary-200 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
                   AI Consensus Conference
                 </span>
               </h1>
@@ -397,7 +409,7 @@ export function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-6 max-w-xl text-lg font-medium text-primary-100 sm:text-xl"
+              className="mt-6 max-w-xl text-lg font-medium text-white/60 sm:text-xl"
             >
               AI &amp; Emergency Medicine: <TypingEffect />
             </motion.p>
@@ -408,24 +420,24 @@ export function HomePage() {
               transition={{ duration: 0.5, delay: 0.4 }}
               className="mt-8 flex flex-wrap items-center gap-3"
             >
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
-                <Calendar className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.06] px-4 py-1.5 text-sm font-semibold text-white/80 backdrop-blur-sm">
+                <Calendar className="h-4 w-4 text-purple-400" />
                 May 21, 2026 &middot; Atlanta
               </span>
               <a
                 href="https://www.saem.org/annual-meeting"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/25"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.06] px-4 py-1.5 text-sm font-semibold text-white/80 backdrop-blur-sm transition hover:bg-white/[0.1]"
               >
-                <Sparkles className="h-4 w-4" />
+                <Sparkles className="h-4 w-4 text-pink-400" />
                 SAEM Annual Meeting
               </a>
               <button
                 onClick={() => document.getElementById('process')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/25"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.06] px-4 py-1.5 text-sm font-semibold text-white/80 backdrop-blur-sm transition hover:bg-white/[0.1]"
               >
-                <FileText className="h-4 w-4" />
+                <FileText className="h-4 w-4 text-cyan-400" />
                 Modified Delphi Method
               </button>
             </motion.div>
@@ -435,7 +447,7 @@ export function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-white/10 px-6 py-3 backdrop-blur-sm"
+              className="mt-6 inline-flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.04] px-6 py-3 backdrop-blur-sm"
             >
               <CountdownTimer targetDate="2026-05-21T08:00:00" />
             </motion.div>
@@ -449,12 +461,12 @@ export function HomePage() {
               <Button
                 size="lg"
                 onClick={scrollToWorkingGroups}
-                className="group bg-white text-primary-700 shadow-xl shadow-primary-900/30 hover:bg-primary-50 hover:text-primary-800"
+                className="group"
               >
                 Explore Working Groups
                 <ArrowDown className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-0.5" />
               </Button>
-              <Link to="/guide" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-white/70 transition hover:text-white">
+              <Link to="/guide" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-white/40 transition hover:text-white/70">
                 <HelpCircle className="h-4 w-4" />
                 New participant? Read the guide
               </Link>
@@ -470,7 +482,7 @@ export function HomePage() {
           >
             <div className="relative">
               {/* Glow behind illustration */}
-              <div className="absolute inset-0 scale-110 rounded-full bg-white/10 blur-3xl" />
+              <div className="absolute inset-0 scale-110 rounded-full bg-purple-500/10 blur-3xl" />
               <HeroIllustration className="relative w-full drop-shadow-2xl" />
             </div>
           </motion.div>
@@ -482,7 +494,7 @@ export function HomePage() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="mx-auto max-w-xs lg:hidden"
           >
-            <HeroIllustration className="w-full opacity-80" />
+            <HeroIllustration className="w-full opacity-60" />
           </motion.div>
         </div>
 
@@ -491,16 +503,16 @@ export function HomePage() {
           <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="h-12 w-full sm:h-16 lg:h-20">
             <path
               d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80Z"
-              fill="#f9fafb"
+              fill="#1C1A2E"
             />
           </svg>
         </div>
       </section>
 
       {/* ─── About Section ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gray-50 px-4 py-20 sm:px-6 lg:py-28">
+      <section className="relative overflow-hidden bg-[#1C1A2E] px-4 py-20 sm:px-6 lg:py-28">
         {/* Subtle background pattern */}
-        <div className="pointer-events-none absolute inset-0 text-gray-300 opacity-30">
+        <div className="pointer-events-none absolute inset-0 text-white opacity-[0.02]">
           <BackgroundPattern className="h-full w-full" style={{ width: '100%', height: '100%' }} />
         </div>
 
@@ -513,19 +525,19 @@ export function HomePage() {
               viewport={{ once: true, margin: '-80px' }}
               variants={slideRight}
             >
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 About This Conference
               </h2>
-              <div className="mt-6 space-y-4 text-base leading-relaxed text-gray-600">
+              <div className="mt-6 space-y-4 text-base leading-relaxed text-white/50">
                 <p>
                   The Society for Academic Emergency Medicine has convened this consensus
                   conference to develop a{' '}
-                  <strong className="text-gray-800">10-year research agenda for artificial
+                  <strong className="text-white/80">10-year research agenda for artificial
                   intelligence in emergency medicine</strong>.
                 </p>
                 <p>
                   Five working groups of domain experts use a{' '}
-                  <strong className="text-gray-800">modified Delphi method</strong> — combining
+                  <strong className="text-white/80">modified Delphi method</strong> — combining
                   iterative surveys, pairwise comparison ranking, and AI-assisted synthesis — to
                   identify and prioritize the most critical research questions.
                 </p>
@@ -563,17 +575,17 @@ export function HomePage() {
               { number: 10, label: 'Year Agenda', suffix: '-Year', icon: Target },
             ].map((stat) => (
               <motion.div key={stat.label} variants={staggerItem}>
-                <Card className="group border-0 bg-white/80 shadow-sm backdrop-blur-sm transition-shadow hover:shadow-md">
+                <Card className="group border-white/[0.06] bg-white/[0.03] backdrop-blur-sm">
                   <CardContent className="flex items-center gap-5 p-6">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 transition-colors group-hover:bg-primary-100">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400 transition-colors group-hover:bg-purple-500/15">
                       <stat.icon className="h-7 w-7" />
                     </div>
                     <div>
-                      <p className="text-3xl font-extrabold text-gray-900">
+                      <p className="text-3xl font-extrabold text-white">
                         <AnimatedNumber value={stat.number} />
-                        {stat.suffix && <span className="text-lg font-bold text-gray-500">{stat.suffix}</span>}
+                        {stat.suffix && <span className="text-lg font-bold text-white/40">{stat.suffix}</span>}
                       </p>
-                      <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                      <p className="text-sm font-medium text-white/40">{stat.label}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -584,7 +596,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Process Section ───────────────────────────────────────── */}
-      <section id="process" className="bg-white px-4 py-20 sm:px-6 lg:py-28">
+      <section id="process" className="bg-[#13111C] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
@@ -593,10 +605,10 @@ export function HomePage() {
             variants={fadeUp}
             className="text-center"
           >
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Our Consensus Process
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-gray-500">
+            <p className="mx-auto mt-3 max-w-2xl text-white/40">
               A rigorous, multi-stage methodology that combines expert judgment with
               statistical rigor to build true consensus
             </p>
@@ -623,22 +635,22 @@ export function HomePage() {
           >
             {PROCESS_STEPS.map((step, idx) => (
               <motion.div key={step.label} variants={staggerItem}>
-                <Card className={`h-full border-t-4 ${step.borderColor} transition-shadow duration-200 hover:shadow-lg`}>
+                <Card className={`h-full border-t-4 ${step.borderColor}`}>
                   <CardContent className="p-6">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${step.iconBg}`}>
                         <step.icon className={`h-5 w-5 ${step.iconColor}`} />
                       </div>
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-white/30">
                           Stage {idx + 1}
                         </span>
-                        <h3 className="text-lg font-bold text-gray-900">{step.label}</h3>
+                        <h3 className="text-lg font-bold text-white">{step.label}</h3>
                       </div>
                     </div>
                     <ul className="mt-5 space-y-3">
                       {step.bullets.map((bullet, bi) => (
-                        <li key={bi} className="flex items-start gap-2.5 text-sm leading-relaxed text-gray-600">
+                        <li key={bi} className="flex items-start gap-2.5 text-sm leading-relaxed text-white/50">
                           <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${step.iconColor} opacity-60`} />
                           {bullet}
                         </li>
@@ -653,7 +665,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Four Pillars ──────────────────────────────────────────── */}
-      <section className="bg-gray-50 px-4 py-20 sm:px-6 lg:py-28">
+      <section className="bg-[#1C1A2E] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
@@ -662,10 +674,10 @@ export function HomePage() {
             variants={fadeUp}
             className="text-center"
           >
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Four Pillars of AI in Emergency Medicine
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-gray-500">
+            <p className="mx-auto mt-3 max-w-xl text-white/40">
               Our research agenda spans four interconnected domains that together define
               the future of AI-augmented emergency care
             </p>
@@ -685,16 +697,16 @@ export function HomePage() {
                 whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.2 } }}
                 className="will-change-transform"
               >
-                <Card className={`group relative h-full overflow-hidden border-l-4 ${pillar.leftBorder} transition-shadow duration-300 hover:shadow-xl`}>
+                <Card className={`group relative h-full overflow-hidden border-l-4 ${pillar.leftBorder}`}>
                   {/* Subtle gradient tint */}
-                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${pillar.tint} opacity-50`} />
+                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${pillar.tint} opacity-40`} />
                   <CardContent className="relative p-6">
                     {/* PillarIllustration */}
                     <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
                       <PillarIllustration pillar={pillar.key} className="h-20 w-20" />
                     </div>
-                    <h3 className="text-center text-lg font-bold text-gray-900">{pillar.name}</h3>
-                    <p className="mt-2 text-center text-sm leading-relaxed text-gray-500">
+                    <h3 className="text-center text-lg font-bold text-white">{pillar.name}</h3>
+                    <p className="mt-2 text-center text-sm leading-relaxed text-white/40">
                       {pillar.description}
                     </p>
                   </CardContent>
@@ -706,7 +718,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Working Groups ────────────────────────────────────────── */}
-      <section id="working-groups" className="scroll-mt-16 bg-white px-4 py-20 sm:px-6 lg:py-28">
+      <section id="working-groups" className="scroll-mt-16 bg-[#13111C] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
@@ -715,10 +727,10 @@ export function HomePage() {
             variants={fadeUp}
             className="text-center"
           >
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Working Groups
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-gray-500">
+            <p className="mx-auto mt-3 max-w-xl text-white/40">
               Five expert groups driving the consensus process across complementary domains
             </p>
           </motion.div>
@@ -727,8 +739,8 @@ export function HomePage() {
             {loadingWG ? (
               <WGSkeletons />
             ) : errorWG ? (
-              <Card className="border-danger-light">
-                <CardContent className="py-12 text-center text-gray-500">
+              <Card>
+                <CardContent className="py-12 text-center text-white/40">
                   <EmptyStateIllustration type="error" className="mx-auto mb-4 w-32" />
                   <p className="text-sm">Unable to load working groups. Please try again later.</p>
                 </CardContent>
@@ -742,7 +754,7 @@ export function HomePage() {
                 className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
               >
                 {workingGroups.map((wg) => {
-                  const pillarColor = PILLAR_COLORS[wg.pillar] || 'border-t-primary-500';
+                  const pillarColor = PILLAR_COLORS[wg.pillar] || 'border-t-purple-500';
                   const badgeVariant = PILLAR_BADGE_VARIANT[wg.pillar] || 'default';
                   return (
                     <motion.div
@@ -751,9 +763,9 @@ export function HomePage() {
                       whileHover={{ y: -6, transition: { duration: 0.2 } }}
                       className="will-change-transform"
                     >
-                      <Card className={`group relative h-full overflow-hidden border-t-4 ${pillarColor} transition-shadow duration-300 hover:shadow-xl`}>
+                      <Card className={`group relative h-full overflow-hidden border-t-4 ${pillarColor}`}>
                         {/* Large watermark WG number */}
-                        <span className="pointer-events-none absolute -bottom-4 -right-2 select-none text-[8rem] font-black leading-none text-gray-900 opacity-[0.03]">
+                        <span className="pointer-events-none absolute -bottom-4 -right-2 select-none text-[8rem] font-black leading-none text-white opacity-[0.03]">
                           {wg.wg_number}
                         </span>
 
@@ -763,16 +775,16 @@ export function HomePage() {
                               WG {wg.wg_number}
                             </Badge>
                             {wg.pillar && (
-                              <span className="text-xs font-medium text-gray-400">{wg.pillar}</span>
+                              <span className="text-xs font-medium text-white/30">{wg.pillar}</span>
                             )}
                           </div>
 
-                          <h3 className="mt-4 text-base font-semibold leading-snug text-gray-900">
+                          <h3 className="mt-4 text-base font-semibold leading-snug text-white">
                             {wg.name}
                           </h3>
 
                           {wg.scope && (
-                            <p className="mt-2 text-sm leading-relaxed text-gray-500 line-clamp-2">
+                            <p className="mt-2 text-sm leading-relaxed text-white/40 line-clamp-2">
                               {wg.scope}
                             </p>
                           )}
@@ -780,7 +792,7 @@ export function HomePage() {
                           {wg.co_leads && wg.co_leads.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-2">
                               {wg.co_leads.map((cl, i) => (
-                                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-white/50">
                                   <Users className="h-3 w-3" />
                                   {cl.name}
                                 </span>
@@ -789,11 +801,11 @@ export function HomePage() {
                           )}
 
                           {/* Stats row */}
-                          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500">
+                          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/40">
                             {wg.total_questions != null && (
                               <span className="flex items-center gap-1.5">
-                                <ClipboardList className="h-4 w-4 text-gray-400" />
-                                <span className="font-semibold text-gray-700">
+                                <ClipboardList className="h-4 w-4 text-white/20" />
+                                <span className="font-semibold text-white/70">
                                   <AnimatedNumber value={wg.total_questions} />
                                 </span>{' '}
                                 questions
@@ -801,8 +813,8 @@ export function HomePage() {
                             )}
                             {wg.confirmed != null && (
                               <span className="flex items-center gap-1.5">
-                                <UserCheck className="h-4 w-4 text-gray-400" />
-                                <span className="font-semibold text-gray-700">
+                                <UserCheck className="h-4 w-4 text-white/20" />
+                                <span className="font-semibold text-white/70">
                                   <AnimatedNumber value={wg.confirmed} />
                                 </span>{' '}
                                 confirmed
@@ -813,19 +825,19 @@ export function HomePage() {
                           {/* Action buttons */}
                           <div className="mt-auto flex flex-wrap gap-2.5 pt-6">
                             <Link to={`/survey/${wg.wg_number}/round_1`}>
-                              <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
+                              <Button variant="secondary" size="sm" className="gap-1">
                                 Round 1
                                 <ChevronRight className="h-3.5 w-3.5" />
                               </Button>
                             </Link>
                             <Link to={`/survey/${wg.wg_number}/round_2`}>
-                              <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
+                              <Button variant="secondary" size="sm" className="gap-1">
                                 Round 2
                                 <ChevronRight className="h-3.5 w-3.5" />
                               </Button>
                             </Link>
                             <Link to={`/rank/${wg.wg_number}`}>
-                              <Button variant="secondary" size="sm" className="gap-1 shadow-sm">
+                              <Button variant="secondary" size="sm" className="gap-1">
                                 Pairwise
                                 <ChevronRight className="h-3.5 w-3.5" />
                               </Button>
@@ -849,7 +861,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Active Sessions / Conference Day ──────────────────────── */}
-      <section className="bg-gray-50 px-4 py-20 sm:px-6 lg:py-28">
+      <section className="bg-[#1C1A2E] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-4xl">
           <motion.div
             initial="hidden"
@@ -858,10 +870,10 @@ export function HomePage() {
             variants={fadeUp}
             className="text-center"
           >
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
               Conference Day Voting
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-gray-500">
+            <p className="mx-auto mt-3 max-w-lg text-white/40">
               Live voting sessions will open on conference day for real-time audience response
             </p>
           </motion.div>
@@ -873,7 +885,7 @@ export function HomePage() {
               </div>
             ) : errorSessions ? (
               <Card>
-                <CardContent className="py-12 text-center text-gray-500">
+                <CardContent className="py-12 text-center text-white/40">
                   <EmptyStateIllustration type="error" className="mx-auto mb-4 w-28" />
                   <p className="text-sm">Unable to load sessions.</p>
                 </CardContent>
@@ -889,14 +901,14 @@ export function HomePage() {
                 {sessions.map((session) => (
                   <motion.div key={session.id} variants={staggerItem}>
                     <Link to={`/vote/${session.id}`}>
-                      <Card className="group cursor-pointer border-emerald-200 transition-all duration-200 hover:border-emerald-300 hover:shadow-xl">
+                      <Card className="group cursor-pointer border-emerald-500/20 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-emerald-500/5">
                         <CardContent className="flex items-center gap-4 p-5">
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 transition-colors group-hover:bg-emerald-500/15">
                             <Radio className="h-7 w-7" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <h3 className="truncate text-base font-semibold text-gray-900">
+                              <h3 className="truncate text-base font-semibold text-white">
                                 {session.title || `Session ${session.id}`}
                               </h3>
                               <Badge variant="live">
@@ -908,12 +920,12 @@ export function HomePage() {
                               </Badge>
                             </div>
                             {session.description && (
-                              <p className="mt-1 truncate text-sm text-gray-500">
+                              <p className="mt-1 truncate text-sm text-white/40">
                                 {session.description}
                               </p>
                             )}
                           </div>
-                          <ChevronRight className="h-5 w-5 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-gray-500" />
+                          <ChevronRight className="h-5 w-5 shrink-0 text-white/20 transition group-hover:translate-x-0.5 group-hover:text-white/40" />
                         </CardContent>
                       </Card>
                     </Link>
@@ -930,12 +942,12 @@ export function HomePage() {
                 <Card className="overflow-hidden">
                   <CardContent className="flex flex-col items-center py-16 text-center">
                     <EmptyStateIllustration type="no-sessions" className="mb-6 w-40" />
-                    <h3 className="text-lg font-semibold text-gray-700">
+                    <h3 className="text-lg font-semibold text-white/70">
                       No active voting sessions
                     </h3>
-                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-gray-400">
+                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/30">
                       Live voting sessions will appear here on conference day,{' '}
-                      <strong className="text-gray-500">May 21, 2026</strong>. Check back during the
+                      <strong className="text-white/50">May 21, 2026</strong>. Check back during the
                       SAEM Annual Meeting.
                     </p>
                   </CardContent>
@@ -947,7 +959,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Sponsors / Credibility ────────────────────────────────── */}
-      <section className="bg-gray-100 px-4 py-16 sm:px-6">
+      <section className="bg-[#13111C] px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-4xl">
           <motion.div
             initial="hidden"
@@ -956,18 +968,18 @@ export function HomePage() {
             variants={fadeUp}
             className="text-center"
           >
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/30">
               Organized by
             </p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-base font-medium text-gray-500">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-base font-medium text-white/40">
               <span>SAEM</span>
-              <span className="text-gray-300" aria-hidden="true">&middot;</span>
+              <span className="text-white/20" aria-hidden="true">&middot;</span>
               <span>CORD</span>
-              <span className="text-gray-300" aria-hidden="true">&middot;</span>
+              <span className="text-white/20" aria-hidden="true">&middot;</span>
               <span>University of Virginia School of Medicine</span>
             </div>
-            <p className="mt-4 text-sm text-gray-400">
-              Conference Chair: <strong className="font-semibold text-gray-500">R. Andrew Taylor, MD, MHS</strong>
+            <p className="mt-4 text-sm text-white/30">
+              Conference Chair: <strong className="font-semibold text-white/50">R. Andrew Taylor, MD, MHS</strong>
             </p>
           </motion.div>
         </div>

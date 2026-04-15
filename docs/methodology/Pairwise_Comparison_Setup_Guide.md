@@ -1,51 +1,56 @@
-# Pairwise Comparison Survey Setup Guide
+# Pairwise Comparison Ranking Guide
 ## SAEM 2026 AI Consensus Conference
 
 ---
 
 ## What Is This?
 
-Alongside the traditional Delphi survey, each working group will run a **pairwise comparison survey** using [All Our Ideas](https://allourideas.org). Participants see two research questions at a time and pick the one they think is more important. This runs continuously and produces a rich priority ranking that complements Delphi.
+Alongside the traditional Delphi survey, each working group runs a **pairwise comparison ranking** through the SAEM AI Consensus Conference platform. Participants see two research questions at a time and pick the one they think is more important. This runs continuously and produces a rich priority ranking that complements Delphi.
 
 **Why do both?** Delphi tells you *what reaches consensus*. Pairwise comparison tells you *what matters most*. Together they give you a complete picture.
 
 ---
 
+## How It Works
+
+The pairwise ranking system is **built into the conference platform** — no external tools or accounts needed. The same web application that hosts Delphi surveys also handles pairwise comparisons and conference-day voting.
+
+### For Participants
+
+1. Navigate to the conference platform and select your working group
+2. Click "Pairwise" on your working group card
+3. Two research questions appear side by side
+4. Pick the one you think is more important (or skip if you can't decide)
+5. A new pair appears automatically — do as many as you like
+6. You can also suggest new questions via the suggestion form
+
+**Keyboard shortcuts:** Press **A** for left, **B** for right, **S** to skip.
+
+### Under the Hood
+
+- **Adaptive pairing algorithm**: The platform avoids showing you the same pair twice and randomizes question order to prevent position bias
+- **Bradley-Terry scoring**: Each vote updates a Laplace-smoothed win-rate score: `score = (wins + 1) / (wins + losses + 2) × 100`
+- **Incremental updates**: Scores recompute after every vote (no batch processing needed)
+- **Live rankings**: The rankings table updates as votes come in, visible to all participants
+
+---
+
 ## Setup Instructions (Planning Committee)
 
-### Step 1: Create Surveys (Apr 23-25)
+### Step 1: Add Questions (Apr 23-25)
 
-1. Go to [allourideas.org](https://allourideas.org)
-2. Click "Start Your Own" (or "Create New Survey")
-3. Create an account or log in
-4. For each working group, create a separate survey:
-   - **Title:** `SAEM AI Consensus — WG[#]: [Name] — Research Priority Ranking`
-   - **Description:** "Help prioritize research questions for AI in Emergency Medicine. Pick the question you think is more important for the field. There are no wrong answers. Vote as many times as you like."
+Questions are added to the platform through the admin dashboard. The same candidate research questions used in Delphi Round 1 are automatically available for pairwise comparison — no separate setup required.
 
-### Step 2: Add Questions
+### Step 2: Verify Availability
 
-For each WG survey, add the same candidate research questions that will appear in Delphi Round 1. Enter each question exactly as written in the Delphi survey.
+1. Log into the admin dashboard
+2. Confirm each working group has its questions in "active" status
+3. Test the pairwise flow by navigating to `/rank/{wg_number}` for each WG
+4. Verify that pairs load correctly and votes submit
 
-**Tips:**
-- Keep question text concise in the pairwise format (participants see two side by side)
-- If a Delphi question is very long, create a shortened version but preserve the core meaning
-- Aim for all items to be roughly the same length so longer items don't get selected just because they seem more detailed
+### Step 3: Test
 
-### Step 3: Configure Settings
-
-- **Allow new ideas:** YES (moderated — co-leads approve before they enter rotation)
-- **Active:** Set to active when Delphi Round 1 launches (Apr 25)
-
-### Step 4: Generate Links
-
-Each survey gets a unique URL. Create a short link for each (e.g., via bit.ly):
-- `WG1: bit.ly/saem-ai-wg1-rank`
-- `WG2: bit.ly/saem-ai-wg2-rank`
-- etc.
-
-### Step 5: Test
-
-Have 2-3 planning committee members test each survey before distribution.
+Have 2-3 planning committee members test each WG's pairwise ranking before distribution.
 
 ---
 
@@ -57,9 +62,7 @@ Include in the Round 1 survey email:
 
 > **Quick Prioritization Exercise (3-5 minutes)**
 > 
-> After completing the Delphi survey above, please also spend a few minutes on this quick ranking exercise:
-> 
-> [link]
+> After completing the Delphi survey above, please also spend a few minutes on this quick ranking exercise. From the home page, click "Pairwise" on your working group card.
 > 
 > You'll see two research questions at a time — just pick the one you think is more important for the field. There are no wrong answers. You can vote as many times as you want (the more votes, the better the data). You can also suggest new questions.
 > 
@@ -67,12 +70,11 @@ Include in the Round 1 survey email:
 
 ### Reminder (Apr 28, if participation is low)
 
-> Quick reminder — if you haven't tried the prioritization exercise yet, it only takes 3 minutes: [link]
-> Every vote helps us build a better priority ranking.
+> Quick reminder — if you haven't tried the prioritization exercise yet, it only takes 3 minutes. Every vote helps us build a better priority ranking.
 
 ### With Delphi Round 2 (May 3)
 
-> The priority ranking survey is still open and has been updated with revised questions from Round 2. If you have a few minutes, your continued input is valuable: [link]
+> The priority ranking is still running and has been updated with revised questions from Round 2. If you have a few minutes, your continued input is valuable.
 
 ---
 
@@ -80,28 +82,30 @@ Include in the Round 1 survey email:
 
 After Delphi Round 1 closes and questions are revised for Round 2:
 
-1. **Remove** any questions that were excluded (<=20% include) from the pairwise survey
-2. **Update** any questions whose wording was revised
-3. **Add** any new questions entering Round 2
-4. **Review and approve** any participant-suggested questions (moderate the queue)
+1. **Remove** any questions that were excluded (<=20% include) — set status to "removed" in admin dashboard
+2. **Update** any questions whose wording was revised — edit via admin dashboard
+3. **Add** any new questions entering Round 2 — add via admin dashboard
+4. **Review and approve** any participant-suggested questions (visible in admin dashboard under suggestions)
+
+All changes take effect immediately in the pairwise ranking. Existing vote data for revised questions is preserved.
 
 ---
 
 ## How to Read the Results
 
-All Our Ideas produces a **ranking** of all questions based on the pairwise votes. The key outputs:
+The platform produces a **ranking** of all questions based on pairwise votes, accessible at `/results/{wg_number}` or via the admin dashboard. The key outputs:
 
 ### Ranking Score
-Each question gets a score (0-100) based on its win rate. Higher = more often chosen as the more important question. The scores are relative — what matters is the ordering and the gaps between items.
-
-### Confidence Intervals
-Each score has a confidence interval. Items whose confidence intervals overlap are not meaningfully different in priority. Items with wide intervals need more votes.
+Each question gets a score (0-100) based on its Laplace-smoothed win rate. Higher = more often chosen as the more important question. The scores are relative — what matters is the ordering and the gaps between items.
 
 ### Win/Loss Record
-For each question, you can see how many times it was shown and how many times it was selected. A question that wins 80% of its matchups is clearly high-priority; one that wins 50% is in the middle.
+For each question, you can see how many times it won and lost. A question that wins 80% of its matchups is clearly high-priority; one that wins 50% is in the middle.
 
-### User-Suggested Ideas
-Review the moderation queue for new suggestions. Good ones get added to the rotation; duplicates or off-topic suggestions get rejected.
+### Participation Stats
+The platform tracks total votes cast, unique participants, and vote distribution across pairs — accessible via the pairwise stats endpoint.
+
+### User-Suggested Questions
+Participant suggestions are visible in the admin dashboard. Co-leads review and approve them before they enter the pairwise rotation.
 
 ---
 
@@ -123,13 +127,10 @@ When reviewing Round 1 Delphi results at Meeting 2, also pull up the pairwise ra
 
 ## Data Export
 
-All Our Ideas provides data export (CSV):
-- Question text
-- Win count
-- Loss count
-- Score (0-100)
-- Confidence interval
-- Total appearances
+The platform provides data export via the admin dashboard:
+- Question text with win/loss/score data (CSV)
+- Raw pairwise vote log with timestamps
+- Full results JSON via `/api/export/pairwise`
 
 Export this data after:
 - Round 1 closes (for Meeting 2 discussion)
@@ -146,16 +147,16 @@ The pairwise comparison data enables several analyses:
 
 2. **Discrimination:** Did pairwise comparison differentiate between questions that Delphi rated similarly? (i.e., does it resolve the ceiling effect?)
 
-3. **Participation:** How many pairwise votes per participant (estimated from session data)? Does more voting change the ranking stability?
+3. **Participation:** How many pairwise votes per participant? Does more voting change the ranking stability?
 
-4. **Novel priorities:** Did any participant-suggested questions (via the "add new idea" feature) enter the top 25% of the ranking?
+4. **Novel priorities:** Did any participant-suggested questions enter the top 25% of the ranking?
 
 ---
 
 ## Troubleshooting
 
-**Low participation:** The pairwise survey is optional and supplementary. If a WG gets fewer than 50 total votes, the ranking won't be stable enough for formal analysis but can still inform discussion.
+**Low participation:** The pairwise ranking is optional and supplementary. If a WG gets fewer than 50 total votes, the ranking won't be stable enough for formal analysis but can still inform discussion.
 
-**Participant confusion:** Some may not understand why there are two surveys. Key message: "The Delphi survey decides what's *in*. The ranking exercise decides what's *most important*. Both matter."
+**Participant confusion:** Some may not understand why there are two exercises. Key message: "The Delphi survey decides what's *in*. The ranking exercise decides what's *most important*. Both matter."
 
-**Long questions:** If questions are too long for side-by-side comparison, create abbreviated versions. Keep a mapping document showing full text → abbreviated text.
+**Long questions:** If questions are too long for side-by-side comparison, create abbreviated versions in the platform. Keep a mapping document showing full text to abbreviated text.

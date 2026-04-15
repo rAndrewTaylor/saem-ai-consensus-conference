@@ -26,17 +26,17 @@ export function Breadcrumbs() {
     <nav aria-label="Breadcrumb" className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
       <ol className="flex items-center gap-1.5 text-sm">
         <li>
-          <Link to="/" className="text-gray-400 hover:text-gray-600 transition">
+          <Link to="/" className="text-white/30 hover:text-white/60 transition">
             <Home className="h-4 w-4" />
           </Link>
         </li>
         {crumbs.map(({ path, label, isLast }) => (
           <li key={path} className="flex items-center gap-1.5">
-            <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+            <ChevronRight className="h-3.5 w-3.5 text-white/20" />
             {isLast ? (
-              <span className="font-medium text-gray-700">{label}</span>
+              <span className="font-medium text-white/70">{label}</span>
             ) : (
-              <Link to={path} className="text-gray-400 hover:text-gray-600 transition">{label}</Link>
+              <Link to={path} className="text-white/30 hover:text-white/60 transition">{label}</Link>
             )}
           </li>
         ))}

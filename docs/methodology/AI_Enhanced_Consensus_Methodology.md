@@ -19,8 +19,8 @@ The consensus process operates across five complementary layers, each producing 
 ### Layer 1: Modified Delphi Process (Backbone)
 Traditional two-round modified Delphi with anonymous electronic surveys. This is the validated, citable backbone of the consensus process.
 
-### Layer 2: Pairwise Comparison Survey (Parallel Prioritization)
-A continuously available pairwise wiki survey running alongside the Delphi rounds, producing rich prioritization data through head-to-head question comparisons.
+### Layer 2: Pairwise Comparison Ranking (Parallel Prioritization)
+A continuously available pairwise comparison system built into the conference platform, running alongside the Delphi rounds, producing rich prioritization data through head-to-head question comparisons using a Bradley-Terry statistical model.
 
 ### Layer 3: AI-Augmented Inter-Round Synthesis
 Structured use of large language models to synthesize free-text feedback, cluster themes, suggest question revisions, and detect cross-working-group overlap between Delphi rounds.
@@ -117,7 +117,7 @@ For each question at each round:
 
 ---
 
-## 4. Layer 2: Pairwise Comparison Survey
+## 4. Layer 2: Pairwise Comparison Ranking
 
 ### 4.1 Rationale
 Traditional Delphi asks participants to rate each question independently, which produces ceiling effects (everything rates 7-8 on a 9-point scale) and doesn't force prioritization. Pairwise comparison addresses this by asking: "Which of these two research questions is more important for the field?"
@@ -125,37 +125,40 @@ Traditional Delphi asks participants to rate each question independently, which 
 This produces a continuously updated ranking with ratio-scale properties, is less cognitively demanding per response, and captures prioritization data that Delphi alone cannot.
 
 ### 4.2 Platform
-**All Our Ideas** (allourideas.org) — an open-source pairwise wiki survey platform developed at Princeton. Features:
-- Web-based, mobile-friendly, no login required
+The pairwise comparison system is **built into the SAEM AI Consensus Conference platform** — the same custom web application that hosts Delphi surveys and conference-day voting. Features:
+- Web-based, mobile-friendly, anonymous token-based participation
 - Participants see two items at a time, choose one or skip
-- "I can't decide" option available
-- Participants can suggest new items (moderated by co-leads)
-- Produces a continuously updated ranking using a Bayesian statistical model
+- Keyboard shortcuts (A/B/S) for rapid voting
+- Participants can suggest new questions (moderated by co-leads)
+- Adaptive pairing algorithm avoids showing the same pair twice per participant
+- Laplace-smoothed Bradley-Terry scoring model: `score = (wins + 1) / (wins + losses + 2) × 100`
+- Scores update incrementally after each vote (no batch recomputation)
+- Live rankings visible to all participants
 - Unlimited responses — participants can vote as many times as they want
-- Free and open-source
+- No external accounts or third-party services required
 
 ### 4.3 Implementation
 
 **Setup (Apr 23-25, before Delphi Round 1):**
-- Create one All Our Ideas survey per working group
-- Seed with the same candidate research questions used in Delphi Round 1
-- Enable the "suggest new idea" feature (moderated)
-- Generate unique survey URLs for each WG
+- Questions added to the platform via the admin dashboard are automatically available for pairwise comparison
+- The same candidate research questions used in Delphi Round 1 appear in pairwise mode
+- Question suggestion feature enabled (co-leads moderate via admin dashboard)
+- Each WG's pairwise ranking accessible at `/rank/{wg_number}`
 
 **Distribution:**
-- Send pairwise survey link alongside Delphi Round 1 survey
+- Direct participants to the pairwise section of the conference platform alongside Delphi Round 1
 - Frame it as: "After completing the Delphi survey, spend 3-5 minutes on this quick prioritization exercise. There are no wrong answers — just pick whichever question you think is more important each time."
-- Keep the pairwise survey open continuously through both Delphi rounds and up to conference day
+- Keep pairwise ranking open continuously through both Delphi rounds and up to conference day
 
 **Between Rounds:**
 - Review pairwise rankings alongside Delphi results at Meeting 2
 - Use pairwise data to inform discussions about gray-zone questions
-- Add any new questions from Round 2 to the pairwise survey
+- Add any new questions from Round 2 via the admin dashboard — they automatically enter pairwise rotation
 
 **Data Collected:**
-- Total votes cast per participant (estimated via session data)
-- Win/loss record for each question
-- Bayesian ranking score with confidence intervals
+- Total votes cast per participant
+- Win/loss record and Bradley-Terry score for each question
+- Response times per comparison
 - User-suggested new questions
 - Concordance analysis: pairwise ranking vs. Delphi importance ratings
 
@@ -257,14 +260,15 @@ For 2 of the 5 working groups (selected at random), co-leads will independently 
 - Low friction — participants should be able to vote in under 60 seconds per round
 - Real-time results available to facilitators (but displayed to audience only at designated times to avoid anchoring)
 
-### 6.2 Primary Platform: Electronic Polling
-**Platform options (select one):**
-- **Mentimeter** — robust, widely used, works on any device, offline mode available
-- **Slido** — integrated Q&A and polling, good for breakout sessions
-- **Google Forms** — simple, free, universally accessible, works offline with PWA
-- **Custom web app** — maximum flexibility but development time required
-
-**Recommended: Mentimeter or Slido** for reliability and ease of use. Both have been used at major medical conferences.
+### 6.2 Primary Platform: SAEM AI Consensus Conference Platform
+All conference-day voting is conducted through the **custom-built SAEM AI Consensus Conference platform** — the same web application used for Delphi surveys and pairwise ranking. Features:
+- Real-time voting with live results via Server-Sent Events (SSE)
+- Three parallel voting methods: priority ranking, importance rating (1-9), and point allocation (100-point budget)
+- Admin-controlled session lifecycle (create, start, phase toggle, stop)
+- Pre- and post-deliberation voting phases with built-in deliberation shift analysis
+- Works on any device with a web browser
+- No accounts or app downloads required — participants use anonymous tokens
+- All data stored in a single, unified database alongside Delphi and pairwise results
 
 ### 6.3 Conference-Day Voting Protocol
 
@@ -369,7 +373,7 @@ All data stored in:
 | Analysis | Data Sources | Method |
 |---|---|---|
 | Consensus rates | Delphi R1, R2 | % agreement per question per round |
-| Priority ranking | Pairwise comparison | Bayesian ranking model (All Our Ideas) |
+| Priority ranking | Pairwise comparison | Bradley-Terry model (conference platform) |
 | Concordance | Delphi importance + pairwise ranking | Spearman rank correlation |
 | Deliberation shift | Conference pre/post votes | Paired comparison of rankings |
 | Cross-WG overlap | All WG question lists | Thematic analysis (AI-assisted + human) |

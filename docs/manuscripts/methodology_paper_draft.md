@@ -17,7 +17,7 @@ R. Andrew Taylor, MD, MHS^1*; [Working Group Co-Leads]^2-11; [Planning Committee
 
 **Objectives:** We describe the design and rationale for an AI-enhanced, multi-method consensus process developed for the 2026 Society for Academic Emergency Medicine (SAEM) Consensus Conference on Artificial Intelligence and Emergency Medicine. The methodology integrates three priority elicitation layers — modified Delphi survey, pairwise comparison ranking, and conference-day live voting — with a structured AI synthesis pipeline operating under human-in-the-loop oversight.
 
-**Methods:** Five working groups (40-60 domain experts total) participated in a compressed two-round modified Delphi process with predefined consensus thresholds (>=80% for confirmation, <=20% for removal). Concurrently, a pairwise comparison survey using Bayesian ranking generated an independent priority ordering. Between rounds, a four-component AI synthesis pipeline (comment theme clustering, question revision suggestion, new question synthesis, and cross-working-group overlap detection) processed qualitative data under structured prompts with full human review. Conference-day voting added a third independent elicitation method. Concordance across all three methods was assessed using Spearman rank correlation. A prespecified validation substudy compared AI-augmented versus human-only synthesis in two randomly selected working groups.
+**Methods:** Five working groups (40-60 domain experts total) participated in a compressed two-round modified Delphi process with predefined consensus thresholds (>=80% for confirmation, <=20% for removal). Concurrently, a pairwise comparison system using adaptive Bradley-Terry scoring generated an independent priority ordering. Between rounds, a four-component AI synthesis pipeline (comment theme clustering, question revision suggestion, new question synthesis, and cross-working-group overlap detection) processed qualitative data under structured prompts with full human review. Conference-day voting added a third independent elicitation method. Concordance across all three methods was assessed using Spearman rank correlation. A prespecified validation substudy compared AI-augmented versus human-only synthesis in two randomly selected working groups.
 
 **Results:** [To be completed after conference]
 
@@ -116,13 +116,13 @@ For each question in each round, we computed: number of respondents, response ra
 
 #### Rationale
 
-The Delphi method provides consensus thresholds and importance ratings but does not directly force prioritization among questions that all exceed the consensus threshold. To generate a continuous priority ranking, we employed a concurrent pairwise comparison survey using the All Our Ideas platform (allourideas.org), an open-source wiki survey developed at Princeton University that implements an adaptive Bayesian ranking algorithm.^8
+The Delphi method provides consensus thresholds and importance ratings but does not directly force prioritization among questions that all exceed the consensus threshold. To generate a continuous priority ranking, we employed a concurrent pairwise comparison system built into the conference platform, implementing an adaptive pairing algorithm with Laplace-smoothed Bradley-Terry scoring.^8,9
 
 #### Design
 
-One pairwise survey was created per working group, seeded with the same candidate research questions as the Delphi Round 1. Participants were presented with two questions at a time and asked to select which they considered more important for the research agenda, with a "Can't decide" option available. The platform adaptively selects pairs to maximize information gain and computes a Bayesian score (0-100 scale) with confidence intervals for each item.
+One pairwise ranking was configured per working group within the conference platform, seeded with the same candidate research questions as the Delphi Round 1. Participants were presented with two questions at a time and asked to select which they considered more important for the research agenda, with a skip option available. The platform's adaptive pairing algorithm preferentially selects pairs not yet seen by each participant, randomizes question order to prevent position bias, and computes a Laplace-smoothed Bradley-Terry score (0-100 scale) for each item, updated incrementally after every vote.
 
-The pairwise survey launched simultaneously with Delphi Round 1 and remained open continuously through conference day, providing a longitudinal priority signal. Between rounds, removed questions were dropped, revised questions were updated, and new questions entering Round 2 were added. Participant-suggested questions were reviewed by co-leads before inclusion.
+The pairwise ranking launched simultaneously with Delphi Round 1 and remained open continuously through conference day, providing a longitudinal priority signal. Between rounds, removed questions were dropped, revised questions were updated, and new questions entering Round 2 were added via the admin dashboard. Participant-suggested questions were reviewed by co-leads before inclusion.
 
 #### Concordance Analysis
 
@@ -229,7 +229,7 @@ Concordance was computed per working group and across the combined research agen
 
 ### Pairwise Comparison Outcomes
 
-- Bayesian rankings per working group
+- Bradley-Terry rankings per working group
 - Concordance with Delphi importance ratings (Spearman rho per WG)
 - Discrimination: ability of pairwise to differentiate questions rated similarly by Delphi
 

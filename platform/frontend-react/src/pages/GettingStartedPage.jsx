@@ -18,13 +18,19 @@ export function GettingStartedPage() {
   return (
     <>
       {/* Hero */}
-      <div className="bg-gradient-to-r from-primary-700 to-primary-500 px-4 py-16 text-white sm:px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <Badge variant="default" className="mb-4 bg-white/15 text-white border-0">
+      <div className="relative overflow-hidden bg-[#13111C] px-4 py-16 text-white sm:px-6">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'linear-gradient(327.21deg, rgba(75, 0, 130, 0.2) 3.65%, rgba(136, 0, 204, 0) 40.32%)',
+          }}
+        />
+        <div className="relative mx-auto max-w-3xl text-center">
+          <Badge variant="default" className="mb-4 bg-white/[0.08] text-white/70 border-0">
             Participant Guide
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Getting Started</h1>
-          <p className="mt-3 text-lg text-primary-100">
+          <p className="mt-3 text-lg text-white/50">
             Everything you need to know about participating in the consensus process
           </p>
         </div>
@@ -33,9 +39,9 @@ export function GettingStartedPage() {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         {/* Overview */}
         <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
-          <h2 className="text-2xl font-bold text-gray-900">How This Works</h2>
-          <p className="mt-3 text-gray-600 leading-relaxed">
-            You've been invited to help shape the <strong>10-year research agenda for AI in emergency medicine</strong>.
+          <h2 className="text-2xl font-bold text-white">How This Works</h2>
+          <p className="mt-3 text-white/50 leading-relaxed">
+            You've been invited to help shape the <strong className="text-white/80">10-year research agenda for AI in emergency medicine</strong>.
             The process uses a modified Delphi method — an iterative, anonymous consensus-building approach where your
             expert judgment directly influences which research questions make it into the final agenda.
           </p>
@@ -46,14 +52,14 @@ export function GettingStartedPage() {
 
         {/* Timeline */}
         <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-900">Timeline</h2>
+          <h2 className="text-2xl font-bold text-white">Timeline</h2>
           <div className="mt-6 space-y-4">
             {[
-              { date: 'Apr 19–20', title: 'Kickoff Meeting', desc: 'Meet your working group, discuss the evidence brief, brainstorm candidate research questions', icon: UserPlus, color: 'bg-blue-100 text-blue-600' },
-              { date: 'Apr 25 – May 2', title: 'Delphi Round 1', desc: 'Rate each candidate question: Include, Modify, or Exclude. Rate importance (1-9). Add comments.', icon: ClipboardList, color: 'bg-blue-100 text-blue-600' },
-              { date: 'Apr 25 – May 21', title: 'Pairwise Ranking', desc: 'Quick side-by-side comparisons — which question matters more? Do as many as you like.', icon: GitCompare, color: 'bg-violet-100 text-violet-600' },
-              { date: 'May 3–9', title: 'Delphi Round 2', desc: 'Re-vote on revised questions with Round 1 results shown. Binary vote: Include or Exclude.', icon: ClipboardList, color: 'bg-blue-100 text-blue-600' },
-              { date: 'May 21', title: 'Conference Day', desc: 'Live voting at SAEM Annual Meeting in Atlanta. Rank priorities, rate importance, allocate points.', icon: Vote, color: 'bg-emerald-100 text-emerald-600' },
+              { date: 'Apr 19–20', title: 'Kickoff Meeting', desc: 'Meet your working group, discuss the evidence brief, brainstorm candidate research questions', icon: UserPlus, color: 'bg-cyan-500/10 text-cyan-400' },
+              { date: 'Apr 25 – May 2', title: 'Delphi Round 1', desc: 'Rate each candidate question: Include, Modify, or Exclude. Rate importance (1-9). Add comments.', icon: ClipboardList, color: 'bg-cyan-500/10 text-cyan-400' },
+              { date: 'Apr 25 – May 21', title: 'Pairwise Ranking', desc: 'Quick side-by-side comparisons — which question matters more? Do as many as you like.', icon: GitCompare, color: 'bg-purple-500/10 text-purple-400' },
+              { date: 'May 3–9', title: 'Delphi Round 2', desc: 'Re-vote on revised questions with Round 1 results shown. Binary vote: Include or Exclude.', icon: ClipboardList, color: 'bg-cyan-500/10 text-cyan-400' },
+              { date: 'May 21', title: 'Conference Day', desc: 'Live voting at SAEM Annual Meeting in Atlanta. Rank priorities, rate importance, allocate points.', icon: Vote, color: 'bg-emerald-500/10 text-emerald-400' },
             ].map((step, i) => (
               <div key={i} className="flex gap-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${step.color}`}>
@@ -61,10 +67,10 @@ export function GettingStartedPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900">{step.title}</h3>
+                    <h3 className="font-semibold text-white">{step.title}</h3>
                     <Badge variant="default">{step.date}</Badge>
                   </div>
-                  <p className="mt-1 text-sm text-gray-500">{step.desc}</p>
+                  <p className="mt-1 text-sm text-white/40">{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -73,7 +79,7 @@ export function GettingStartedPage() {
 
         {/* FAQ */}
         <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-900">Frequently Asked Questions</h2>
+          <h2 className="text-2xl font-bold text-white">Frequently Asked Questions</h2>
           <div className="mt-6 space-y-6">
             {[
               { q: 'Are my responses anonymous?', a: 'Yes. All Delphi survey responses are anonymous to other group members. Only aggregated results are shared.' },
@@ -85,11 +91,11 @@ export function GettingStartedPage() {
             ].map((faq, i) => (
               <Card key={i}>
                 <CardContent className="py-4">
-                  <h3 className="flex items-start gap-2 font-semibold text-gray-900">
-                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
+                  <h3 className="flex items-start gap-2 font-semibold text-white">
+                    <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" />
                     {faq.q}
                   </h3>
-                  <p className="mt-2 pl-6 text-sm leading-relaxed text-gray-600">{faq.a}</p>
+                  <p className="mt-2 pl-6 text-sm leading-relaxed text-white/50">{faq.a}</p>
                 </CardContent>
               </Card>
             ))}

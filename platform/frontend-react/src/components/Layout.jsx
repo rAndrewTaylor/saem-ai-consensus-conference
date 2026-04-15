@@ -17,21 +17,23 @@ export function Layout({ children }) {
   const { theme, toggle } = useTheme();
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-[#13111C]">
       {/* Skip to content */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-primary-600 focus:px-4 focus:py-2 focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-purple-600 focus:px-4 focus:py-2 focus:text-white"
       >
         Skip to main content
       </a>
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-lg">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#13111C]/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5 text-primary-600 transition hover:text-primary-700">
-            <BrainCircuit className="h-7 w-7" />
-            <span className="text-lg font-bold tracking-tight">SAEM AI Consensus</span>
+          <Link to="/" className="flex items-center gap-2.5 transition hover:opacity-80">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+              <BrainCircuit className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-white">SAEM AI Consensus</span>
           </Link>
 
           {/* Desktop nav */}
@@ -43,8 +45,8 @@ export function Layout({ children }) {
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition",
                   location.pathname === to
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    ? "bg-white/[0.1] text-white"
+                    : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -55,7 +57,7 @@ export function Layout({ children }) {
             {/* Dark mode toggle */}
             <button
               onClick={toggle}
-              className="ml-2 rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+              className="ml-2 rounded-lg p-2 text-white/40 transition hover:bg-white/[0.06] hover:text-white/70"
               aria-label="Toggle dark mode"
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -66,13 +68,13 @@ export function Layout({ children }) {
           <div className="flex items-center gap-1 sm:hidden">
             <button
               onClick={toggle}
-              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              className="rounded-lg p-2 text-white/40 hover:bg-white/[0.06]"
               aria-label="Toggle dark mode"
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
             <button
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+              className="rounded-lg p-2 text-white/60 hover:bg-white/[0.06]"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
@@ -83,7 +85,7 @@ export function Layout({ children }) {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="border-t border-gray-100 bg-white px-4 py-2 sm:hidden">
+          <div className="border-t border-white/[0.06] bg-[#1C1A2E] px-4 py-2 sm:hidden">
             {navLinks.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
@@ -92,8 +94,8 @@ export function Layout({ children }) {
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
                   location.pathname === to
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-gray-600"
+                    ? "bg-white/[0.1] text-white"
+                    : "text-white/50"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -111,12 +113,12 @@ export function Layout({ children }) {
       <main id="main-content" className="flex-1">{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white py-8">
+      <footer className="border-t border-white/[0.06] bg-[#13111C] py-8">
         <div className="mx-auto max-w-7xl px-4 text-center sm:px-6">
-          <p className="text-sm font-medium text-gray-500">
+          <p className="text-sm font-medium text-white/40">
             SAEM 2026 AI Consensus Conference
           </p>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-white/20">
             Society for Academic Emergency Medicine &middot; Modified Delphi Method
           </p>
         </div>

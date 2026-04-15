@@ -14,57 +14,42 @@
 
 ---
 
-## Platform Recommendation: Mentimeter
+## Platform: SAEM AI Consensus Conference Platform
 
-**Why Mentimeter:**
-- Battle-tested at medical conferences (ACEP, AHA, etc.)
-- Works on any smartphone browser — no app download
-- Offline presentation mode available (results stored locally, synced later)
-- Supports ranking, rating, open-ended, and word cloud question types
-- Exports to Excel/CSV
-- Paid plan (~$12/month) supports unlimited audience size and exports
+All conference-day voting is conducted through the **same custom-built web platform** used for Delphi surveys and pairwise ranking. This provides a unified data pipeline — all pre-conference and conference-day data in one system.
 
-**Backup platforms:** Slido (similar features), Google Forms (free, universal, less interactive)
+**Key features for conference day:**
+- Real-time live voting with instant results via Server-Sent Events (SSE)
+- Three parallel voting methods: priority ranking, importance rating (1-9), and point allocation (100-point budget)
+- Admin-controlled session lifecycle (create, start, phase toggle pre/post deliberation, stop)
+- Pre- and post-deliberation voting phases with built-in deliberation shift analysis
+- Works on any smartphone browser — no app download or account creation needed
+- Participants use anonymous tokens (same as Delphi/pairwise)
+- All data stored alongside Delphi and pairwise results for integrated analysis
+- Data export via admin dashboard (CSV, JSON)
 
 ---
 
 ## Pre-Conference Setup (May 15-20)
 
-### Step 1: Create Mentimeter Presentations
+### Step 1: Create Conference Sessions
 
-Create one Mentimeter presentation per working group (5 total) plus one for cross-WG prioritization (6 total).
+Using the admin dashboard, create one conference session per working group (5 total) plus one for cross-WG prioritization (6 total).
 
-**Per-WG Presentation Structure:**
+**Per-WG Session Configuration:**
+- Session type: `vote`
+- Working group: select the relevant WG
+- Phase: starts in `deliberation` (pre-discussion), toggled to `post_discussion` after breakout
 
-| Slide | Type | Content |
-|---|---|---|
-| 1 | Heading | "WG[#]: [Name] — Audience Prioritization" |
-| 2 | Instruction | "Go to menti.com and enter code: XXXXXX" |
-| 3 | Multiple choice | "What is your primary role?" (EM physician / Researcher / Trainee / Data scientist/engineer / Nurse/APP / Administrator / Other) |
-| 4 | Multiple choice | "Career stage?" (Student or resident / Fellow or early career <5yr / Mid-career 5-15yr / Senior >15yr) |
-| 5 | Ranking | "Rank these research questions by priority (top 5)" — list all confirmed consensus questions |
-| 6 | Open ended | "Are there critical research questions missing from this list?" |
-| 7 | Heading | "--- BREAKOUT DISCUSSION ---" (pause for discussion) |
-| 8 | Ranking | Same ranking question repeated (post-discussion) |
-| 9 | Scales (1-9) | "Rate the importance of each question" — all confirmed questions, 1-9 scale |
-| 10 | Open ended | "After the discussion, any final thoughts or suggested modifications?" |
-
-**Cross-WG Presentation Structure:**
-
-| Slide | Type | Content |
-|---|---|---|
-| 1 | Heading | "Cross-Working-Group Research Agenda Prioritization" |
-| 2 | Instruction | "Go to menti.com and enter code: YYYYYY" |
-| 3 | 100-point allocation | "Allocate 100 points across these research priorities" — top 3-5 questions per WG (15-25 total) |
-| 4 | Ranking | "Overall, rank the top 10 most important questions across all working groups" |
-| 5 | Open ended | "What is the single most important thing the field should focus on in the next 10 years?" |
-| 6 | Word cloud | "In one word, what is the biggest barrier to AI progress in emergency medicine?" |
+**Cross-WG Session Configuration:**
+- Session type: `vote`
+- Include top 3-5 confirmed questions per WG (15-25 total)
 
 ### Step 2: Test
 
-- May 15: Planning committee tests all presentations internally
+- May 15: Planning committee tests all sessions internally
 - May 16: Dry run with co-leads (test from their phones)
-- Confirm: codes work, slides advance correctly, exports function
+- Confirm: sessions create correctly, voting works, results display, exports function
 
 ### Step 3: Print Backup Materials
 
@@ -81,9 +66,9 @@ Print and bring to Atlanta (even if you expect internet to work):
 
 - [ ] Test venue Wi-Fi with 5+ simultaneous devices
 - [ ] Test cellular connectivity (AT&T, Verizon, T-Mobile)
-- [ ] Set up Mentimeter presentations, confirm access codes
-- [ ] Project access code on screen: "Go to menti.com, enter code: XXXXXX"
-- [ ] Place table cards with QR codes linking to Mentimeter
+- [ ] Verify conference platform sessions are ready (do not activate yet)
+- [ ] Project platform URL on screen with instructions for participants
+- [ ] Place table cards with QR codes linking to the conference platform
 - [ ] Designate a "tech helper" at the registration desk for participants who need help connecting
 - [ ] **Decision point:** If Wi-Fi AND cellular are both unreliable, switch to Backup Protocol (announce at opening)
 
@@ -93,10 +78,10 @@ Print and bring to Atlanta (even if you expect internet to work):
 - Co-leads present their findings, consensus questions, and key themes
 - Audience listens
 
-**0:10-0:12 — Demographics + Initial Vote**
-- Facilitator: "Please go to menti.com and enter code XXXXXX"
-- Slides 3-4: Quick demographics (role, career stage)
-- Slide 5: "Rank the top 5 research questions by priority"
+**0:10-0:12 — Initial Vote**
+- Admin activates the session via dashboard
+- Facilitator: "Please open the conference platform on your phone and go to the live voting session"
+- Participants submit priority rankings
 - Give 2-3 minutes for everyone to vote
 - **Do NOT show results yet** (to avoid anchoring the discussion)
 
@@ -110,12 +95,12 @@ Print and bring to Atlanta (even if you expect internet to work):
 - Facilitators capture key points in a shared Google Doc (or on paper if offline)
 
 **0:30-0:35 — Post-Discussion Re-Vote**
-- Slide 8: Same ranking question, fresh vote
-- Slide 9: Importance ratings (1-9 scale)
-- Slide 10: Open-ended final thoughts
+- Admin toggles session phase to `post_discussion` via dashboard
+- Participants submit new priority rankings + importance ratings
+- Open-ended final thoughts via the platform's comment feature
 
 **0:35-0:40 — Brief Results Preview**
-- NOW show the pre/post comparison if technology allows
+- NOW show the pre/post comparison (live on the platform)
 - Co-leads briefly comment on what shifted
 
 **0:40-0:45 — Transition**
@@ -123,20 +108,19 @@ Print and bring to Atlanta (even if you expect internet to work):
 ### Cross-WG Prioritization (End of Day, ~30 min)
 
 **0:00-0:05 — Setup**
-- New Mentimeter code displayed
+- Admin activates the cross-WG session
 - Brief instructions: "You'll allocate priority across ALL working groups' top questions"
 
 **0:05-0:15 — 100-Point Allocation**
-- Slide 3: Participants distribute 100 points across the top questions from all WGs
+- Participants distribute 100 points across the top questions from all WGs via the platform
 - This is the single most important data point for the proceedings manuscript
 
-**0:15-0:25 — Top 10 Ranking + Open-Ended**
-- Slide 4: Force-rank top 10 across all WGs
-- Slide 5: "Single most important thing" open-ended
-- Slide 6: Word cloud — "Biggest barrier"
+**0:15-0:25 — Top Priority Ranking + Open-Ended**
+- Participants submit priority ranking of top questions across all WGs
+- Open-ended: "Single most important thing the field should focus on in the next 10 years?"
 
 **0:25-0:30 — Live Results**
-- Show the unified priority ranking to the full room
+- Show the unified priority ranking to the full room (live from the platform)
 - Conference chair provides brief synthesis
 
 ---
@@ -150,16 +134,15 @@ Activate if, during morning setup, you cannot reliably get 50+ simultaneous devi
 
 **Equipment needed:**
 - 1 portable Wi-Fi router (e.g., GL.iNet travel router, ~$30)
-- 1 laptop running a local survey server
+- 1 laptop running the conference platform locally
 
 **Setup:**
-- Install [LimeSurvey](https://www.limesurvey.org/) or [KoboToolbox](https://www.kobotoolbox.org/) on the laptop
-- Pre-load all survey questions (mirror the Mentimeter structure)
+- Run the conference platform backend locally on the laptop (Python + SQLite)
 - Router creates a local Wi-Fi network (no internet needed)
-- Participants connect to the local network and access surveys via browser
+- Participants connect to the local network and access the platform via browser
 - All data stored on the laptop; export after each session
 
-**Pros:** Same electronic data collection, just local. No internet needed.
+**Pros:** Same electronic data collection with the same platform, just local. No internet needed.
 **Cons:** Requires pre-setup and testing. Participants must switch Wi-Fi networks.
 
 ### Backup Option B: Paper Ballots
@@ -215,19 +198,20 @@ TOTAL: ___ (must equal 100)
 
 ### Backup Option C: Hybrid
 
-Use Mentimeter for WG sessions where connectivity works; switch to paper for sessions where it doesn't. Note which sessions used which method in the data.
+Use the platform for WG sessions where connectivity works; switch to paper for sessions where it doesn't. Note which sessions used which method in the data.
 
 ---
 
 ## Data Export and Analysis
 
 ### Immediately After Each Session
-- Export Mentimeter results (Excel/CSV)
+- Export results from the admin dashboard (CSV/JSON)
 - Download facilitator notes from shared Google Doc
-- Save a copy of the Mentimeter presentation with results embedded
+- Verify data completeness in the platform
 
 ### End of Conference Day
-- Export all Mentimeter data
+- Export all conference session data via admin dashboard
+- Run the full results export: `/api/export/full-results`
 - Collect all paper ballots (if used)
 - Collect all facilitator note sheets
 - Back up everything to Google Drive AND a USB drive
@@ -236,26 +220,24 @@ Use Mentimeter for WG sessions where connectivity works; switch to paper for ses
 
 | Data Point | Source | Format |
 |---|---|---|
-| Participant demographics | Mentimeter or paper | Categorical |
-| Pre-discussion priority ranking | Mentimeter or paper | Ordinal (top 5) |
-| Post-discussion priority ranking | Mentimeter or paper | Ordinal (top 5) |
-| Importance ratings (1-9) | Mentimeter or paper | Ordinal |
-| Open-ended suggestions | Mentimeter or paper | Free text |
+| Pre-discussion priority ranking | Conference platform or paper | Ordinal (top 5) |
+| Post-discussion priority ranking | Conference platform or paper | Ordinal (top 5) |
+| Importance ratings (1-9) | Conference platform or paper | Ordinal |
+| Open-ended suggestions | Conference platform or paper | Free text |
 | Breakout discussion notes | Facilitator notes | Free text |
-| Cross-WG point allocation | Mentimeter or paper | Ratio (100-point budget) |
-| Cross-WG top 10 ranking | Mentimeter or paper | Ordinal |
-| Word cloud responses | Mentimeter | Free text |
-| Attendance per session | Mentimeter response count or head count | Count |
+| Cross-WG point allocation | Conference platform or paper | Ratio (100-point budget) |
+| Cross-WG top 10 ranking | Conference platform or paper | Ordinal |
+| Attendance per session | Platform vote count or head count | Count |
 
 ### Key Analyses
 
-1. **Deliberation shift:** Pre vs. post-discussion rankings (paired analysis). Which questions moved up/down after discussion? This is a novel data point for consensus methodology.
+1. **Deliberation shift:** Pre vs. post-discussion rankings (paired analysis, built into the platform at `/api/conference/deliberation-shift/{wg}`). Which questions moved up/down after discussion? This is a novel data point for consensus methodology.
 
 2. **Cross-WG priority ranking:** The 100-point allocation produces a unified, ratio-scale ranking of the full research agenda. This is the headline finding for the proceedings manuscript.
 
 3. **Demographic variation:** Do different stakeholder groups (clinicians vs. researchers vs. trainees) prioritize differently? Analyze by role and career stage.
 
-4. **Concordance chain:** Compare conference-day audience rankings → Delphi importance ratings → pairwise comparison rankings. Three independent prioritization methods on the same questions.
+4. **Concordance chain:** Compare conference-day audience rankings -> Delphi importance ratings -> pairwise comparison rankings. Three independent prioritization methods on the same questions, all in one database.
 
 ---
 
@@ -303,13 +285,13 @@ Submit notes to: [Google Doc link or collect paper]
 
 ## Equipment Checklist for Atlanta
 
-- [ ] Mentimeter Pro account (active, tested)
-- [ ] Laptop with presentations loaded
-- [ ] Portable Wi-Fi router + local survey server (Backup A)
+- [ ] Conference platform deployed and tested (Railway or equivalent)
+- [ ] Laptop with platform accessible (admin dashboard open)
+- [ ] Portable Wi-Fi router + laptop with local platform instance (Backup A)
 - [ ] 200 printed ballot packets (Backup B)
 - [ ] 20 pens
 - [ ] 30 facilitator quick reference cards
-- [ ] 30 table QR code cards (link to Mentimeter)
+- [ ] 30 table QR code cards (link to conference platform)
 - [ ] USB drive for backup
 - [ ] Power strips / extension cords
 - [ ] Phone hotspot as emergency internet backup

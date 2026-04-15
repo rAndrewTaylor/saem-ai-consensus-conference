@@ -1,7 +1,7 @@
 /**
  * Inline SVG illustration components for the SAEM AI Consensus Conference platform.
  *
- * Design language: geometric, abstract, blue palette with emerald/violet/teal/amber accents.
+ * Design language: geometric, abstract, purple/cyan/pink palette (Railway-inspired).
  * All illustrations share cohesive style tokens and animation definitions.
  */
 
@@ -30,16 +30,16 @@ export function HeroIllustration(props) {
 
   // Outer nodes – positions, sizes, colours, optional icon type
   const nodes = [
-    { x: 130, y: 80,  r: 18, color: '#3b82f6', icon: 'cross',     delay: 0   },
-    { x: 480, y: 70,  r: 16, color: '#059669', icon: 'pulse',     delay: 0.5 },
-    { x: 540, y: 220, r: 20, color: '#7c3aed', icon: 'circuit',   delay: 1   },
-    { x: 500, y: 400, r: 15, color: '#0d9488', icon: 'data',      delay: 1.5 },
-    { x: 300, y: 460, r: 17, color: '#d97706', icon: 'chart',     delay: 2   },
-    { x: 100, y: 410, r: 14, color: '#3b82f6', icon: 'clipboard', delay: 0.3 },
-    { x: 60,  y: 240, r: 19, color: '#2563eb', icon: 'data',      delay: 0.8 },
-    { x: 180, y: 170, r: 12, color: '#7c3aed', icon: null,        delay: 1.2 },
-    { x: 420, y: 150, r: 13, color: '#059669', icon: null,        delay: 1.8 },
-    { x: 400, y: 340, r: 11, color: '#0d9488', icon: null,        delay: 2.2 },
+    { x: 130, y: 80,  r: 18, color: '#a855f7', icon: 'cross',     delay: 0   },
+    { x: 480, y: 70,  r: 16, color: '#10b981', icon: 'pulse',     delay: 0.5 },
+    { x: 540, y: 220, r: 20, color: '#06b6d4', icon: 'circuit',   delay: 1   },
+    { x: 500, y: 400, r: 15, color: '#ec4899', icon: 'data',      delay: 1.5 },
+    { x: 300, y: 460, r: 17, color: '#f59e0b', icon: 'chart',     delay: 2   },
+    { x: 100, y: 410, r: 14, color: '#06b6d4', icon: 'clipboard', delay: 0.3 },
+    { x: 60,  y: 240, r: 19, color: '#a855f7', icon: 'data',      delay: 0.8 },
+    { x: 180, y: 170, r: 12, color: '#ec4899', icon: null,        delay: 1.2 },
+    { x: 420, y: 150, r: 13, color: '#10b981', icon: null,        delay: 1.8 },
+    { x: 400, y: 340, r: 11, color: '#06b6d4', icon: null,        delay: 2.2 },
   ];
 
   // Secondary inter-node connections (indices into nodes[])
@@ -109,9 +109,9 @@ export function HeroIllustration(props) {
       <defs>
         {/* Radial glow behind centre */}
         <radialGradient id="hero-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.18" />
-          <stop offset="60%" stopColor="#3b82f6" stopOpacity="0.06" />
-          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+          <stop offset="0%" stopColor="#a855f7" stopOpacity="0.18" />
+          <stop offset="60%" stopColor="#a855f7" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
         </radialGradient>
       </defs>
 
@@ -123,7 +123,7 @@ export function HeroIllustration(props) {
         <line
           key={`rad-${i}`}
           x1={cx} y1={cy} x2={n.x} y2={n.y}
-          stroke="#3b82f6" strokeWidth="1" opacity="0.15"
+          stroke="#a855f7" strokeWidth="1" opacity="0.15"
         />
       ))}
 
@@ -143,7 +143,7 @@ export function HeroIllustration(props) {
         <line
           key={`link-${i}`}
           x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y}
-          stroke="#3b82f6" strokeWidth="0.8" opacity="0.12"
+          stroke="#a855f7" strokeWidth="0.8" opacity="0.12"
         />
       ))}
 
@@ -153,14 +153,14 @@ export function HeroIllustration(props) {
           key={`mid-${i}`}
           cx={(nodes[a].x + nodes[b].x) / 2}
           cy={(nodes[a].y + nodes[b].y) / 2}
-          r="2" fill="#3b82f6" opacity="0.25"
+          r="2" fill="#a855f7" opacity="0.25"
         />
       ))}
 
       {/* Centre hub ring */}
-      <circle cx={cx} cy={cy} r="48" fill="#2563eb" opacity="0.08" />
-      <circle cx={cx} cy={cy} r="38" fill="#2563eb" opacity="0.15" />
-      <circle cx={cx} cy={cy} r="28" stroke="#2563eb" strokeWidth="2" fill="#2563eb" opacity="0.9" />
+      <circle cx={cx} cy={cy} r="48" fill="#7c3aed" opacity="0.08" />
+      <circle cx={cx} cy={cy} r="38" fill="#7c3aed" opacity="0.15" />
+      <circle cx={cx} cy={cy} r="28" stroke="#7c3aed" strokeWidth="2" fill="#7c3aed" opacity="0.9" />
 
       {/* Centre brain / neural icon */}
       <g transform={`translate(${cx}, ${cy})`}>
@@ -204,7 +204,7 @@ export function HeroIllustration(props) {
       ].map((p, i) => (
         <circle
           key={`pt-${i}`}
-          cx={p.x} cy={p.y} r="2.5" fill="#3b82f6" opacity="0.35"
+          cx={p.x} cy={p.y} r="2.5" fill="#a855f7" opacity="0.35"
           className="node-pulse"
           style={{ animationDelay: `${p.d}s` }}
         />
@@ -221,9 +221,9 @@ export function HeroIllustration(props) {
  */
 export function DelphiProcessIllustration(props) {
   const stages = [
-    { label: 'Survey',  cx: 130, color: '#2563eb', bg: '#3b82f6' },
-    { label: 'Rank',    cx: 350, color: '#7c3aed', bg: '#8b5cf6' },
-    { label: 'Vote',    cx: 570, color: '#059669', bg: '#10b981' },
+    { label: 'Survey',  cx: 130, color: '#06b6d4', bg: '#22d3ee' },
+    { label: 'Rank',    cx: 350, color: '#a855f7', bg: '#c084fc' },
+    { label: 'Vote',    cx: 570, color: '#10b981', bg: '#34d399' },
   ];
 
   return (
@@ -234,21 +234,21 @@ export function DelphiProcessIllustration(props) {
       {/* Arrow 1 -> 2 */}
       <path
         d="M 195 85 C 240 85, 240 85, 285 85"
-        stroke="#cbd5e1" strokeWidth="2" fill="none" markerEnd="url(#arrow-head)"
+        stroke="rgba(255,255,255,0.15)" strokeWidth="2" fill="none" markerEnd="url(#arrow-head)"
       />
       <path
         d="M 195 85 C 240 60, 260 60, 285 85"
-        stroke="#94a3b8" strokeWidth="1.5" fill="none" opacity="0.4"
+        stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" fill="none" opacity="0.4"
         className="line-flow"
       />
       {/* Arrow 2 -> 3 */}
       <path
         d="M 415 85 C 460 85, 480 85, 505 85"
-        stroke="#cbd5e1" strokeWidth="2" fill="none" markerEnd="url(#arrow-head)"
+        stroke="rgba(255,255,255,0.15)" strokeWidth="2" fill="none" markerEnd="url(#arrow-head)"
       />
       <path
         d="M 415 85 C 460 60, 480 60, 505 85"
-        stroke="#94a3b8" strokeWidth="1.5" fill="none" opacity="0.4"
+        stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" fill="none" opacity="0.4"
         className="line-flow"
         style={{ animationDelay: '0.8s' }}
       />
@@ -263,7 +263,7 @@ export function DelphiProcessIllustration(props) {
         <circle
           key={`dot-${i}`}
           cx={(d.cx1 + d.cx2) / 2} cy={d.cy} r="3"
-          fill="#3b82f6" opacity="0.5"
+          fill="#a855f7" opacity="0.5"
           className="node-pulse"
           style={{ animationDelay: `${d.delay}s` }}
         />
@@ -271,7 +271,7 @@ export function DelphiProcessIllustration(props) {
 
       <defs>
         <marker id="arrow-head" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <path d="M0,0 L8,3 L0,6" fill="#94a3b8" />
+          <path d="M0,0 L8,3 L0,6" fill="rgba(255,255,255,0.3)" />
         </marker>
       </defs>
 
@@ -317,7 +317,7 @@ export function DelphiProcessIllustration(props) {
           <text x={s.cx - 42} y="60" textAnchor="middle" fill="#fff" fontSize="11" fontWeight="700" fontFamily="system-ui, sans-serif">{i + 1}</text>
 
           {/* Label */}
-          <text x={s.cx} y="148" textAnchor="middle" fill="#475569" fontSize="14" fontWeight="600" fontFamily="system-ui, sans-serif">{s.label}</text>
+          <text x={s.cx} y="148" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="14" fontWeight="600" fontFamily="system-ui, sans-serif">{s.label}</text>
         </g>
       ))}
     </svg>
@@ -328,37 +328,37 @@ export function DelphiProcessIllustration(props) {
 // 3. PillarIllustration
 // ---------------------------------------------------------------------------
 const pillarRenderers = {
-  /** Circuit board / microchip – blue palette */
+  /** Circuit board / microchip – cyan palette */
   technology() {
     return (
       <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         {/* Background circle */}
-        <circle cx="60" cy="60" r="56" fill="#3b82f6" opacity="0.06" />
+        <circle cx="60" cy="60" r="56" fill="#06b6d4" opacity="0.08" />
 
         {/* Central chip */}
-        <rect x="40" y="40" width="40" height="40" rx="6" fill="#2563eb" opacity="0.12" stroke="#2563eb" strokeWidth="1.5" />
-        <rect x="47" y="47" width="26" height="26" rx="3" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" strokeWidth="1" />
+        <rect x="40" y="40" width="40" height="40" rx="6" fill="#06b6d4" opacity="0.15" stroke="#06b6d4" strokeWidth="1.5" />
+        <rect x="47" y="47" width="26" height="26" rx="3" fill="#06b6d4" opacity="0.2" stroke="#22d3ee" strokeWidth="1" />
 
         {/* Inner die detail */}
-        <rect x="52" y="52" width="16" height="16" rx="2" fill="#2563eb" opacity="0.35" />
-        <circle cx="60" cy="60" r="3" fill="#3b82f6" opacity="0.9" />
+        <rect x="52" y="52" width="16" height="16" rx="2" fill="#06b6d4" opacity="0.35" />
+        <circle cx="60" cy="60" r="3" fill="#22d3ee" opacity="0.9" />
 
         {/* Traces – top */}
-        <line x1="50" y1="40" x2="50" y2="24" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
-        <line x1="60" y1="40" x2="60" y2="20" stroke="#2563eb" strokeWidth="1.2" opacity="0.5" />
-        <line x1="70" y1="40" x2="70" y2="24" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
+        <line x1="50" y1="40" x2="50" y2="24" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
+        <line x1="60" y1="40" x2="60" y2="20" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" />
+        <line x1="70" y1="40" x2="70" y2="24" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
         {/* Traces – bottom */}
-        <line x1="50" y1="80" x2="50" y2="96" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
-        <line x1="60" y1="80" x2="60" y2="100" stroke="#2563eb" strokeWidth="1.2" opacity="0.5" />
-        <line x1="70" y1="80" x2="70" y2="96" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
+        <line x1="50" y1="80" x2="50" y2="96" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
+        <line x1="60" y1="80" x2="60" y2="100" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" />
+        <line x1="70" y1="80" x2="70" y2="96" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
         {/* Traces – left */}
-        <line x1="40" y1="50" x2="24" y2="50" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
-        <line x1="40" y1="60" x2="20" y2="60" stroke="#2563eb" strokeWidth="1.2" opacity="0.5" />
-        <line x1="40" y1="70" x2="24" y2="70" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
+        <line x1="40" y1="50" x2="24" y2="50" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
+        <line x1="40" y1="60" x2="20" y2="60" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" />
+        <line x1="40" y1="70" x2="24" y2="70" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
         {/* Traces – right */}
-        <line x1="80" y1="50" x2="96" y2="50" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
-        <line x1="80" y1="60" x2="100" y2="60" stroke="#2563eb" strokeWidth="1.2" opacity="0.5" />
-        <line x1="80" y1="70" x2="96" y2="70" stroke="#3b82f6" strokeWidth="1.2" opacity="0.5" />
+        <line x1="80" y1="50" x2="96" y2="50" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
+        <line x1="80" y1="60" x2="100" y2="60" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" />
+        <line x1="80" y1="70" x2="96" y2="70" stroke="#06b6d4" strokeWidth="1.2" opacity="0.5" />
 
         {/* Trace-end nodes */}
         {[
@@ -367,14 +367,14 @@ const pillarRenderers = {
           [24, 50], [20, 60], [24, 70],
           [96, 50], [100, 60], [96, 70],
         ].map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="2.5" fill="#3b82f6" opacity="0.6" />
+          <circle key={i} cx={x} cy={y} r="2.5" fill="#22d3ee" opacity="0.6" />
         ))}
 
         {/* Corner trace accents */}
-        <path d="M24,24 L32,24 L32,32" fill="none" stroke="#3b82f6" strokeWidth="1" opacity="0.3" />
-        <path d="M96,24 L88,24 L88,32" fill="none" stroke="#3b82f6" strokeWidth="1" opacity="0.3" />
-        <path d="M24,96 L32,96 L32,88" fill="none" stroke="#3b82f6" strokeWidth="1" opacity="0.3" />
-        <path d="M96,96 L88,96 L88,88" fill="none" stroke="#3b82f6" strokeWidth="1" opacity="0.3" />
+        <path d="M24,24 L32,24 L32,32" fill="none" stroke="#06b6d4" strokeWidth="1" opacity="0.3" />
+        <path d="M96,24 L88,24 L88,32" fill="none" stroke="#06b6d4" strokeWidth="1" opacity="0.3" />
+        <path d="M24,96 L32,96 L32,88" fill="none" stroke="#06b6d4" strokeWidth="1" opacity="0.3" />
+        <path d="M96,96 L88,96 L88,88" fill="none" stroke="#06b6d4" strokeWidth="1" opacity="0.3" />
       </svg>
     );
   },
@@ -444,12 +444,12 @@ const pillarRenderers = {
       <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <style>{svgAnimationStyles}</style>
         {/* Background circle */}
-        <circle cx="60" cy="60" r="56" fill="#0d9488" opacity="0.06" />
+        <circle cx="60" cy="60" r="56" fill="#10b981" opacity="0.06" />
 
         {/* Head silhouette (facing right) */}
         <path
           d="M72,95 L48,95 L48,80 C32,78 24,66 24,52 C24,32 38,18 56,18 C74,18 88,32 88,50 C88,60 84,68 78,74 L78,80 C78,82 76,84 72,84 L68,84 L68,88 C68,92 72,95 72,95Z"
-          fill="#0d9488" opacity="0.1" stroke="#0d9488" strokeWidth="1.5" strokeLinejoin="round"
+          fill="#10b981" opacity="0.1" stroke="#10b981" strokeWidth="1.5" strokeLinejoin="round"
         />
 
         {/* Neural connections inside head */}
@@ -465,10 +465,10 @@ const pillarRenderers = {
           { x: 55, y: 45, r: 2.5 },
         ].map((n, i) => (
           <g key={i}>
-            <circle cx={n.x} cy={n.y} r={n.r} fill="#0d9488" opacity="0.35"
+            <circle cx={n.x} cy={n.y} r={n.r} fill="#10b981" opacity="0.35"
               className="node-pulse" style={{ animationDelay: `${i * 0.4}s` }}
             />
-            <circle cx={n.x} cy={n.y} r={n.r * 0.5} fill="#0d9488" opacity="0.7" />
+            <circle cx={n.x} cy={n.y} r={n.r * 0.5} fill="#10b981" opacity="0.7" />
           </g>
         ))}
 
@@ -480,13 +480,13 @@ const pillarRenderers = {
           [55, 45, 58, 55], [42, 52, 48, 65], [72, 50, 62, 68],
         ].map(([x1, y1, x2, y2], i) => (
           <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke="#0d9488" strokeWidth="0.8" opacity="0.3"
+            stroke="#10b981" strokeWidth="0.8" opacity="0.3"
           />
         ))}
 
         {/* Thought / emission arcs outside head */}
-        <path d="M80,38 C88,34 92,40 88,46" fill="none" stroke="#0d9488" strokeWidth="1" opacity="0.2" />
-        <path d="M84,30 C94,26 100,34 94,42" fill="none" stroke="#0d9488" strokeWidth="0.8" opacity="0.15" />
+        <path d="M80,38 C88,34 92,40 88,46" fill="none" stroke="#10b981" strokeWidth="1" opacity="0.2" />
+        <path d="M84,30 C94,26 100,34 94,42" fill="none" stroke="#10b981" strokeWidth="0.8" opacity="0.15" />
       </svg>
     );
   },
@@ -588,24 +588,24 @@ const emptyStateRenderers = {
     return (
       <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         {/* Clipboard body */}
-        <rect x="52" y="44" width="80" height="110" rx="10" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="52" y="44" width="80" height="110" rx="10" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
         {/* Clipboard clip */}
-        <rect x="74" y="34" width="36" height="18" rx="6" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
-        <rect x="82" y="30" width="20" height="10" rx="4" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.5" />
+        <rect x="74" y="34" width="36" height="18" rx="6" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+        <rect x="82" y="30" width="20" height="10" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" />
 
         {/* Content lines (faded) */}
-        <line x1="70" y1="74" x2="114" y2="74" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
-        <line x1="70" y1="88" x2="108" y2="88" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
-        <line x1="70" y1="102" x2="100" y2="102" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
-        <line x1="70" y1="116" x2="96" y2="116" stroke="#e2e8f0" strokeWidth="3" strokeLinecap="round" />
+        <line x1="70" y1="74" x2="114" y2="74" stroke="rgba(255,255,255,0.08)" strokeWidth="3" strokeLinecap="round" />
+        <line x1="70" y1="88" x2="108" y2="88" stroke="rgba(255,255,255,0.08)" strokeWidth="3" strokeLinecap="round" />
+        <line x1="70" y1="102" x2="100" y2="102" stroke="rgba(255,255,255,0.08)" strokeWidth="3" strokeLinecap="round" />
+        <line x1="70" y1="116" x2="96" y2="116" stroke="rgba(255,255,255,0.08)" strokeWidth="3" strokeLinecap="round" />
 
         {/* Magnifying glass */}
-        <circle cx="132" cy="128" r="22" fill="#f8fafc" stroke="#3b82f6" strokeWidth="2.5" opacity="0.9" />
-        <circle cx="132" cy="128" r="14" fill="none" stroke="#3b82f6" strokeWidth="1.5" opacity="0.3" />
-        <line x1="148" y1="144" x2="162" y2="162" stroke="#3b82f6" strokeWidth="3.5" strokeLinecap="round" opacity="0.8" />
+        <circle cx="132" cy="128" r="22" fill="rgba(168,85,247,0.06)" stroke="#a855f7" strokeWidth="2.5" opacity="0.9" />
+        <circle cx="132" cy="128" r="14" fill="none" stroke="#a855f7" strokeWidth="1.5" opacity="0.3" />
+        <line x1="148" y1="144" x2="162" y2="162" stroke="#a855f7" strokeWidth="3.5" strokeLinecap="round" opacity="0.8" />
 
         {/* ? in magnifying glass */}
-        <text x="132" y="134" textAnchor="middle" fill="#3b82f6" fontSize="18" fontWeight="600" fontFamily="system-ui, sans-serif" opacity="0.6">?</text>
+        <text x="132" y="134" textAnchor="middle" fill="#a855f7" fontSize="18" fontWeight="600" fontFamily="system-ui, sans-serif" opacity="0.6">?</text>
       </svg>
     );
   },
@@ -615,14 +615,14 @@ const emptyStateRenderers = {
     return (
       <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         {/* Calendar body */}
-        <rect x="36" y="48" width="100" height="100" rx="10" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="36" y="48" width="100" height="100" rx="10" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
         {/* Calendar header */}
-        <rect x="36" y="48" width="100" height="28" rx="10" fill="#e2e8f0" />
-        <rect x="36" y="66" width="100" height="10" fill="#e2e8f0" />
+        <rect x="36" y="48" width="100" height="28" rx="10" fill="rgba(255,255,255,0.06)" />
+        <rect x="36" y="66" width="100" height="10" fill="rgba(255,255,255,0.06)" />
 
         {/* Calendar binding rings */}
-        <rect x="58" y="40" width="8" height="16" rx="3" fill="#cbd5e1" />
-        <rect x="106" y="40" width="8" height="16" rx="3" fill="#cbd5e1" />
+        <rect x="58" y="40" width="8" height="16" rx="3" fill="rgba(255,255,255,0.1)" />
+        <rect x="106" y="40" width="8" height="16" rx="3" fill="rgba(255,255,255,0.1)" />
 
         {/* Day grid (faded) */}
         {[0, 1, 2, 3].map(row =>
@@ -631,14 +631,14 @@ const emptyStateRenderers = {
               key={`${row}-${col}`}
               x={48 + col * 17} y={86 + row * 14}
               width="10" height="8" rx="2"
-              fill="#e2e8f0" opacity="0.6"
+              fill="rgba(255,255,255,0.06)" opacity="0.6"
             />
           ))
         )}
 
         {/* Clock overlay */}
-        <circle cx="140" cy="132" r="30" fill="#f8fafc" stroke="#059669" strokeWidth="2.5" />
-        <circle cx="140" cy="132" r="24" fill="none" stroke="#059669" strokeWidth="1" opacity="0.2" />
+        <circle cx="140" cy="132" r="30" fill="rgba(16,185,129,0.06)" stroke="#10b981" strokeWidth="2.5" />
+        <circle cx="140" cy="132" r="24" fill="none" stroke="#10b981" strokeWidth="1" opacity="0.2" />
 
         {/* Clock tick marks */}
         {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => {
@@ -649,15 +649,15 @@ const emptyStateRenderers = {
           const y2 = 132 + 23 * Math.sin(rad);
           return (
             <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke="#059669" strokeWidth="1.5" opacity="0.35" strokeLinecap="round"
+              stroke="#10b981" strokeWidth="1.5" opacity="0.35" strokeLinecap="round"
             />
           );
         })}
 
         {/* Clock hands */}
-        <line x1="140" y1="132" x2="140" y2="116" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
-        <line x1="140" y1="132" x2="152" y2="138" stroke="#059669" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-        <circle cx="140" cy="132" r="2.5" fill="#059669" opacity="0.7" />
+        <line x1="140" y1="132" x2="140" y2="116" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
+        <line x1="140" y1="132" x2="152" y2="138" stroke="#10b981" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+        <circle cx="140" cy="132" r="2.5" fill="#10b981" opacity="0.7" />
       </svg>
     );
   },
@@ -669,31 +669,31 @@ const emptyStateRenderers = {
         {/* Triangle */}
         <path
           d="M100,40 L170,155 L30,155Z"
-          fill="#fef3c7" stroke="#d97706" strokeWidth="2.5" strokeLinejoin="round"
+          fill="rgba(245,158,11,0.1)" stroke="#f59e0b" strokeWidth="2.5" strokeLinejoin="round"
         />
         {/* Inner triangle highlight */}
         <path
           d="M100,58 L158,148 L42,148Z"
-          fill="#fffbeb" opacity="0.6"
+          fill="rgba(245,158,11,0.05)" opacity="0.6"
         />
 
         {/* Gentle face */}
         {/* Eyes – slightly closed / calm */}
-        <circle cx="84" cy="118" r="4" fill="#d97706" opacity="0.6" />
-        <circle cx="116" cy="118" r="4" fill="#d97706" opacity="0.6" />
+        <circle cx="84" cy="118" r="4" fill="#f59e0b" opacity="0.6" />
+        <circle cx="116" cy="118" r="4" fill="#f59e0b" opacity="0.6" />
         {/* Small highlight on eyes */}
-        <circle cx="85.5" cy="116.5" r="1.5" fill="#fff" opacity="0.7" />
-        <circle cx="117.5" cy="116.5" r="1.5" fill="#fff" opacity="0.7" />
+        <circle cx="85.5" cy="116.5" r="1.5" fill="#fff" opacity="0.5" />
+        <circle cx="117.5" cy="116.5" r="1.5" fill="#fff" opacity="0.5" />
 
         {/* Gentle mouth – slight concern */}
-        <path d="M90,134 C95,130 105,130 110,134" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+        <path d="M90,134 C95,130 105,130 110,134" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
 
         {/* Exclamation mark (above face) */}
-        <rect x="96" y="72" width="8" height="24" rx="4" fill="#d97706" opacity="0.7" />
-        <circle cx="100" cy="104" r="4" fill="#d97706" opacity="0.7" />
+        <rect x="96" y="72" width="8" height="24" rx="4" fill="#f59e0b" opacity="0.7" />
+        <circle cx="100" cy="104" r="4" fill="#f59e0b" opacity="0.7" />
 
         {/* Soft shadow beneath */}
-        <ellipse cx="100" cy="170" rx="50" ry="6" fill="#d97706" opacity="0.08" />
+        <ellipse cx="100" cy="170" rx="50" ry="6" fill="#f59e0b" opacity="0.06" />
       </svg>
     );
   },
