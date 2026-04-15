@@ -7,6 +7,8 @@ const routeLabels = {
   vote: 'Conference Voting',
   dashboard: 'Dashboard',
   results: 'Results',
+  wg: 'Working Groups',
+  guide: 'Guide',
 };
 
 export function Breadcrumbs() {

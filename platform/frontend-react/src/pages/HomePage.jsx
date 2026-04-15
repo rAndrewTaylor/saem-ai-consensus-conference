@@ -763,94 +763,76 @@ export function HomePage() {
                       whileHover={{ y: -6, transition: { duration: 0.2 } }}
                       className="will-change-transform"
                     >
-                      <Card className={`group relative h-full overflow-hidden border-t-4 ${pillarColor}`}>
-                        {/* Large watermark WG number */}
-                        <span className="pointer-events-none absolute -bottom-4 -right-2 select-none text-[8rem] font-black leading-none text-white opacity-[0.03]">
-                          {wg.wg_number}
-                        </span>
+                      <Link to={`/wg/${wg.wg_number}`} className="block h-full">
+                        <Card className={`group relative h-full overflow-hidden border-t-4 ${pillarColor} transition hover:border-white/20`}>
+                          {/* Large watermark WG number */}
+                          <span className="pointer-events-none absolute -bottom-4 -right-2 select-none text-[8rem] font-black leading-none text-white opacity-[0.03]">
+                            {wg.wg_number}
+                          </span>
 
-                        <CardContent className="relative flex h-full flex-col p-6">
-                          <div className="flex items-start justify-between">
-                            <Badge variant={badgeVariant} className="text-xs font-bold">
-                              WG {wg.wg_number}
-                            </Badge>
-                            {wg.pillar && (
-                              <span className="text-xs font-medium text-white/30">{wg.pillar}</span>
-                            )}
-                          </div>
-
-                          <h3 className="mt-4 text-base font-semibold leading-snug text-white">
-                            {wg.name}
-                          </h3>
-
-                          {wg.scope && (
-                            <p className="mt-2 text-sm leading-relaxed text-white/40 line-clamp-2">
-                              {wg.scope}
-                            </p>
-                          )}
-
-                          {wg.co_leads && wg.co_leads.length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {wg.co_leads.map((cl, i) => (
-                                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-white/50">
-                                  <Users className="h-3 w-3" />
-                                  {cl.name}
-                                </span>
-                              ))}
+                          <CardContent className="relative flex h-full flex-col p-6">
+                            <div className="flex items-start justify-between">
+                              <Badge variant={badgeVariant} className="text-xs font-bold">
+                                WG {wg.wg_number}
+                              </Badge>
+                              {wg.pillar && (
+                                <span className="text-xs font-medium text-white/30">{wg.pillar}</span>
+                              )}
                             </div>
-                          )}
 
-                          {/* Stats row */}
-                          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/40">
-                            {wg.total_questions != null && (
-                              <span className="flex items-center gap-1.5">
-                                <ClipboardList className="h-4 w-4 text-white/20" />
-                                <span className="font-semibold text-white/70">
-                                  <AnimatedNumber value={wg.total_questions} />
-                                </span>{' '}
-                                questions
-                              </span>
-                            )}
-                            {wg.confirmed != null && (
-                              <span className="flex items-center gap-1.5">
-                                <UserCheck className="h-4 w-4 text-white/20" />
-                                <span className="font-semibold text-white/70">
-                                  <AnimatedNumber value={wg.confirmed} />
-                                </span>{' '}
-                                confirmed
-                              </span>
-                            )}
-                          </div>
+                            <h3 className="mt-4 text-base font-semibold leading-snug text-white">
+                              {wg.name}
+                            </h3>
 
-                          {/* Action buttons */}
-                          <div className="mt-auto flex flex-wrap gap-2.5 pt-6">
-                            <Link to={`/survey/${wg.wg_number}/round_1`}>
-                              <Button variant="secondary" size="sm" className="gap-1">
-                                Round 1
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
-                            <Link to={`/survey/${wg.wg_number}/round_2`}>
-                              <Button variant="secondary" size="sm" className="gap-1">
-                                Round 2
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
-                            <Link to={`/rank/${wg.wg_number}`}>
-                              <Button variant="secondary" size="sm" className="gap-1">
-                                Pairwise
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
-                            <Link to={`/results/${wg.wg_number}`}>
-                              <Button variant="ghost" size="sm" className="gap-1">
-                                Results
-                                <ArrowRight className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
-                          </div>
-                        </CardContent>
-                      </Card>
+                            {wg.scope && (
+                              <p className="mt-2 text-sm leading-relaxed text-white/40 line-clamp-2">
+                                {wg.scope}
+                              </p>
+                            )}
+
+                            {wg.co_leads && wg.co_leads.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {wg.co_leads.map((cl, i) => (
+                                  <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-white/50">
+                                    <Users className="h-3 w-3" />
+                                    {cl.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Stats row */}
+                            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/40">
+                              {wg.total_questions != null && (
+                                <span className="flex items-center gap-1.5">
+                                  <ClipboardList className="h-4 w-4 text-white/20" />
+                                  <span className="font-semibold text-white/70">
+                                    <AnimatedNumber value={wg.total_questions} />
+                                  </span>{' '}
+                                  questions
+                                </span>
+                              )}
+                              {wg.confirmed != null && (
+                                <span className="flex items-center gap-1.5">
+                                  <UserCheck className="h-4 w-4 text-white/20" />
+                                  <span className="font-semibold text-white/70">
+                                    <AnimatedNumber value={wg.confirmed} />
+                                  </span>{' '}
+                                  confirmed
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Primary CTA */}
+                            <div className="mt-auto flex items-center justify-between pt-6">
+                              <span className="text-sm font-semibold text-white/70 transition group-hover:text-white">
+                                View group
+                              </span>
+                              <ArrowRight className="h-4 w-4 text-white/30 transition group-hover:translate-x-0.5 group-hover:text-white/70" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
                     </motion.div>
                   );
                 })}
