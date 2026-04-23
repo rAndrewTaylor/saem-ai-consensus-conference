@@ -122,16 +122,7 @@ export function Layout({ children }) {
       {/* Footer */}
       <footer className="border-t border-white/[0.06] py-10" style={{ backgroundColor: 'var(--th-base)' }}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          {/* SAEM26 event logo */}
-          <div className="flex justify-center">
-            <img
-              src="/images/saem26-logo.png"
-              alt="SAEM26 Annual Meeting"
-              className="h-14 transition hover:opacity-80"
-            />
-          </div>
-
-          <div className="mt-5 text-center">
+          <div className="text-center">
             <p className="text-sm font-medium text-white/40">
               AI Consensus Conference &middot; May 21, 2026 &middot; Atlanta
             </p>

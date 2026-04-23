@@ -22,9 +22,15 @@ const WG_OPTIONS = [
 
 const ROLE_OPTIONS = [
   {
+    value: 'wg_member',
+    label: 'Working Group Member',
+    desc: 'Domain expert participating in the Delphi rounds before the conference',
+    icon: UserCheck,
+  },
+  {
     value: 'participant',
     label: 'Conference Participant',
-    desc: 'Take surveys, rank research questions, vote on conference day',
+    desc: 'Attend conference day — vote, rank, and help finalize the research agenda',
     icon: User,
   },
   {

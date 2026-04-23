@@ -24,7 +24,7 @@ router = APIRouter()
 
 # --- Schemas ---
 
-VALID_ROLES = {"wg_lead", "planning_committee", "participant"}
+VALID_ROLES = {"wg_lead", "planning_committee", "wg_member", "participant"}
 
 
 class InviteeCreate(BaseModel):
@@ -41,7 +41,7 @@ class ParticipantRegister(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
     wg_number: int = Field(..., ge=1, le=5)
-    role: str = Field("participant")  # wg_lead | planning_committee | participant
+    role: str = Field("participant")  # wg_lead | planning_committee | wg_member | participant
 
 
 class BulkInviteCreate(BaseModel):
