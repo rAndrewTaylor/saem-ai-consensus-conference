@@ -19,7 +19,7 @@ export function Layout({ children }) {
   const { theme, toggle } = useTheme();
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#13111C]">
+    <div className="flex min-h-screen flex-col" style={{ backgroundColor: 'var(--th-base)' }}>
       {/* Skip to content */}
       <a
         href="#main-content"
@@ -29,7 +29,7 @@ export function Layout({ children }) {
       </a>
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#13111C]/80 backdrop-blur-xl">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-xl" style={{ backgroundColor: 'var(--th-nav-bg)' }}>
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5 transition hover:opacity-80">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
@@ -92,7 +92,7 @@ export function Layout({ children }) {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="border-t border-white/[0.06] bg-[#1C1A2E] px-4 py-2 sm:hidden">
+          <div className="border-t border-white/[0.06] px-4 py-2 sm:hidden" style={{ backgroundColor: 'var(--th-surface)' }}>
             {navLinks.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
@@ -120,22 +120,9 @@ export function Layout({ children }) {
       <main id="main-content" className="flex-1">{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.06] bg-[#13111C] py-10">
+      <footer className="border-t border-white/[0.06] py-10" style={{ backgroundColor: 'var(--th-base)' }}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          {/* Institutional logos */}
-          <div className="flex flex-wrap items-center justify-center gap-8">
-            <img
-              src="/images/saem-logo.png"
-              alt="Society for Academic Emergency Medicine"
-              className="h-12 opacity-70 brightness-0 invert transition hover:opacity-100"
-            />
-            <img
-              src="/images/uva-logo.svg"
-              alt="University of Virginia School of Medicine"
-              className="h-10 opacity-70 transition hover:opacity-100"
-            />
-          </div>
-          <div className="mt-6 text-center">
+          <div className="text-center">
             <p className="text-sm font-medium text-white/40">
               SAEM 2026 AI Consensus Conference
             </p>

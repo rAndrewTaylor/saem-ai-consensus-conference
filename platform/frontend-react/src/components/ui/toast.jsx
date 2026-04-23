@@ -38,7 +38,8 @@ export function ToastProvider({ children }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               className={cn(
-                "flex items-center gap-3 rounded-xl border border-l-4 border-white/[0.06] bg-[#1C1A2E] px-4 py-3 shadow-xl shadow-black/40",
+                "flex items-center gap-3 rounded-xl border border-l-4 px-4 py-3 shadow-xl",
+                "border-[var(--th-border)] bg-[var(--th-surface)] shadow-[var(--th-shadow)]",
                 borders[t.type]
               )}
             >

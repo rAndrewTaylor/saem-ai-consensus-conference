@@ -58,17 +58,136 @@
 /* Smooth scrolling */
 html { scroll-behavior: smooth; }
 
-/* Base dark theme */
-body {
-  background-color: var(--color-surface-base);
-  color: var(--color-text-primary);
+/* ── Theme-aware CSS custom properties ───────────────────────────── */
+/* These are RUNTIME CSS vars that respond to .light / .dark on <html>.
+   The @theme block above is build-time-only Tailwind configuration. */
+:root, html.dark {
+  --th-base: #13111C;
+  --th-surface: #1C1A2E;
+  --th-surface-2: #252340;
+  --th-surface-hover: #322F52;
+  --th-text: #F4F2FF;
+  --th-text-2: rgba(255,255,255,0.7);
+  --th-text-muted: rgba(255,255,255,0.5);
+  --th-text-faint: rgba(255,255,255,0.4);
+  --th-text-ghost: rgba(255,255,255,0.25);
+  --th-border: rgba(255,255,255,0.06);
+  --th-border-2: rgba(255,255,255,0.1);
+  --th-input-bg: rgba(255,255,255,0.04);
+  --th-shadow: rgba(0,0,0,0.2);
+  --th-placeholder: rgba(255,255,255,0.3);
+  --th-nav-bg: rgba(19,17,28,0.8);
 }
+
+html.light {
+  --th-base: #f8fafc;
+  --th-surface: #ffffff;
+  --th-surface-2: #f1f5f9;
+  --th-surface-hover: #e2e8f0;
+  --th-text: #0f172a;
+  --th-text-2: #334155;
+  --th-text-muted: #64748b;
+  --th-text-faint: #94a3b8;
+  --th-text-ghost: #cbd5e1;
+  --th-border: #e2e8f0;
+  --th-border-2: #cbd5e1;
+  --th-input-bg: rgba(0,0,0,0.03);
+  --th-shadow: rgba(0,0,0,0.06);
+  --th-placeholder: #94a3b8;
+  --th-nav-bg: rgba(248,250,252,0.85);
+}
+
+body {
+  background-color: var(--th-base);
+  color: var(--th-text);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* ── Light-mode overrides for hardcoded dark hex values ──────────── */
+/* These catch the bg-[#hex] and text-white/* patterns used throughout
+   the codebase so the light toggle works without editing every JSX file. */
+
+/* Backgrounds */
+html.light .bg-\[\#13111C\]    { background-color: var(--th-base) !important; }
+html.light .bg-\[\#1C1A2E\]    { background-color: var(--th-surface) !important; }
+html.light .bg-\[\#252340\]    { background-color: var(--th-surface-2) !important; }
+html.light .bg-\[\#1C1A2E\]\/90 { background-color: rgba(255,255,255,0.9) !important; }
+html.light .bg-\[\#13111C\]\/80 { background-color: rgba(248,250,252,0.85) !important; }
+html.light .bg-\[\#13111C\]\/90 { background-color: rgba(248,250,252,0.92) !important; }
+html.light .bg-white\/\[0\.02\] { background-color: rgba(0,0,0,0.01) !important; }
+html.light .bg-white\/\[0\.03\] { background-color: rgba(0,0,0,0.02) !important; }
+html.light .bg-white\/\[0\.04\] { background-color: rgba(0,0,0,0.03) !important; }
+html.light .bg-white\/\[0\.06\] { background-color: rgba(0,0,0,0.04) !important; }
+html.light .bg-white\/\[0\.08\] { background-color: rgba(0,0,0,0.06) !important; }
+html.light .bg-white\/\[0\.1\]  { background-color: rgba(0,0,0,0.07) !important; }
+html.light .bg-black\/20  { background-color: rgba(0,0,0,0.06) !important; }
+html.light .bg-black\/30  { background-color: rgba(0,0,0,0.08) !important; }
+html.light .bg-black\/40  { background-color: rgba(0,0,0,0.06) !important; }
+
+/* Text colors */
+html.light .text-white       { color: #0f172a !important; }
+html.light .text-white\/90   { color: #1e293b !important; }
+html.light .text-white\/85   { color: #1e293b !important; }
+html.light .text-white\/80   { color: #334155 !important; }
+html.light .text-white\/70   { color: #475569 !important; }
+html.light .text-white\/60   { color: #64748b !important; }
+html.light .text-white\/50   { color: #64748b !important; }
+html.light .text-white\/40   { color: #94a3b8 !important; }
+html.light .text-white\/30   { color: #94a3b8 !important; }
+html.light .text-white\/25   { color: #cbd5e1 !important; }
+html.light .text-white\/20   { color: #cbd5e1 !important; }
+
+/* Borders */
+html.light .border-white\/\[0\.04\] { border-color: #f1f5f9 !important; }
+html.light .border-white\/\[0\.06\] { border-color: #e2e8f0 !important; }
+html.light .border-white\/\[0\.08\] { border-color: #e2e8f0 !important; }
+html.light .border-white\/\[0\.1\]  { border-color: #cbd5e1 !important; }
+html.light .border-white\/\[0\.12\] { border-color: #cbd5e1 !important; }
+html.light .border-white\/\[0\.16\] { border-color: #94a3b8 !important; }
+html.light .border-white\/20  { border-color: #cbd5e1 !important; }
+
+/* Placeholders */
+html.light .placeholder-white\/30::placeholder { color: #94a3b8 !important; }
+html.light .placeholder-white\/25::placeholder { color: #94a3b8 !important; }
+
+/* Shadows on light */
+html.light .shadow-lg   { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05) !important; }
+html.light .shadow-xl   { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04) !important; }
+html.light .shadow-black\/20 { box-shadow: none !important; }
+html.light .shadow-black\/30 { box-shadow: none !important; }
+
+/* Gradient overlays (hero glow) — hide on light */
+html.light [class*="from-purple-500\/1"],
+html.light [class*="from-pink-500\/1"],
+html.light [class*="from-emerald-500\/1"],
+html.light [class*="from-amber-500\/1"],
+html.light [class*="from-cyan-500\/1"] {
+  opacity: 0 !important;
+}
+
+/* Focus rings */
+html.light .focus\:ring-purple-500\/20:focus { --tw-ring-color: rgba(124,58,237,0.15) !important; }
+html.light .ring-purple-500\/30 { --tw-ring-color: rgba(124,58,237,0.2) !important; }
+html.light .ring-emerald-400\/40 { --tw-ring-color: rgba(52,211,153,0.25) !important; }
+
+/* Input / form overrides */
+html.light input, html.light select, html.light textarea {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+html.light input::placeholder, html.light textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Opacity overrides for watermarks, decorative elements */
+html.light .opacity-\[0\.03\] { opacity: 0.06 !important; }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--color-surface-base); }
-::-webkit-scrollbar-thumb { background: var(--color-surface-3); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-surface-hover); }
+::-webkit-scrollbar-track { background: var(--th-base); }
+::-webkit-scrollbar-thumb { background: var(--th-surface-hover); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--th-text-faint); }
 
 /* Gradient text effect — purple to pink (Railway-style) */
 .gradient-text {
@@ -128,74 +247,5 @@ body {
   pointer-events: none;
 }
 
-/* Dark mode overrides — now dark is the default, light is the alternate */
-.dark body,
-.dark .bg-gray-50 { background-color: var(--color-surface-base); }
-.dark .bg-white { background-color: var(--color-surface-1); }
-.dark .bg-white\/80 { background-color: rgba(28, 26, 46, 0.8); }
-.dark .bg-gray-100 { background-color: rgba(255, 255, 255, 0.04); }
-.dark .bg-gray-200 { background-color: rgba(255, 255, 255, 0.06); }
-.dark .text-gray-900 { color: var(--color-text-primary); }
-.dark .text-gray-800 { color: #e2e0ef; }
-.dark .text-gray-700 { color: #c4c0d8; }
-.dark .text-gray-600 { color: var(--color-text-secondary); }
-.dark .text-gray-500 { color: #8880a0; }
-.dark .text-gray-400 { color: var(--color-text-tertiary); }
-.dark .text-gray-300 { color: rgba(255, 255, 255, 0.2); }
-.dark .border-gray-300 { border-color: rgba(255, 255, 255, 0.1); }
-.dark .border-gray-200 { border-color: rgba(255, 255, 255, 0.08); }
-.dark .border-gray-100 { border-color: rgba(255, 255, 255, 0.04); }
-.dark .shadow-sm { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); }
-.dark .shadow-lg { box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); }
-.dark .divide-gray-100 > :not(:first-child) { border-color: rgba(255, 255, 255, 0.04); }
-.dark .divide-gray-200 > :not(:first-child) { border-color: rgba(255, 255, 255, 0.06); }
-
-/* Primary color overrides for dark mode */
-.dark .bg-primary-50 { background-color: rgba(168, 85, 247, 0.08); }
-.dark .bg-primary-100 { background-color: rgba(168, 85, 247, 0.12); }
-.dark .text-primary-600 { color: #a855f7; }
-.dark .text-primary-700 { color: #c084fc; }
-.dark .border-primary-200 { border-color: rgba(168, 85, 247, 0.2); }
-
-/* Blue overrides → cyan in dark mode */
-.dark .bg-blue-50 { background-color: rgba(6, 182, 212, 0.08); }
-.dark .bg-blue-100 { background-color: rgba(6, 182, 212, 0.12); }
-.dark .text-blue-600 { color: #22d3ee; }
-
-/* Violet overrides */
-.dark .bg-violet-50 { background-color: rgba(168, 85, 247, 0.08); }
-.dark .bg-violet-100 { background-color: rgba(168, 85, 247, 0.12); }
-.dark .text-violet-600 { color: #c084fc; }
-
-/* Emerald overrides */
-.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.08); }
-.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.12); }
-.dark .text-emerald-600 { color: #34d399; }
-
-/* Amber overrides */
-.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.08); }
-.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.12); }
-.dark .text-amber-600 { color: #fbbf24; }
-
-/* Red overrides */
-.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.12); }
-.dark .text-red-600 { color: #f87171; }
-
-/* Hover states */
-.dark .hover\:bg-gray-50:hover { background-color: rgba(255, 255, 255, 0.04); }
-.dark .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.06); }
-.dark .hover\:text-gray-900:hover { color: var(--color-text-primary); }
-
-/* Dark mode inputs */
-.dark input, .dark select, .dark textarea {
-  background-color: var(--color-surface-2);
-  color: var(--color-text-primary);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Dark mode focus rings */
-.dark .focus\:border-primary-500:focus { border-color: #a855f7; }
-.dark .focus\:ring-primary-200:focus { --tw-ring-color: rgba(168, 85, 247, 0.2); }
-
-/* Dark mode cards */
-.dark .rounded-xl { border-color: rgba(255, 255, 255, 0.06); }
+/* Note: legacy .dark class overrides have been replaced by the html.light
+   override system above. Dark is the default; light overrides via CSS vars. */
