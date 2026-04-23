@@ -127,7 +127,7 @@ export function Layout({ children }) {
             <img
               src="/images/saem26-logo.png"
               alt="SAEM26 Annual Meeting"
-              className="h-14 opacity-90 transition hover:opacity-100"
+              className="h-14 transition hover:opacity-80"
             />
           </div>
 
@@ -140,12 +140,41 @@ export function Layout({ children }) {
             </p>
           </div>
 
-          {/* Supporter logos */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 border-t border-white/[0.04] pt-6">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/20">Supported by</span>
-            <img src="/images/uva-sponsor.jpeg" alt="University of Virginia School of Medicine" className="h-9 rounded opacity-80 transition hover:opacity-100" />
-            <img src="/images/cord-logo.jpg" alt="CORD — Council of Residency Directors in Emergency Medicine" className="h-9 rounded opacity-80 transition hover:opacity-100" />
-            <img src="/images/abem-logo.png" alt="American Board of Emergency Medicine" className="h-9 rounded opacity-80 transition hover:opacity-100" />
+          {/* Supporter logos — each in a white pill so they render cleanly on any theme */}
+          <div className="mt-8 border-t border-white/[0.04] pt-6">
+            <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.15em] text-white/25">
+              Supported by
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
+                <img
+                  src="/images/saem-logo.png"
+                  alt="Society for Academic Emergency Medicine"
+                  className="h-9 w-auto object-contain"
+                />
+              </div>
+              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
+                <img
+                  src="/images/uva-sponsor.jpeg"
+                  alt="University of Virginia School of Medicine — Department of Emergency Medicine"
+                  className="h-8 w-auto object-contain"
+                />
+              </div>
+              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
+                <img
+                  src="/images/cord-logo.jpg"
+                  alt="CORD — Council of Residency Directors in Emergency Medicine"
+                  className="h-9 w-auto object-contain"
+                />
+              </div>
+              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
+                <img
+                  src="/images/abem-logo-full.png"
+                  alt="American Board of Emergency Medicine"
+                  className="h-9 w-auto object-contain"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </footer>
