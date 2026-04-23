@@ -259,10 +259,10 @@ export function PairwisePage() {
   const progressPct = totalPairs > 0 ? (displayedCompleted / totalPairs) * 100 : 0;
 
   return (
-    <div className="flex flex-col bg-[#13111C]">
+    <div className="flex flex-col bg-[#0A1628]">
       {/* Hero Header */}
       <div className="relative overflow-hidden px-4 py-12 sm:px-6">
-        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-pink-500/10 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#00B4D8]/10 to-transparent blur-3xl" />
         <div className="relative mx-auto max-w-3xl">
           <Link to={`/wg/${wgNumber}`} className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-white/50 transition hover:text-white/80">
             Back to working group
@@ -414,7 +414,7 @@ export function PairwisePage() {
           <div className="relative grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
             {/* VS divider (desktop) */}
             <div className="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
-              <div className="z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.12] bg-[#252340] text-sm font-bold text-white/60 shadow-lg shadow-black/30">
+              <div className="z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.12] bg-[#142C4A] text-sm font-bold text-white/60 shadow-lg shadow-black/30">
                 VS
               </div>
             </div>
@@ -434,10 +434,10 @@ export function PairwisePage() {
                   onClick={() => submitVote(pair.question_a?.id)}
                   disabled={isSubmitting}
                   className={cn(
-                    'group w-full cursor-pointer rounded-xl border bg-[#1C1A2E] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13111C]',
+                    'group w-full cursor-pointer rounded-xl border bg-[#0E1E35] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1628]',
                     selectedSide === pair.question_a?.id
                       ? 'border-emerald-400/70 shadow-emerald-500/20 shadow-xl ring-2 ring-emerald-400/40'
-                      : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#252340]',
+                      : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#142C4A]',
                     isSubmitting && selectedSide !== pair.question_a?.id && 'opacity-50'
                   )}
                 >
@@ -474,7 +474,7 @@ export function PairwisePage() {
                 animate={{ scale: 1, opacity: 1 }}
                 className="flex items-center justify-center py-1 md:hidden"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.12] bg-[#252340] text-xs font-bold text-white/60 shadow-lg shadow-black/30">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.12] bg-[#142C4A] text-xs font-bold text-white/60 shadow-lg shadow-black/30">
                   VS
                 </div>
               </motion.div>
@@ -493,10 +493,10 @@ export function PairwisePage() {
                   onClick={() => submitVote(pair.question_b?.id)}
                   disabled={isSubmitting}
                   className={cn(
-                    'group w-full cursor-pointer rounded-xl border bg-[#1C1A2E] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13111C]',
+                    'group w-full cursor-pointer rounded-xl border bg-[#0E1E35] p-6 text-left shadow-lg shadow-black/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1628]',
                     selectedSide === pair.question_b?.id
                       ? 'border-emerald-400/70 shadow-emerald-500/20 shadow-xl ring-2 ring-emerald-400/40'
-                      : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#252340]',
+                      : 'border-white/[0.08] hover:border-purple-400/40 hover:bg-[#142C4A]',
                     isSubmitting && selectedSide !== pair.question_b?.id && 'opacity-50'
                   )}
                 >

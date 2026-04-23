@@ -60,11 +60,11 @@ const PILLARS = [
     key: 'training',
     icon: GraduationCap,
     color: 'pillar-training',
-    border: 'border-t-purple-400',
-    leftBorder: 'border-l-purple-400',
-    bg: 'bg-purple-500/10',
-    tint: 'from-purple-500/10 to-transparent',
-    iconColor: 'text-purple-400',
+    border: 'border-t-indigo-400',
+    leftBorder: 'border-l-indigo-400',
+    bg: 'bg-indigo-500/10',
+    tint: 'from-[#1B5E8A]/10 to-transparent',
+    iconColor: 'text-indigo-400',
     description:
       'How medical education and residency curricula must evolve to prepare clinicians for AI-augmented practice.',
   },
@@ -115,9 +115,9 @@ const PROCESS_STEPS = [
     icon: GitCompare,
     label: 'Pairwise Ranking',
     color: 'purple',
-    borderColor: 'border-t-purple-500',
+    borderColor: 'border-t-indigo-500',
     iconBg: 'bg-purple-500/10',
-    iconColor: 'text-purple-400',
+    iconColor: 'text-indigo-400',
     bullets: [
       'Head-to-head comparisons between top-rated questions from Delphi rounds',
       'Bradley-Terry statistical model produces a rigorous priority ranking',
@@ -142,7 +142,7 @@ const PROCESS_STEPS = [
 // ── Pillar color map for WG cards ───────────────────────────────────
 const PILLAR_COLORS = {
   Technology: 'border-t-cyan-400',
-  Training: 'border-t-purple-400',
+  Training: 'border-t-indigo-400',
   Self: 'border-t-emerald-400',
   Society: 'border-t-amber-400',
 };
@@ -353,7 +353,7 @@ export function HomePage() {
       </Helmet>
 
       {/* ─── Hero Section ──────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#13111C] px-4 py-20 text-white sm:px-6 sm:py-28 lg:py-36">
+      <section className="relative overflow-hidden bg-[#0A1628] px-4 py-20 text-white sm:px-6 sm:py-28 lg:py-36">
         {/* Railway-style gradient overlays */}
         <div
           className="pointer-events-none absolute inset-0"
@@ -371,14 +371,14 @@ export function HomePage() {
           <BackgroundPattern className="h-full w-full" style={{ width: '100%', height: '100%' }} />
         </div>
 
-        {/* Animated floating orbs — purple/pink tones */}
+        {/* Animated floating orbs — navy/teal tones */}
         <motion.div
           className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-purple-500 opacity-[0.06] blur-[120px]"
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-pink-500 opacity-[0.06] blur-[120px]"
+          className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-[#00B4D8] opacity-[0.06] blur-[120px]"
           animate={{ x: [0, -25, 0], y: [0, 15, 0] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -398,7 +398,7 @@ export function HomePage() {
             >
               <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
                 SAEM 2026{' '}
-                <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-[#0C2340] via-[#1B5E8A] to-[#00B4D8] bg-clip-text text-transparent">
                   AI Consensus Conference
                 </span>
               </h1>
@@ -429,7 +429,7 @@ export function HomePage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.06] px-4 py-1.5 text-sm font-semibold text-white/80 backdrop-blur-sm transition hover:bg-white/[0.1]"
               >
-                <Sparkles className="h-4 w-4 text-pink-400" />
+                <Sparkles className="h-4 w-4 text-[#00B4D8]" />
                 SAEM Annual Meeting
               </a>
               <button
@@ -498,14 +498,14 @@ export function HomePage() {
           <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="h-12 w-full sm:h-16 lg:h-20">
             <path
               d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80Z"
-              fill="#1C1A2E"
+              fill="#0E1E35"
             />
           </svg>
         </div>
       </section>
 
       {/* ─── About Section ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#1C1A2E] px-4 py-20 sm:px-6 lg:py-28">
+      <section className="relative overflow-hidden bg-[#0E1E35] px-4 py-20 sm:px-6 lg:py-28">
         {/* Subtle background pattern */}
         <div className="pointer-events-none absolute inset-0 text-white opacity-[0.02]">
           <BackgroundPattern className="h-full w-full" style={{ width: '100%', height: '100%' }} />
@@ -591,7 +591,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Process Section ───────────────────────────────────────── */}
-      <section id="process" className="bg-[#13111C] px-4 py-20 sm:px-6 lg:py-28">
+      <section id="process" className="bg-[#0A1628] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
@@ -660,7 +660,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Four Pillars ──────────────────────────────────────────── */}
-      <section className="bg-[#1C1A2E] px-4 py-20 sm:px-6 lg:py-28">
+      <section className="bg-[#0E1E35] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
@@ -713,7 +713,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Working Groups ────────────────────────────────────────── */}
-      <section id="working-groups" className="scroll-mt-16 bg-[#13111C] px-4 py-20 sm:px-6 lg:py-28">
+      <section id="working-groups" className="scroll-mt-16 bg-[#0A1628] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
@@ -749,7 +749,7 @@ export function HomePage() {
                 className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
               >
                 {workingGroups.map((wg) => {
-                  const pillarColor = PILLAR_COLORS[wg.pillar] || 'border-t-purple-500';
+                  const pillarColor = PILLAR_COLORS[wg.pillar] || 'border-t-indigo-500';
                   const badgeVariant = PILLAR_BADGE_VARIANT[wg.pillar] || 'default';
                   return (
                     <motion.div
@@ -838,7 +838,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Active Sessions / Conference Day ──────────────────────── */}
-      <section className="bg-[#1C1A2E] px-4 py-20 sm:px-6 lg:py-28">
+      <section className="bg-[#0E1E35] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-4xl">
           <motion.div
             initial="hidden"
@@ -936,7 +936,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Sponsors / Credibility ────────────────────────────────── */}
-      <section className="bg-[#13111C] px-4 py-16 sm:px-6">
+      <section className="bg-[#0A1628] px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-4xl">
           <motion.div
             initial="hidden"

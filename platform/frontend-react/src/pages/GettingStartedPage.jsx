@@ -18,7 +18,7 @@ export function GettingStartedPage() {
   return (
     <>
       {/* Hero */}
-      <div className="relative overflow-hidden bg-[#13111C] px-4 py-16 text-white sm:px-6">
+      <div className="relative overflow-hidden bg-[#0A1628] px-4 py-16 text-white sm:px-6">
         <div
           className="pointer-events-none absolute inset-0"
           style={{

@@ -39,8 +39,8 @@ export function InvitePage() {
   }, [token]);
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#13111C] px-4 py-16 sm:px-6">
-      <div className="pointer-events-none fixed -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-purple-500/15 to-transparent blur-3xl" />
+    <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#0A1628] px-4 py-16 sm:px-6">
+      <div className="pointer-events-none fixed -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#1B5E8A]/12 to-transparent blur-3xl" />
 
       <div className="relative w-full max-w-md">
         {state === 'loading' && (

@@ -7,7 +7,7 @@ const variants = {
   success: "bg-emerald-500/90 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20",
   danger: "bg-red-500/90 text-white hover:bg-red-500 shadow-lg shadow-red-900/20",
   ghost: "text-[var(--th-text-muted)] hover:bg-[var(--th-input-bg)] hover:text-[var(--th-text)]",
-  link: "text-purple-500 hover:text-purple-400 underline-offset-4 hover:underline p-0 h-auto",
+  link: "text-[#00B4D8] hover:text-[#48CAE4] underline-offset-4 hover:underline p-0 h-auto",
 }
 
 const sizes = {

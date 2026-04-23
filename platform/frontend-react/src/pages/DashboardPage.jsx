@@ -94,7 +94,7 @@ function pillarVariant(name) {
 // ---------------------------------------------------------------------------
 const STATUS_COLORS = {
   confirmed: '#10b981',
-  active: '#a855f7',
+  active: '#00B4D8',
   removed: '#ef4444',
   draft: '#6b6680',
 };
@@ -129,7 +129,7 @@ function LoginForm({ onLogin }) {
         className="w-full max-w-sm"
       >
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0C2340] to-[#00B4D8] text-white shadow-lg shadow-[#0C2340]/25">
             <BrainCircuit className="h-8 w-8" />
           </div>
           <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>

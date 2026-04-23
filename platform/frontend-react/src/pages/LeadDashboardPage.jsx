@@ -112,7 +112,7 @@ export function LeadDashboardPage() {
   const PillarIcon = PILLAR_ICONS[wg.pillar] || Sparkles;
 
   return (
-    <div className="flex flex-col bg-[#13111C]">
+    <div className="flex flex-col bg-[#0A1628]">
       {/* ─── Hero ──────────────────────────────────────────── */}
       <section className="relative overflow-hidden px-4 pt-10 pb-8 sm:px-6">
         <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-500/10 to-transparent blur-3xl" />
@@ -202,7 +202,7 @@ export function LeadDashboardPage() {
                 ) : (
                   <div className="max-h-[480px] overflow-y-auto">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-[#1C1A2E] z-10">
+                      <thead className="sticky top-0 bg-[#0E1E35] z-10">
                         <tr className="border-b border-white/[0.06] text-xs uppercase tracking-wider text-white/40">
                           <th className="px-6 py-3 font-medium">Question</th>
                           <th className="px-3 py-3 text-center font-medium">Status</th>

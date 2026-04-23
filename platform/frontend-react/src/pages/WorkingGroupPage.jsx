@@ -37,11 +37,11 @@ const PILLAR_STYLES = {
   },
   Training: {
     icon: GraduationCap,
-    border: 'border-t-purple-400',
-    iconColor: 'text-purple-400',
-    bg: 'bg-purple-500/10',
+    border: 'border-t-indigo-400',
+    iconColor: 'text-indigo-400',
+    bg: 'bg-indigo-500/10',
     badge: 'primary',
-    glow: 'from-purple-500/10 to-transparent',
+    glow: 'from-[#1B5E8A]/10 to-transparent',
   },
   Self: {
     icon: Brain,
@@ -63,11 +63,11 @@ const PILLAR_STYLES = {
 
 const DEFAULT_STYLE = {
   icon: Sparkles,
-  border: 'border-t-purple-500',
-  iconColor: 'text-purple-400',
-  bg: 'bg-purple-500/10',
+  border: 'border-t-indigo-500',
+  iconColor: 'text-indigo-400',
+  bg: 'bg-indigo-500/10',
   badge: 'primary',
-  glow: 'from-purple-500/10 to-transparent',
+  glow: 'from-[#1B5E8A]/10 to-transparent',
 };
 
 const fadeUp = {
@@ -136,7 +136,7 @@ export function WorkingGroupPage() {
   const PillarIcon = style.icon;
 
   return (
-    <div className="flex flex-col bg-[#13111C]">
+    <div className="flex flex-col bg-[#0A1628]">
       <Helmet>
         <meta
           name="description"
@@ -169,7 +169,7 @@ export function WorkingGroupPage() {
             initial="hidden"
             animate="visible"
             variants={fadeUp}
-            className="relative mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#1C1A2E] p-8 sm:p-10"
+            className="relative mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E1E35] p-8 sm:p-10"
           >
             {/* Large watermark WG number */}
             <span className="pointer-events-none absolute -bottom-10 -right-6 select-none text-[14rem] font-black leading-none text-white opacity-[0.03] sm:text-[18rem]">
@@ -275,7 +275,7 @@ export function WorkingGroupPage() {
               {extras.keyTopics.map((topic, i) => (
                 <li
                   key={i}
-                  className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-[#1C1A2E] p-4"
+                  className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-[#0E1E35] p-4"
                 >
                   <CheckCircle2 className={`mt-0.5 h-4 w-4 flex-shrink-0 ${style.iconColor}`} />
                   <span className="text-sm text-white/70">{topic}</span>
@@ -287,7 +287,7 @@ export function WorkingGroupPage() {
       )}
 
       {/* ─── Participate (activity cards) ─────────────────────────── */}
-      <section className="bg-[#13111C] px-4 py-16 sm:px-6 sm:py-20">
+      <section className="bg-[#0A1628] px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Participate</h2>
           <p className="mt-2 text-white/50">
@@ -307,14 +307,14 @@ export function WorkingGroupPage() {
               icon={ClipboardList}
               phase={PHASE_INFO.round_2.label}
               blurb={PHASE_INFO.round_2.blurb}
-              accent="purple"
+              accent="navy"
             />
             <ActivityCard
               to={`/rank/${wg.wg_number}`}
               icon={GitCompare}
               phase={PHASE_INFO.pairwise.label}
               blurb={PHASE_INFO.pairwise.blurb}
-              accent="pink"
+              accent="teal"
             />
             <ActivityCard
               to={`/results/${wg.wg_number}`}
@@ -344,16 +344,16 @@ function StatPill({ icon: Icon, label, value }) {
 
 const ACCENT_STYLES = {
   cyan: { bg: 'bg-cyan-500/10', icon: 'text-cyan-400', hover: 'group-hover:border-cyan-400/40' },
-  purple: { bg: 'bg-purple-500/10', icon: 'text-purple-400', hover: 'group-hover:border-purple-400/40' },
-  pink: { bg: 'bg-pink-500/10', icon: 'text-pink-400', hover: 'group-hover:border-pink-400/40' },
+  navy: { bg: 'bg-[#1B5E8A]/15', icon: 'text-[#48CAE4]', hover: 'group-hover:border-[#48CAE4]/40' },
+  teal: { bg: 'bg-[#00B4D8]/10', icon: 'text-[#00B4D8]', hover: 'group-hover:border-[#00B4D8]/40' },
   emerald: { bg: 'bg-emerald-500/10', icon: 'text-emerald-400', hover: 'group-hover:border-emerald-400/40' },
 };
 
-function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'purple' }) {
+function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'navy' }) {
   const a = ACCENT_STYLES[accent];
   return (
     <Link to={to} className="group block">
-      <div className={`relative flex h-full flex-col rounded-xl border border-white/[0.08] bg-[#1C1A2E] p-5 transition-all hover:bg-[#252340] ${a.hover}`}>
+      <div className={`relative flex h-full flex-col rounded-xl border border-white/[0.08] bg-[#0E1E35] p-5 transition-all hover:bg-[#142C4A] ${a.hover}`}>
         <div className="flex items-start gap-3">
           <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${a.bg}`}>
             <Icon className={`h-5 w-5 ${a.icon}`} />
@@ -375,7 +375,7 @@ function WGPageSkeleton() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
       <Skeleton className="h-5 w-40" />
-      <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#1C1A2E] p-8">
+      <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#0E1E35] p-8">
         <Skeleton className="h-6 w-28" />
         <Skeleton className="mt-5 h-12 w-3/4" />
         <Skeleton className="mt-4 h-5 w-full max-w-2xl" />

@@ -4,7 +4,7 @@ export function PageLoader() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#00B4D8]" />
         <p className="text-sm text-white/40">Loading...</p>
       </div>
     </div>

@@ -121,7 +121,7 @@ export function TryPage() {
   const hasPersonas = personas.length > 0;
 
   return (
-    <div className="flex flex-col bg-[#13111C]">
+    <div className="flex flex-col bg-[#0A1628]">
       <Helmet>
         <meta name="description" content="Try the SAEM AI Consensus platform — pick a demo persona or create a test account to walk through the experience." />
       </Helmet>
@@ -279,7 +279,7 @@ export function TryPage() {
                             className={`group flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
                               isSelected
                                 ? 'border-emerald-400/50 bg-emerald-500/10'
-                                : 'border-white/[0.06] bg-[#1C1A2E] hover:border-purple-400/40 hover:bg-[#252340]'
+                                : 'border-white/[0.06] bg-[#0E1E35] hover:border-purple-400/40 hover:bg-[#142C4A]'
                             }`}
                           >
                             <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${

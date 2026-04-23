@@ -30,7 +30,7 @@ const TABS = [
 
 const STATUS_CONFIG = {
   confirmed: { label: 'Confirmed', color: '#10b981', bgClass: 'bg-emerald-500/10', textClass: 'text-emerald-300', variant: 'success' },
-  active: { label: 'Active / Gray Zone', color: '#8b5cf6', bgClass: 'bg-purple-500/10', textClass: 'text-purple-300', variant: 'primary' },
+  active: { label: 'Active / Gray Zone', color: '#1B5E8A', bgClass: 'bg-purple-500/10', textClass: 'text-purple-300', variant: 'primary' },
   removed: { label: 'Removed', color: '#ef4444', bgClass: 'bg-red-500/10', textClass: 'text-red-300', variant: 'danger' },
 };
 
@@ -51,7 +51,7 @@ const GRID_STROKE = 'rgba(255,255,255,0.06)';
 const chartTooltipStyle = {
   borderRadius: '0.75rem',
   border: '1px solid rgba(255,255,255,0.1)',
-  background: '#252340',
+  background: '#142C4A',
   boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
   fontSize: '0.8125rem',
   fontFamily: 'Inter, sans-serif',
@@ -186,7 +186,7 @@ function QuestionCard({ question, index, wgNumber, roundName }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: index * 0.03 }}
-      className="rounded-xl border border-white/[0.06] bg-[#1C1A2E] p-4 transition-colors hover:border-white/[0.12]"
+      className="rounded-xl border border-white/[0.06] bg-[#0E1E35] p-4 transition-colors hover:border-white/[0.12]"
     >
       <p className="text-sm font-medium leading-relaxed text-white/90">
         {question.text || question.question_text}
@@ -383,7 +383,7 @@ function PairwiseTab({ wgNumber }) {
   const statusToColor = (status) => {
     if (status === 'confirmed') return '#10b981';
     if (status === 'removed') return '#ef4444';
-    return '#8b5cf6';
+    return '#1B5E8A';
   };
 
   const PairwiseTooltip = ({ active, payload }) => {
@@ -601,7 +601,7 @@ function ConcordanceTab({ wgNumber }) {
   // Color dots by rank difference
   const diffToColor = (diff) => {
     if (diff <= 1) return '#10b981';
-    if (diff <= 3) return '#8b5cf6';
+    if (diff <= 3) return '#1B5E8A';
     if (diff <= 5) return '#f59e0b';
     return '#ef4444';
   };
@@ -736,7 +736,7 @@ function ConcordanceTab({ wgNumber }) {
               <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs font-medium">
                 {[
                   { label: 'Diff <= 1', color: '#10b981' },
-                  { label: 'Diff 2-3', color: '#8b5cf6' },
+                  { label: 'Diff 2-3', color: '#1B5E8A' },
                   { label: 'Diff 4-5', color: '#f59e0b' },
                   { label: 'Diff > 5', color: '#ef4444' },
                 ].map((l) => (
@@ -848,10 +848,10 @@ export function ResultsPage() {
   }, [activeTab]);
 
   return (
-    <div className="flex flex-col bg-[#13111C]">
+    <div className="flex flex-col bg-[#0A1628]">
       {/* Hero Header */}
       <div className="relative overflow-hidden px-4 py-12 sm:px-6">
-        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-b from-purple-500/12 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#1B5E8A]/10 to-transparent blur-3xl" />
         <div className="relative mx-auto max-w-5xl">
           <Link
             to={`/wg/${wgNumber}`}

@@ -1,7 +1,7 @@
 /**
  * Inline SVG illustration components for the SAEM AI Consensus Conference platform.
  *
- * Design language: geometric, abstract, purple/cyan/pink palette (Railway-inspired).
+ * Design language: geometric, abstract, navy/teal/cyan palette (SAEM-aligned).
  * All illustrations share cohesive style tokens and animation definitions.
  */
 
@@ -30,14 +30,14 @@ export function HeroIllustration(props) {
 
   // Outer nodes – positions, sizes, colours, optional icon type
   const nodes = [
-    { x: 130, y: 80,  r: 18, color: '#a855f7', icon: 'cross',     delay: 0   },
+    { x: 130, y: 80,  r: 18, color: '#00B4D8', icon: 'cross',     delay: 0   },
     { x: 480, y: 70,  r: 16, color: '#10b981', icon: 'pulse',     delay: 0.5 },
     { x: 540, y: 220, r: 20, color: '#06b6d4', icon: 'circuit',   delay: 1   },
-    { x: 500, y: 400, r: 15, color: '#ec4899', icon: 'data',      delay: 1.5 },
+    { x: 500, y: 400, r: 15, color: '#D32F2F', icon: 'data',      delay: 1.5 },
     { x: 300, y: 460, r: 17, color: '#f59e0b', icon: 'chart',     delay: 2   },
     { x: 100, y: 410, r: 14, color: '#06b6d4', icon: 'clipboard', delay: 0.3 },
-    { x: 60,  y: 240, r: 19, color: '#a855f7', icon: 'data',      delay: 0.8 },
-    { x: 180, y: 170, r: 12, color: '#ec4899', icon: null,        delay: 1.2 },
+    { x: 60,  y: 240, r: 19, color: '#00B4D8', icon: 'data',      delay: 0.8 },
+    { x: 180, y: 170, r: 12, color: '#D32F2F', icon: null,        delay: 1.2 },
     { x: 420, y: 150, r: 13, color: '#10b981', icon: null,        delay: 1.8 },
     { x: 400, y: 340, r: 11, color: '#06b6d4', icon: null,        delay: 2.2 },
   ];
@@ -109,9 +109,9 @@ export function HeroIllustration(props) {
       <defs>
         {/* Radial glow behind centre */}
         <radialGradient id="hero-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#a855f7" stopOpacity="0.18" />
-          <stop offset="60%" stopColor="#a855f7" stopOpacity="0.06" />
-          <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+          <stop offset="0%" stopColor="#00B4D8" stopOpacity="0.18" />
+          <stop offset="60%" stopColor="#00B4D8" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#00B4D8" stopOpacity="0" />
         </radialGradient>
       </defs>
 
@@ -123,7 +123,7 @@ export function HeroIllustration(props) {
         <line
           key={`rad-${i}`}
           x1={cx} y1={cy} x2={n.x} y2={n.y}
-          stroke="#a855f7" strokeWidth="1" opacity="0.15"
+          stroke="#00B4D8" strokeWidth="1" opacity="0.15"
         />
       ))}
 
@@ -143,7 +143,7 @@ export function HeroIllustration(props) {
         <line
           key={`link-${i}`}
           x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y}
-          stroke="#a855f7" strokeWidth="0.8" opacity="0.12"
+          stroke="#00B4D8" strokeWidth="0.8" opacity="0.12"
         />
       ))}
 
@@ -153,14 +153,14 @@ export function HeroIllustration(props) {
           key={`mid-${i}`}
           cx={(nodes[a].x + nodes[b].x) / 2}
           cy={(nodes[a].y + nodes[b].y) / 2}
-          r="2" fill="#a855f7" opacity="0.25"
+          r="2" fill="#00B4D8" opacity="0.25"
         />
       ))}
 
       {/* Centre hub ring */}
-      <circle cx={cx} cy={cy} r="48" fill="#7c3aed" opacity="0.08" />
-      <circle cx={cx} cy={cy} r="38" fill="#7c3aed" opacity="0.15" />
-      <circle cx={cx} cy={cy} r="28" stroke="#7c3aed" strokeWidth="2" fill="#7c3aed" opacity="0.9" />
+      <circle cx={cx} cy={cy} r="48" fill="#1B5E8A" opacity="0.08" />
+      <circle cx={cx} cy={cy} r="38" fill="#1B5E8A" opacity="0.15" />
+      <circle cx={cx} cy={cy} r="28" stroke="#1B5E8A" strokeWidth="2" fill="#1B5E8A" opacity="0.9" />
 
       {/* Centre brain / neural icon */}
       <g transform={`translate(${cx}, ${cy})`}>
@@ -204,7 +204,7 @@ export function HeroIllustration(props) {
       ].map((p, i) => (
         <circle
           key={`pt-${i}`}
-          cx={p.x} cy={p.y} r="2.5" fill="#a855f7" opacity="0.35"
+          cx={p.x} cy={p.y} r="2.5" fill="#00B4D8" opacity="0.35"
           className="node-pulse"
           style={{ animationDelay: `${p.d}s` }}
         />
@@ -222,7 +222,7 @@ export function HeroIllustration(props) {
 export function DelphiProcessIllustration(props) {
   const stages = [
     { label: 'Survey',  cx: 130, color: '#06b6d4', bg: '#22d3ee' },
-    { label: 'Rank',    cx: 350, color: '#a855f7', bg: '#c084fc' },
+    { label: 'Rank',    cx: 350, color: '#00B4D8', bg: '#48CAE4' },
     { label: 'Vote',    cx: 570, color: '#10b981', bg: '#34d399' },
   ];
 
@@ -263,7 +263,7 @@ export function DelphiProcessIllustration(props) {
         <circle
           key={`dot-${i}`}
           cx={(d.cx1 + d.cx2) / 2} cy={d.cy} r="3"
-          fill="#a855f7" opacity="0.5"
+          fill="#00B4D8" opacity="0.5"
           className="node-pulse"
           style={{ animationDelay: `${d.delay}s` }}
         />
@@ -385,37 +385,37 @@ const pillarRenderers = {
       <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <style>{svgAnimationStyles}</style>
         {/* Background circle */}
-        <circle cx="60" cy="60" r="56" fill="#7c3aed" opacity="0.06" />
+        <circle cx="60" cy="60" r="56" fill="#1B5E8A" opacity="0.06" />
 
         {/* Open book */}
         <path
           d="M60,85 L60,42 C60,42 58,35 38,35 C24,35 20,40 20,40 L20,82 C20,82 24,78 38,78 C52,78 58,82 60,85Z"
-          fill="#7c3aed" opacity="0.1" stroke="#7c3aed" strokeWidth="1.5" strokeLinejoin="round"
+          fill="#1B5E8A" opacity="0.1" stroke="#1B5E8A" strokeWidth="1.5" strokeLinejoin="round"
         />
         <path
           d="M60,85 L60,42 C60,42 62,35 82,35 C96,35 100,40 100,40 L100,82 C100,82 96,78 82,78 C68,78 62,82 60,85Z"
-          fill="#7c3aed" opacity="0.1" stroke="#7c3aed" strokeWidth="1.5" strokeLinejoin="round"
+          fill="#1B5E8A" opacity="0.1" stroke="#1B5E8A" strokeWidth="1.5" strokeLinejoin="round"
         />
         {/* Page lines – left */}
-        <line x1="30" y1="48" x2="52" y2="48" stroke="#7c3aed" strokeWidth="0.8" opacity="0.3" />
-        <line x1="30" y1="55" x2="52" y2="55" stroke="#7c3aed" strokeWidth="0.8" opacity="0.3" />
-        <line x1="30" y1="62" x2="50" y2="62" stroke="#7c3aed" strokeWidth="0.8" opacity="0.3" />
-        <line x1="30" y1="69" x2="48" y2="69" stroke="#7c3aed" strokeWidth="0.8" opacity="0.25" />
+        <line x1="30" y1="48" x2="52" y2="48" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.3" />
+        <line x1="30" y1="55" x2="52" y2="55" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.3" />
+        <line x1="30" y1="62" x2="50" y2="62" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.3" />
+        <line x1="30" y1="69" x2="48" y2="69" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.25" />
         {/* Page lines – right */}
-        <line x1="68" y1="48" x2="90" y2="48" stroke="#7c3aed" strokeWidth="0.8" opacity="0.3" />
-        <line x1="68" y1="55" x2="90" y2="55" stroke="#7c3aed" strokeWidth="0.8" opacity="0.3" />
-        <line x1="70" y1="62" x2="90" y2="62" stroke="#7c3aed" strokeWidth="0.8" opacity="0.3" />
-        <line x1="72" y1="69" x2="90" y2="69" stroke="#7c3aed" strokeWidth="0.8" opacity="0.25" />
+        <line x1="68" y1="48" x2="90" y2="48" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.3" />
+        <line x1="68" y1="55" x2="90" y2="55" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.3" />
+        <line x1="70" y1="62" x2="90" y2="62" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.3" />
+        <line x1="72" y1="69" x2="90" y2="69" stroke="#1B5E8A" strokeWidth="0.8" opacity="0.25" />
 
         {/* Spine */}
-        <line x1="60" y1="38" x2="60" y2="85" stroke="#7c3aed" strokeWidth="1.2" opacity="0.4" />
+        <line x1="60" y1="38" x2="60" y2="85" stroke="#1B5E8A" strokeWidth="1.2" opacity="0.4" />
 
         {/* Graduation cap suggestion – negative space above book */}
         <path
           d="M42,28 L60,20 L78,28 L60,34Z"
-          fill="#7c3aed" opacity="0.18" stroke="#7c3aed" strokeWidth="1" strokeLinejoin="round"
+          fill="#1B5E8A" opacity="0.18" stroke="#1B5E8A" strokeWidth="1" strokeLinejoin="round"
         />
-        <line x1="73" y1="28" x2="73" y2="36" stroke="#7c3aed" strokeWidth="1" opacity="0.3" />
+        <line x1="73" y1="28" x2="73" y2="36" stroke="#1B5E8A" strokeWidth="1" opacity="0.3" />
 
         {/* Rising knowledge particles */}
         {[
@@ -429,7 +429,7 @@ const pillarRenderers = {
         ].map((p, i) => (
           <circle
             key={i} cx={p.x} cy={p.y} r={p.r}
-            fill="#7c3aed" opacity="0.5"
+            fill="#1B5E8A" opacity="0.5"
             className="particle-float"
             style={{ animationDelay: `${p.delay}s` }}
           />
@@ -600,12 +600,12 @@ const emptyStateRenderers = {
         <line x1="70" y1="116" x2="96" y2="116" stroke="rgba(255,255,255,0.08)" strokeWidth="3" strokeLinecap="round" />
 
         {/* Magnifying glass */}
-        <circle cx="132" cy="128" r="22" fill="rgba(168,85,247,0.06)" stroke="#a855f7" strokeWidth="2.5" opacity="0.9" />
-        <circle cx="132" cy="128" r="14" fill="none" stroke="#a855f7" strokeWidth="1.5" opacity="0.3" />
-        <line x1="148" y1="144" x2="162" y2="162" stroke="#a855f7" strokeWidth="3.5" strokeLinecap="round" opacity="0.8" />
+        <circle cx="132" cy="128" r="22" fill="rgba(168,85,247,0.06)" stroke="#00B4D8" strokeWidth="2.5" opacity="0.9" />
+        <circle cx="132" cy="128" r="14" fill="none" stroke="#00B4D8" strokeWidth="1.5" opacity="0.3" />
+        <line x1="148" y1="144" x2="162" y2="162" stroke="#00B4D8" strokeWidth="3.5" strokeLinecap="round" opacity="0.8" />
 
         {/* ? in magnifying glass */}
-        <text x="132" y="134" textAnchor="middle" fill="#a855f7" fontSize="18" fontWeight="600" fontFamily="system-ui, sans-serif" opacity="0.6">?</text>
+        <text x="132" y="134" textAnchor="middle" fill="#00B4D8" fontSize="18" fontWeight="600" fontFamily="system-ui, sans-serif" opacity="0.6">?</text>
       </svg>
     );
   },

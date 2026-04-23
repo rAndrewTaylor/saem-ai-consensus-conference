@@ -367,7 +367,7 @@ export function ConferencePage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col bg-[#13111C]">
+    <div className="flex flex-col bg-[#0A1628]">
       {/* Hero Header */}
       <div className="relative overflow-hidden px-4 py-12 sm:px-6">
         <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-500/15 to-transparent blur-3xl" />
@@ -424,7 +424,7 @@ export function ConferencePage() {
 
       {/* Tabs */}
       <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-        <Tabs.List className="relative mb-6 flex gap-1 rounded-xl border border-white/[0.06] bg-[#1C1A2E] p-1">
+        <Tabs.List className="relative mb-6 flex gap-1 rounded-xl border border-white/[0.06] bg-[#0E1E35] p-1">
           {TAB_CONFIG.map(({ value, label, icon: Icon }) => (
             <Tabs.Trigger
               key={value}
@@ -489,7 +489,7 @@ export function ConferencePage() {
                           <GripVertical className="h-5 w-5 text-white/25 cursor-grab shrink-0" />
                           <span className={cn(
                             'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
-                            idx === 0 ? 'bg-purple-600 text-white' : 'bg-white/[0.08] text-white/70'
+                            idx === 0 ? 'bg-[#0C2340] text-white' : 'bg-white/[0.08] text-white/70'
                           )}>
                             {idx + 1}
                           </span>
@@ -566,7 +566,7 @@ export function ConferencePage() {
                             step={1}
                             value={val}
                             onChange={(e) => setImportance(qId, Number(e.target.value))}
-                            className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-purple-500 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md"
+                            className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-[#00B4D8] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md"
                           />
                           <span className="shrink-0 text-xs text-white/40 w-12">Critical</span>
                           <span className={cn(

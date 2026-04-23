@@ -147,7 +147,7 @@ function ImportanceSlider({ value, onChange }) {
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-purple-500 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md"
+          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-[#00B4D8] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md"
         />
         <span className="shrink-0 text-xs font-medium text-white/30">Critical</span>
       </div>
@@ -471,10 +471,10 @@ export function SurveyPage() {
   }
 
   return (
-    <div className="flex flex-col bg-[#13111C]">
+    <div className="flex flex-col bg-[#0A1628]">
       {/* ─── Hero Header ─────────────────────────────────────────── */}
       <div className="relative overflow-hidden px-4 py-12 sm:px-6">
-        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-purple-500/10 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#1B5E8A]/10 to-transparent blur-3xl" />
         <div className="relative mx-auto max-w-3xl">
           <Link
             to={`/wg/${wgNumber}`}
@@ -498,7 +498,7 @@ export function SurveyPage() {
       {/* ─── Sticky Progress Bar ───────────────────────────────── */}
       <div
         ref={progressRef}
-        className="sticky top-16 z-40 border-b border-white/[0.08] bg-[#1C1A2E] px-4 py-3.5 shadow-lg shadow-black/20 sm:px-6"
+        className="sticky top-16 z-40 border-b border-white/[0.08] bg-[#0E1E35] px-4 py-3.5 shadow-lg shadow-black/20 sm:px-6"
       >
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between gap-3 text-sm">

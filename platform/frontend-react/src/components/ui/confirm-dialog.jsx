@@ -23,7 +23,8 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmT
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.1] bg-[#1C1A2E] p-6 shadow-2xl shadow-black/40"
+                className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border p-6 shadow-2xl"
+                style={{ backgroundColor: 'var(--th-surface)', borderColor: 'var(--th-border-2)', boxShadow: '0 25px 50px -12px var(--th-shadow)' }}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
