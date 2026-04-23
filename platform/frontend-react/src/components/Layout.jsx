@@ -32,7 +32,7 @@ export function Layout({ children }) {
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-xl" style={{ backgroundColor: 'var(--th-nav-bg)' }}>
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5 transition hover:opacity-80">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0C2340] to-[#00B4D8]">
               <BrainCircuit className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-bold tracking-tight text-white">SAEM AI Consensus</span>
@@ -122,13 +122,30 @@ export function Layout({ children }) {
       {/* Footer */}
       <footer className="border-t border-white/[0.06] py-10" style={{ backgroundColor: 'var(--th-base)' }}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="text-center">
+          {/* SAEM26 event logo */}
+          <div className="flex justify-center">
+            <img
+              src="/images/saem26-logo.png"
+              alt="SAEM26 Annual Meeting"
+              className="h-14 opacity-90 transition hover:opacity-100"
+            />
+          </div>
+
+          <div className="mt-5 text-center">
             <p className="text-sm font-medium text-white/40">
-              SAEM 2026 AI Consensus Conference
+              AI Consensus Conference &middot; May 21, 2026 &middot; Atlanta
             </p>
             <p className="mt-1 text-xs text-white/20">
-              AI-Enhanced Modified Delphi Method &middot; May 21, 2026 &middot; Atlanta
+              AI-Enhanced Modified Delphi Method
             </p>
+          </div>
+
+          {/* Supporter logos */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 border-t border-white/[0.04] pt-6">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/20">Supported by</span>
+            <img src="/images/uva-sponsor.jpeg" alt="University of Virginia School of Medicine" className="h-9 rounded opacity-80 transition hover:opacity-100" />
+            <img src="/images/cord-logo.jpg" alt="CORD — Council of Residency Directors in Emergency Medicine" className="h-9 rounded opacity-80 transition hover:opacity-100" />
+            <img src="/images/abem-logo.png" alt="American Board of Emergency Medicine" className="h-9 rounded opacity-80 transition hover:opacity-100" />
           </div>
         </div>
       </footer>

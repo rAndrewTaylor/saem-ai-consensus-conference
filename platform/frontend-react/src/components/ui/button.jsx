@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 import { Loader2 } from "lucide-react"
 
 const variants = {
-  primary: "bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-500 hover:to-purple-400 shadow-lg shadow-purple-900/20",
+  primary: "bg-gradient-to-r from-[#1B5E8A] to-[#0097A7] text-white hover:from-[#2B86C5] hover:to-[#00B4D8] shadow-lg shadow-[#0C2340]/25",
   secondary: "bg-[var(--th-input-bg)] text-[var(--th-text-2)] border border-[var(--th-border-2)] hover:bg-[var(--th-surface-hover)]",
   success: "bg-emerald-500/90 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20",
   danger: "bg-red-500/90 text-white hover:bg-red-500 shadow-lg shadow-red-900/20",
@@ -21,7 +21,7 @@ export function Button({ variant = "primary", size = "md", loading, disabled, cl
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--th-base)] disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00B4D8]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--th-base)] disabled:pointer-events-none disabled:opacity-50",
         variants[variant],
         sizes[size],
         className

@@ -2,12 +2,13 @@ import { cn } from "@/lib/utils"
 
 const variants = {
   default: "bg-white/[0.08] text-white/70",
-  primary: "bg-purple-500/15 text-purple-300",
+  primary: "bg-[#00B4D8]/15 text-[#48CAE4]",
   success: "bg-emerald-500/15 text-emerald-300",
   warning: "bg-amber-500/15 text-amber-300",
   danger: "bg-red-500/15 text-red-300",
   live: "bg-emerald-500/15 text-emerald-300 animate-pulse",
   cyan: "bg-cyan-500/15 text-cyan-300",
+  navy: "bg-[#1B5E8A]/15 text-[#5FB5DC]",
 }
 
 export function Badge({ variant = "default", className, children, ...props }) {

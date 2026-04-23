@@ -26,7 +26,6 @@ import {
   Target,
   TrendingUp,
   Calendar,
-  HelpCircle,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -466,10 +465,6 @@ export function HomePage() {
                 Explore Working Groups
                 <ArrowDown className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-0.5" />
               </Button>
-              <Link to="/guide" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-white/40 transition hover:text-white/70">
-                <HelpCircle className="h-4 w-4" />
-                New participant? Read the guide
-              </Link>
             </motion.div>
           </div>
 
