@@ -24,6 +24,9 @@ router = APIRouter()
 
 # --- Schemas ---
 
+VALID_ROLES = {"wg_lead", "planning_committee", "participant"}
+
+
 class InviteeCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
@@ -31,6 +34,14 @@ class InviteeCreate(BaseModel):
 
 class ParticipantCreate(InviteeCreate):
     wg_number: int = Field(..., ge=1, le=5)
+
+
+class ParticipantRegister(BaseModel):
+    """Public self-registration schema."""
+    name: str = Field(..., min_length=1, max_length=200)
+    email: Optional[str] = Field(None, max_length=200)
+    wg_number: int = Field(..., ge=1, le=5)
+    role: str = Field("participant")  # wg_lead | planning_committee | participant
 
 
 class BulkInviteCreate(BaseModel):
@@ -56,6 +67,50 @@ def _participant_to_dict(p: Participant, response_counts: dict | None = None) ->
         "is_active": p.is_active,
         "delphi_response_count": counts.get("delphi", 0),
         "pairwise_vote_count": counts.get("pairwise", 0),
+    }
+
+
+# --- Public self-registration ---
+
+@router.post("/register")
+def register_participant(
+    body: ParticipantRegister,
+    db: Session = Depends(get_db),
+):
+    """Public: self-service registration. Creates a named participant with
+    a chosen WG and role. Returns a token the frontend stores in localStorage.
+    """
+    if body.role not in VALID_ROLES:
+        raise HTTPException(400, f"Invalid role. Choose one of: {VALID_ROLES}")
+
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+
+    name = sanitize_text(body.name, max_length=200)
+    email = sanitize_text(body.email, max_length=200) if body.email else None
+
+    p = Participant(
+        token=_new_token(),
+        wg_id=wg.id,
+        name=name,
+        email=email,
+        role=body.role,
+        is_active=True,
+        claimed_at=datetime.utcnow(),  # self-registered = already claimed
+    )
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+
+    return {
+        "token": p.token,
+        "name": p.name,
+        "email": p.email,
+        "role": p.role,
+        "wg_number": wg.number,
+        "wg_name": wg.name,
+        "wg_short_name": wg.short_name,
     }
 
 

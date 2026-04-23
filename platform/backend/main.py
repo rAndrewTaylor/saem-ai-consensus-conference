@@ -23,9 +23,9 @@ import os
 from .config import ADMIN_SECRET, ALLOWED_ORIGINS
 from .logging_config import get_logger
 from .middleware import RequestLoggingMiddleware
-from .database import init_db, get_db, seed_working_groups, SessionLocal, engine
+from .database import init_db, get_db, seed_working_groups, seed_co_leads, SessionLocal, engine
 from .auth import create_admin_token, require_admin
-from .routers import surveys, pairwise, conference, analysis, admin, participants
+from .routers import surveys, pairwise, conference, analysis, admin, participants, co_leads
 
 logger = get_logger(__name__)
 
@@ -104,6 +104,7 @@ app.include_router(conference.router, prefix="/api/conference", tags=["Conferenc
 app.include_router(analysis.router, prefix="/api/analysis", tags=["AI Analysis"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(participants.router, prefix="/api/participants", tags=["Participants"])
+app.include_router(co_leads.router, prefix="/api/co-leads", tags=["Co-Leads"])
 
 # ---------------------------------------------------------------------------
 # Startup
@@ -116,6 +117,12 @@ def startup():
     db = SessionLocal()
     try:
         seed_working_groups(db)
+        try:
+            added = seed_co_leads(db)
+            if added:
+                logger.info("Seeded %d co-lead records (with invite tokens)", added)
+        except Exception:
+            logger.exception("Co-lead seed failed (non-fatal)")
         # Pre-seed demo data so /try is ready instantly for testers.
         # Set AUTO_SEED_DEMO=0 in Railway env to disable before real rollout.
         if os.environ.get("AUTO_SEED_DEMO", "1") != "0":

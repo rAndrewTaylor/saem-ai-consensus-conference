@@ -19,6 +19,9 @@ const GettingStartedPage = lazy(() => import('@/pages/GettingStartedPage').then(
 const WorkingGroupPage = lazy(() => import('@/pages/WorkingGroupPage').then(m => ({ default: m.WorkingGroupPage })));
 const InvitePage = lazy(() => import('@/pages/InvitePage').then(m => ({ default: m.InvitePage })));
 const TryPage = lazy(() => import('@/pages/TryPage').then(m => ({ default: m.TryPage })));
+const LeadClaimPage = lazy(() => import('@/pages/LeadClaimPage').then(m => ({ default: m.LeadClaimPage })));
+const LeadDashboardPage = lazy(() => import('@/pages/LeadDashboardPage').then(m => ({ default: m.LeadDashboardPage })));
+const JoinPage = lazy(() => import('@/pages/JoinPage').then(m => ({ default: m.JoinPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function AnimatedRoutes() {
@@ -32,6 +35,9 @@ function AnimatedRoutes() {
           <Route path="/wg/:wgNumber" element={<WorkingGroupPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
           <Route path="/try" element={<TryPage />} />
+          <Route path="/lead/claim/:token" element={<LeadClaimPage />} />
+          <Route path="/lead" element={<LeadDashboardPage />} />
+          <Route path="/join" element={<JoinPage />} />
           <Route path="/survey/:wgNumber/:roundName" element={<SurveyPage />} />
           <Route path="/rank/:wgNumber" element={<PairwisePage />} />
           <Route path="/vote/:sessionId" element={<ConferencePage />} />

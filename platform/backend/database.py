@@ -107,6 +107,11 @@ class CoLead(Base):
     email = Column(String(200))
     institution = Column(String(200))
     wg_id = Column(Integer, ForeignKey("working_groups.id"))
+    # Invite-link auth (same pattern as Participant)
+    invite_token = Column(String(64), unique=True, nullable=True)
+    claimed_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     working_group = relationship("WorkingGroup", back_populates="co_leads")
 
@@ -447,6 +452,28 @@ def _apply_additive_migrations():
     else:
         log.info("participants table not yet present; create_all will handle it")
 
+    # Co-lead invite columns
+    desired_co_lead_cols = {
+        "invite_token": "VARCHAR(64)",
+        "claimed_at": "TIMESTAMP" if not is_sqlite else "DATETIME",
+        "is_active": "BOOLEAN",
+        "created_at": "TIMESTAMP" if not is_sqlite else "DATETIME",
+    }
+    if "co_leads" in inspector.get_table_names():
+        existing = {c["name"] for c in inspector.get_columns("co_leads")}
+        added = []
+        with engine.begin() as conn:
+            for col, col_type in desired_co_lead_cols.items():
+                if col not in existing:
+                    try:
+                        conn.execute(sa_text(f"ALTER TABLE co_leads ADD COLUMN {col} {col_type}"))
+                        added.append(col)
+                    except Exception:
+                        log.exception("Failed to add column %s to co_leads", col)
+                        raise
+        if added:
+            log.info("Added missing co_leads columns: %s", added)
+
 
 def get_db():
     """FastAPI dependency that yields a database session."""
@@ -463,6 +490,54 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+CO_LEAD_ROSTER = {
+    # (name, note) — emails/institutions left blank for admin to fill in; notes
+    # flag provisional/TBD entries per planning committee records (Apr 2026)
+    1: [("Rohit Sangal", None), ("Brian Patterson", None)],
+    2: [("Fran Riley", None)],  # second co-lead TBD (Phil Jarret, DJ Apakam, or Ethan Abbott)
+    3: [("Christian Rose", None), ("Carl Preiksaitis", None)],
+    4: [("Maame Yiadom", None), ("Tehreem Rehman", None)],
+    5: [("Arwen Declan", None), ("Kennedy Hall", None)],
+}
+
+
+def seed_co_leads(db):
+    """Seed co-leads for each working group if they don't exist.
+
+    Each co-lead gets a unique invite_token the admin can share via Slack/email.
+    Idempotent — skips any co-lead already present for a WG by name match.
+    """
+    import secrets
+    wgs = {wg.number: wg for wg in db.query(WorkingGroup).all()}
+    added = 0
+    for wg_number, people in CO_LEAD_ROSTER.items():
+        wg = wgs.get(wg_number)
+        if not wg:
+            continue
+        existing_by_name = {
+            cl.name: cl for cl in db.query(CoLead).filter(CoLead.wg_id == wg.id).all()
+        }
+        for name, _note in people:
+            if name in existing_by_name:
+                # Backfill invite token for any pre-existing co-lead row that lacks one
+                cl = existing_by_name[name]
+                if not cl.invite_token:
+                    cl.invite_token = secrets.token_urlsafe(24)
+                    added += 1
+                continue
+            cl = CoLead(
+                name=name,
+                wg_id=wg.id,
+                invite_token=secrets.token_urlsafe(24),
+                is_active=True,
+            )
+            db.add(cl)
+            added += 1
+    if added:
+        db.commit()
+    return added
 
 
 def seed_working_groups(db):

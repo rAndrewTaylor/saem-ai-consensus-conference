@@ -49,3 +49,8 @@ export const setToken = (wg, token) => localStorage.setItem(`saem_token_wg${wg}`
 export const getAdminToken = () => localStorage.getItem('saem_admin_token');
 export const setAdminToken = (token) => localStorage.setItem('saem_admin_token', token);
 export const clearAdminToken = () => localStorage.removeItem('saem_admin_token');
+
+// Co-lead token (invite-link-based, same pattern as participant tokens)
+export const getLeadToken = () => localStorage.getItem('saem_lead_token');
+export const setLeadToken = (token) => localStorage.setItem('saem_lead_token', token);
+export const clearLeadToken = () => localStorage.removeItem('saem_lead_token');

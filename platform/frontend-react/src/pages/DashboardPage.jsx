@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ParticipantsSection } from '@/components/admin/ParticipantsSection';
+import { CoLeadsSection } from '@/components/admin/CoLeadsSection';
 
 // ---------------------------------------------------------------------------
 // Animated counter hook
@@ -971,6 +972,9 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Working Group Leads */}
+      <CoLeadsSection />
 
       {/* Participants & Invites */}
       <ParticipantsSection wgs={wgs} />

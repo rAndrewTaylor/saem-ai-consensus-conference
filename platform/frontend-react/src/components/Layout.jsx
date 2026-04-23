@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Home, LayoutDashboard, BookOpen, Menu, X, Sun, Moon, Beaker } from 'lucide-react';
+import { BrainCircuit, Home, LayoutDashboard, BookOpen, Menu, X, Sun, Moon, Beaker, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -8,7 +8,8 @@ import { Breadcrumbs } from '@/components/Breadcrumbs';
 const navLinks = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/guide', label: 'Guide', icon: BookOpen },
-  { to: '/try', label: 'Try it', icon: Beaker, highlight: true },
+  { to: '/join', label: 'Join', icon: UserPlus, highlight: true },
+  { to: '/try', label: 'Demo', icon: Beaker },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
@@ -119,14 +120,29 @@ export function Layout({ children }) {
       <main id="main-content" className="flex-1">{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.06] bg-[#13111C] py-8">
-        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6">
-          <p className="text-sm font-medium text-white/40">
-            SAEM 2026 AI Consensus Conference
-          </p>
-          <p className="mt-1 text-xs text-white/20">
-            Society for Academic Emergency Medicine &middot; Modified Delphi Method
-          </p>
+      <footer className="border-t border-white/[0.06] bg-[#13111C] py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          {/* Institutional logos */}
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            <img
+              src="/images/saem-logo.png"
+              alt="Society for Academic Emergency Medicine"
+              className="h-12 opacity-70 brightness-0 invert transition hover:opacity-100"
+            />
+            <img
+              src="/images/uva-logo.svg"
+              alt="University of Virginia School of Medicine"
+              className="h-10 opacity-70 transition hover:opacity-100"
+            />
+          </div>
+          <div className="mt-6 text-center">
+            <p className="text-sm font-medium text-white/40">
+              SAEM 2026 AI Consensus Conference
+            </p>
+            <p className="mt-1 text-xs text-white/20">
+              AI-Enhanced Modified Delphi Method &middot; May 21, 2026 &middot; Atlanta
+            </p>
+          </div>
         </div>
       </footer>
     </div>
