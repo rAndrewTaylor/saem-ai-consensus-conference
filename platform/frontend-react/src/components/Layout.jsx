@@ -140,41 +140,14 @@ export function Layout({ children }) {
             </p>
           </div>
 
-          {/* Supporter logos — each in a white pill so they render cleanly on any theme */}
-          <div className="mt-8 border-t border-white/[0.04] pt-6">
-            <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.15em] text-white/25">
+          {/* Supporters */}
+          <div className="mt-8 border-t border-white/[0.04] pt-6 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/25">
               Supported by
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
-                <img
-                  src="/images/saem-logo.png"
-                  alt="Society for Academic Emergency Medicine"
-                  className="h-9 w-auto object-contain"
-                />
-              </div>
-              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
-                <img
-                  src="/images/uva-sponsor.jpeg"
-                  alt="University of Virginia School of Medicine — Department of Emergency Medicine"
-                  className="h-8 w-auto object-contain"
-                />
-              </div>
-              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
-                <img
-                  src="/images/cord-logo.jpg"
-                  alt="CORD — Council of Residency Directors in Emergency Medicine"
-                  className="h-9 w-auto object-contain"
-                />
-              </div>
-              <div className="flex h-14 items-center rounded-lg bg-white px-5 shadow-sm transition hover:shadow-md">
-                <img
-                  src="/images/abem-logo-full.png"
-                  alt="American Board of Emergency Medicine"
-                  className="h-9 w-auto object-contain"
-                />
-              </div>
-            </div>
+            <p className="mt-2 text-xs text-white/40">
+              SAEM &middot; UVA Department of Emergency Medicine &middot; CORD &middot; ABEM
+            </p>
           </div>
         </div>
       </footer>
