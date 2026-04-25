@@ -109,9 +109,9 @@ export function InvitePage() {
                 {info.wg_number && (
                   <Button
                     className="mt-7 gap-1.5"
-                    onClick={() => navigate(`/wg/${info.wg_number}`)}
+                    onClick={() => navigate(`/join?token=${encodeURIComponent(token)}`)}
                   >
-                    Get started
+                    Continue to signup
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 )}

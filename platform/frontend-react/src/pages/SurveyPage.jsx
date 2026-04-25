@@ -434,6 +434,25 @@ export function SurveyPage() {
     );
   }
 
+  if (!token) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertCircle className="mx-auto h-8 w-8 text-red-300" />
+            <h2 className="mt-3 text-lg font-semibold text-white">Invite link required</h2>
+            <p className="mt-2 text-sm text-white/55">
+              Access to surveys is invite-only. Open your email invitation link to sign in.
+            </p>
+            <Link to="/join" className="mt-5 inline-block">
+              <Button variant="secondary" size="sm">Go to join</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">

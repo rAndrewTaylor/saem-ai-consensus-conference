@@ -1,22 +1,74 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Home, LayoutDashboard, BookOpen, Menu, X, Sun, Moon, Beaker, UserPlus } from 'lucide-react';
-import { useState } from 'react';
+import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Menu, X, Sun, Moon, UserPlus, LogIn } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { getAdminToken, getLeadToken } from '@/lib/api';
 
-const navLinks = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/guide', label: 'Guide', icon: BookOpen },
-  { to: '/join', label: 'Join', icon: UserPlus, highlight: true },
-  { to: '/try', label: 'Demo', icon: Beaker },
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-];
+/**
+ * Detect the signed-in WG number by scanning localStorage for saem_token_wgN keys.
+ * Returns the WG number (1-5) or null if not signed in.
+ */
+function getSignedInWg() {
+  for (let i = 1; i <= 5; i++) {
+    if (localStorage.getItem(`saem_token_wg${i}`)) return i;
+  }
+  return null;
+}
 
 export function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { theme, toggle } = useTheme();
+
+  // Derive auth state from localStorage (re-evaluates on each render,
+  // which is fine — nav renders on every route change)
+  const wgNumber = useMemo(() => getSignedInWg(), [location.pathname]);
+  const isAdmin = useMemo(() => !!getAdminToken(), [location.pathname]);
+  const isLead = useMemo(() => !!getLeadToken(), [location.pathname]);
+  const isSignedIn = wgNumber !== null;
+
+  // Build nav links dynamically based on auth state
+  const navLinks = useMemo(() => {
+    const links = [];
+
+    // Primary: My Group (if signed in) or Home
+    if (isSignedIn) {
+      links.push({ to: `/wg/${wgNumber}`, label: 'My Group', icon: Users, section: 'wg' });
+    } else {
+      links.push({ to: '/', label: 'Home', icon: Home, section: 'home' });
+    }
+
+    // WG Lead dashboard
+    if (isLead) {
+      links.push({ to: '/lead', label: 'Lead View', icon: Crown, section: 'wg' });
+    }
+
+    // Conference Day
+    links.push({ to: '/', label: 'Conference Day', icon: Radio, section: 'conf', hash: '#conference' });
+
+    // Guide
+    links.push({ to: '/guide', label: 'Guide', icon: BookOpen, section: 'util' });
+
+    // Join (only if not signed in)
+    if (!isSignedIn) {
+      links.push({ to: '/join', label: 'Join', icon: UserPlus, highlight: true, section: 'util' });
+    }
+
+    // Admin dashboard
+    if (isAdmin) {
+      links.push({ to: '/dashboard', label: 'Admin', icon: LayoutDashboard, section: 'admin' });
+    }
+
+    return links;
+  }, [isSignedIn, isAdmin, isLead, wgNumber]);
+
+  const isActiveLink = (link) => {
+    if (link.hash) return false; // hash links don't get active state
+    if (link.to === '/') return location.pathname === '/';
+    return location.pathname.startsWith(link.to);
+  };
 
   return (
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: 'var(--th-base)' }}>
@@ -35,36 +87,44 @@ export function Layout({ children }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0C2340] to-[#00B4D8]">
               <BrainCircuit className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-white">SAEM AI Consensus</span>
+            <div className="hidden min-[480px]:block">
+              <span className="text-lg font-bold tracking-tight text-white">SAEM AI Consensus</span>
+            </div>
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden items-center gap-1 sm:flex">
-            {navLinks.map(({ to, label, icon: Icon, highlight }) => {
-              const isActive = location.pathname === to;
+          <div className="hidden items-center gap-0.5 md:flex">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              const active = isActiveLink(link);
+              // Visual separator before Conference Day section
+              const showSep = link.section === 'conf';
               return (
-                <Link
-                  key={to}
-                  to={to}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition",
-                    isActive
-                      ? "bg-white/[0.1] text-white"
-                      : highlight
-                        ? "border border-amber-400/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/15 hover:text-amber-100"
-                        : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
+                <div key={link.to + (link.hash || '')} className="flex items-center">
+                  {showSep && <div className="mx-1.5 h-5 w-px bg-white/[0.08]" />}
+                  <Link
+                    to={link.to + (link.hash || '')}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+                      active
+                        ? "bg-white/[0.1] text-white"
+                        : link.highlight
+                          ? "border border-[#00B4D8]/30 bg-[#00B4D8]/10 text-[#48CAE4] hover:bg-[#00B4D8]/15 hover:text-[#48CAE4]"
+                          : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                </div>
               );
             })}
 
-            {/* Dark mode toggle */}
+            {/* Theme toggle */}
+            <div className="mx-1.5 h-5 w-px bg-white/[0.08]" />
             <button
               onClick={toggle}
-              className="ml-2 rounded-lg p-2 text-white/40 transition hover:bg-white/[0.06] hover:text-white/70"
+              className="rounded-lg p-2 text-white/40 transition hover:bg-white/[0.06] hover:text-white/70"
               aria-label="Toggle dark mode"
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -72,7 +132,7 @@ export function Layout({ children }) {
           </div>
 
           {/* Mobile toggle */}
-          <div className="flex items-center gap-1 sm:hidden">
+          <div className="flex items-center gap-1 md:hidden">
             <button
               onClick={toggle}
               className="rounded-lg p-2 text-white/40 hover:bg-white/[0.06]"
@@ -92,23 +152,26 @@ export function Layout({ children }) {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="border-t border-white/[0.06] px-4 py-2 sm:hidden" style={{ backgroundColor: 'var(--th-surface)' }}>
-            {navLinks.map(({ to, label, icon: Icon }) => (
-              <Link
-                key={to}
-                to={to}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
-                  location.pathname === to
-                    ? "bg-white/[0.1] text-white"
-                    : "text-white/50"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
+          <div className="border-t border-white/[0.06] px-4 py-2 md:hidden" style={{ backgroundColor: 'var(--th-surface)' }}>
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.to + (link.hash || '')}
+                  to={link.to + (link.hash || '')}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
+                    isActiveLink(link)
+                      ? "bg-white/[0.1] text-white"
+                      : "text-white/50"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
         )}
       </nav>

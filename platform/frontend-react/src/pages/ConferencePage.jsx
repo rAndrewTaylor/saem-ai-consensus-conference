@@ -334,6 +334,26 @@ export function ConferencePage() {
     );
   }
 
+  if (!token) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/15">
+          <WifiOff className="h-8 w-8 text-red-300" />
+        </div>
+        <h1 className="text-xl font-bold text-white">Invite link required</h1>
+        <p className="mt-2 text-white/55">
+          Conference voting is restricted to invited participants. Use your invitation link to sign in.
+        </p>
+        <Link to="/join">
+          <Button variant="secondary" className="mt-6 gap-2">
+            <Home className="h-4 w-4" />
+            Go to join
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Inactive / error state
   // ---------------------------------------------------------------------------

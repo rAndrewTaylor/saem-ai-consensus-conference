@@ -256,6 +256,24 @@ export function PairwisePage() {
     );
   }
 
+  if (!token) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+        <Card className="border-red-400/30 bg-red-500/5">
+          <CardContent className="py-10 text-center">
+            <p className="text-sm font-medium text-red-200">Invite link required</p>
+            <p className="mt-2 text-sm text-white/55">
+              Pairwise ranking is invite-only. Use your email invitation link to gain access.
+            </p>
+            <Link to="/join" className="mt-5 inline-block">
+              <Button variant="secondary" size="sm">Go to join</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const progressPct = totalPairs > 0 ? (displayedCompleted / totalPairs) * 100 : 0;
 
   return (

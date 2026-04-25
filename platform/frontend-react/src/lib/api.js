@@ -46,6 +46,16 @@ export async function api(url, { method = 'GET', body, token, params } = {}) {
 // Token management
 export const getToken = (wg) => localStorage.getItem(`saem_token_wg${wg}`);
 export const setToken = (wg, token) => localStorage.setItem(`saem_token_wg${wg}`, token);
+export const getAnyParticipantToken = () => {
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('saem_token_wg')) {
+      const token = localStorage.getItem(key);
+      if (token) return token;
+    }
+  }
+  return null;
+};
 export const getAdminToken = () => localStorage.getItem('saem_admin_token');
 export const setAdminToken = (token) => localStorage.setItem('saem_admin_token', token);
 export const clearAdminToken = () => localStorage.removeItem('saem_admin_token');

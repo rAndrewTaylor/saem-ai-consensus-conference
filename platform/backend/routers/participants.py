@@ -7,6 +7,7 @@ from sqlalchemy import func
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 import secrets
+import os
 
 from ..database import (
     get_db, WorkingGroup, Participant, DelphiResponse, PairwiseVote,
@@ -25,6 +26,19 @@ router = APIRouter()
 # --- Schemas ---
 
 VALID_ROLES = {"wg_lead", "planning_committee", "wg_member", "participant"}
+SELF_SELECTABLE_ROLES = {"wg_member", "participant"}
+
+
+def _shared_join_token() -> str:
+    return (os.environ.get("SHARED_JOIN_TOKEN") or "").strip()
+
+
+def _is_valid_shared_join_token(token: str) -> bool:
+    configured = _shared_join_token()
+    provided = (token or "").strip()
+    if not configured or not provided:
+        return False
+    return secrets.compare_digest(configured, provided)
 
 
 class InviteeCreate(BaseModel):
@@ -42,6 +56,21 @@ class ParticipantRegister(BaseModel):
     email: Optional[str] = Field(None, max_length=200)
     wg_number: int = Field(..., ge=1, le=5)
     role: str = Field("participant")  # wg_lead | planning_committee | wg_member | participant
+
+
+class InviteRegister(BaseModel):
+    token: str = Field(..., min_length=12, max_length=200)
+    name: str = Field(..., min_length=1, max_length=200)
+    email: Optional[str] = Field(None, max_length=200)
+    role: str = Field("participant")  # restricted: wg_member | participant
+
+
+class SharedRegister(BaseModel):
+    access_token: str = Field(..., min_length=8, max_length=200)
+    name: str = Field(..., min_length=1, max_length=200)
+    email: Optional[str] = Field(None, max_length=200)
+    wg_number: int = Field(..., ge=1, le=5)
+    role: str = Field("participant")  # restricted: wg_member | participant
 
 
 class BulkInviteCreate(BaseModel):
@@ -80,6 +109,8 @@ def register_participant(
     """Public: self-service registration. Creates a named participant with
     a chosen WG and role. Returns a token the frontend stores in localStorage.
     """
+    if os.environ.get("ALLOW_PUBLIC_SIGNUP", "0") != "1":
+        raise HTTPException(403, "Public signup is disabled. Use your invite email link.")
     if body.role not in VALID_ROLES:
         raise HTTPException(400, f"Invalid role. Choose one of: {VALID_ROLES}")
 
@@ -98,6 +129,96 @@ def register_participant(
         role=body.role,
         is_active=True,
         claimed_at=datetime.utcnow(),  # self-registered = already claimed
+    )
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+
+    return {
+        "token": p.token,
+        "name": p.name,
+        "email": p.email,
+        "role": p.role,
+        "wg_number": wg.number,
+        "wg_name": wg.name,
+        "wg_short_name": wg.short_name,
+    }
+
+
+@router.post("/register-invite")
+def register_from_invite(
+    body: InviteRegister,
+    db: Session = Depends(get_db),
+):
+    """Invite-only registration/update. Requires a valid emailed token."""
+    if body.role not in SELF_SELECTABLE_ROLES:
+        raise HTTPException(400, f"Invalid role. Choose one of: {SELF_SELECTABLE_ROLES}")
+
+    p = db.query(Participant).filter(Participant.token == body.token).first()
+    if not p:
+        raise HTTPException(404, "Invalid invite link")
+    if not p.is_active:
+        raise HTTPException(410, "This invite has been deactivated. Contact the chair.")
+    if not p.working_group:
+        raise HTTPException(400, "Invite is missing working group assignment")
+
+    p.name = sanitize_text(body.name, max_length=200)
+    p.email = sanitize_text(str(body.email), max_length=200) if body.email else None
+    p.role = body.role
+    if p.claimed_at is None:
+        p.claimed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(p)
+
+    wg = p.working_group
+    return {
+        "token": p.token,
+        "name": p.name,
+        "email": p.email,
+        "role": p.role,
+        "wg_number": wg.number if wg else None,
+        "wg_name": wg.name if wg else None,
+        "wg_short_name": wg.short_name if wg else None,
+    }
+
+
+@router.get("/shared-access/validate")
+def validate_shared_access(token: str):
+    """Validate whether a shared join token is currently accepted."""
+    if not _shared_join_token():
+        raise HTTPException(403, "Shared join link is not configured")
+    if not _is_valid_shared_join_token(token):
+        raise HTTPException(403, "Invalid shared join link")
+    return {"ok": True}
+
+
+@router.post("/register-shared")
+def register_from_shared_link(
+    body: SharedRegister,
+    db: Session = Depends(get_db),
+):
+    """Shared-link registration for cases where emails are unavailable."""
+    if not _shared_join_token():
+        raise HTTPException(403, "Shared join link is not configured")
+    if not _is_valid_shared_join_token(body.access_token):
+        raise HTTPException(403, "Invalid shared join link")
+    if body.role not in SELF_SELECTABLE_ROLES:
+        raise HTTPException(400, f"Invalid role. Choose one of: {SELF_SELECTABLE_ROLES}")
+
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+
+    name = sanitize_text(body.name, max_length=200)
+    email = sanitize_text(body.email, max_length=200) if body.email else None
+    p = Participant(
+        token=_new_token(),
+        wg_id=wg.id,
+        name=name,
+        email=email,
+        role=body.role,
+        is_active=True,
+        claimed_at=datetime.utcnow(),
     )
     db.add(p)
     db.commit()

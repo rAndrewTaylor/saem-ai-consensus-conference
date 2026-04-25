@@ -12,6 +12,8 @@ os.environ["ADMIN_SECRET"] = "test-admin-password"
 os.environ["JWT_SECRET"] = "test-jwt-secret"
 os.environ["ANTHROPIC_API_KEY"] = "test-key"
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:8000"
+os.environ["ALLOW_ANONYMOUS_TOKENS"] = "1"
+os.environ["ALLOW_PUBLIC_SIGNUP"] = "1"
 
 from backend.database import Base, get_db, seed_working_groups
 from backend.main import app, limiter

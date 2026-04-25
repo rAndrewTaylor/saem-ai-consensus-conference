@@ -8,6 +8,7 @@ from sqlalchemy import func
 from pydantic import BaseModel
 from typing import Optional
 import secrets
+import os
 
 from ..database import (
     get_db, WorkingGroup, Question, Participant, DelphiResponse,
@@ -77,6 +78,8 @@ def list_working_groups(db: Session = Depends(get_db)):
 @router.post("/token")
 def get_or_create_token(wg_number: int, db: Session = Depends(get_db)):
     """Issue an anonymous participant token for a working group."""
+    if os.environ.get("ALLOW_ANONYMOUS_TOKENS", "0") != "1":
+        raise HTTPException(403, "Anonymous tokens are disabled. Use your invite email link.")
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")

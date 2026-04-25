@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, ArrowLeft, User, Crown, Users, UserCheck, CheckCircle2,
+  ArrowRight, ArrowLeft, User, UserCheck, CheckCircle2, ShieldAlert,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
-import { api, setToken, setLeadToken } from '@/lib/api';
+import { api, setToken } from '@/lib/api';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 const WG_OPTIONS = [
@@ -33,24 +33,15 @@ const ROLE_OPTIONS = [
     desc: 'Attend conference day — vote, rank, and help finalize the research agenda',
     icon: User,
   },
-  {
-    value: 'planning_committee',
-    label: 'Consensus Committee',
-    desc: 'Planning committee member guiding the Delphi process',
-    icon: Users,
-  },
-  {
-    value: 'wg_lead',
-    label: 'Working Group Co-Lead',
-    desc: 'Co-lead for one of the five working groups',
-    icon: Crown,
-  },
 ];
 
 export function JoinPage() {
   usePageTitle('Join');
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('token');
+  const accessToken = searchParams.get('access');
 
   const [step, setStep] = useState(1); // 1=identity, 2=wg+role
   const [name, setName] = useState('');
@@ -58,38 +49,103 @@ export function JoinPage() {
   const [wg, setWg] = useState(null);
   const [role, setRole] = useState('participant');
   const [submitting, setSubmitting] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [accessError, setAccessError] = useState(null);
+  const isInviteMode = Boolean(inviteToken);
+  const isSharedMode = !isInviteMode && Boolean(accessToken);
+
+  useEffect(() => {
+    if (!inviteToken && !accessToken) {
+      setCheckingAccess(false);
+      return;
+    }
+    if (inviteToken) {
+      api('/api/participants/claim', { params: { token: inviteToken } })
+        .then((data) => {
+          setName(data?.name || '');
+          setEmail(data?.email || '');
+          setWg(data?.wg_number || null);
+        })
+        .catch((err) => setAccessError(err.message || 'Invalid invite link'))
+        .finally(() => setCheckingAccess(false));
+      return;
+    }
+    api('/api/participants/shared-access/validate', { params: { token: accessToken } })
+      .catch((err) => setAccessError(err.message || 'Invalid shared join link'))
+      .finally(() => setCheckingAccess(false));
+  }, [inviteToken, accessToken]);
 
   const canGoNext = name.trim().length >= 2;
-  const canSubmit = wg !== null && role;
+  const canSubmit = (isInviteMode ? wg !== null : wg !== null) && role;
 
   const handleSubmit = async () => {
+    if (!inviteToken && !accessToken) return;
     setSubmitting(true);
     try {
-      const data = await api('/api/participants/register', {
-        method: 'POST',
-        body: {
-          name: name.trim(),
-          email: email.trim() || null,
-          wg_number: wg,
-          role,
-        },
-      });
+      const data = isInviteMode
+        ? await api('/api/participants/register-invite', {
+          method: 'POST',
+          body: {
+            token: inviteToken,
+            name: name.trim(),
+            email: email.trim() || null,
+            role,
+          },
+        })
+        : await api('/api/participants/register-shared', {
+          method: 'POST',
+          body: {
+            access_token: accessToken,
+            name: name.trim(),
+            email: email.trim() || null,
+            wg_number: wg,
+            role,
+          },
+        });
       setToken(data.wg_number, data.token);
-      if (data.role === 'wg_lead') {
-        setLeadToken(data.token);
-      }
       toast({ message: `Welcome, ${data.name}!`, type: 'success' });
-      if (data.role === 'wg_lead') {
-        navigate('/lead');
-      } else {
-        navigate(`/wg/${data.wg_number}`);
-      }
+      navigate(`/wg/${data.wg_number}`);
     } catch (err) {
       toast({ message: err.message || 'Registration failed', type: 'error' });
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (checkingAccess) {
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#0A1628] px-4 py-16 sm:px-6">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-10 text-center text-sm text-white/60">
+            Validating your access link...
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if ((!isInviteMode && !isSharedMode) || accessError || (isInviteMode && !wg)) {
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#0A1628] px-4 py-16 sm:px-6">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-10 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/15 text-red-300">
+              <ShieldAlert className="h-6 w-6" />
+            </div>
+            <h1 className="mt-4 text-lg font-semibold text-white">Invite required</h1>
+            <p className="mt-2 text-sm text-white/55">
+              {accessError || 'Please use the official join link to access registration.'}
+            </p>
+            <Link to="/" className="mt-5 inline-block">
+              <Button variant="secondary" size="sm">Back to home</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const wgInfo = WG_OPTIONS.find((opt) => opt.number === wg);
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#0A1628] px-4 py-16 sm:px-6">
@@ -186,31 +242,49 @@ export function JoinPage() {
                     </div>
                   </div>
 
-                  {/* Working Group */}
-                  <label className="mb-2 block text-sm font-medium text-white/70">Working Group</label>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {WG_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.number}
-                        onClick={() => setWg(opt.number)}
-                        className={`group flex items-start gap-2 rounded-lg border p-3 text-left transition-all ${
-                          wg === opt.number
-                            ? 'border-purple-400/50 bg-purple-500/10'
-                            : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
-                        }`}
-                      >
-                        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          wg === opt.number ? 'bg-purple-500 text-white' : 'bg-white/[0.08] text-white/60'
-                        }`}>
-                          {opt.number}
+                  {isInviteMode ? (
+                    <>
+                      <label className="mb-2 block text-sm font-medium text-white/70">Assigned Working Group</label>
+                      <div className="rounded-lg border border-purple-400/40 bg-purple-500/10 p-3">
+                        <div className="flex items-start gap-2">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-500 text-xs font-bold text-white">
+                            {wg}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white/90">{wgInfo?.short || `WG ${wg}`}</p>
+                            <p className="text-[10px] text-white/40">{wgInfo?.pillar || 'Assigned in invite'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-white/90">{opt.short}</p>
-                          <p className="text-[10px] text-white/40">{opt.pillar} pillar</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <label className="mb-2 block text-sm font-medium text-white/70">Working Group</label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {WG_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.number}
+                            onClick={() => setWg(opt.number)}
+                            className={`group flex items-start gap-2 rounded-lg border p-3 text-left transition-all ${
+                              wg === opt.number
+                                ? 'border-purple-400/50 bg-purple-500/10'
+                                : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                              wg === opt.number ? 'bg-purple-500 text-white' : 'bg-white/[0.08] text-white/60'
+                            }`}>
+                              {opt.number}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white/90">{opt.short}</p>
+                              <p className="text-[10px] text-white/40">{opt.pillar} pillar</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
                   {/* Role */}
                   <label className="mb-2 mt-5 block text-sm font-medium text-white/70">Your role</label>
@@ -253,7 +327,7 @@ export function JoinPage() {
                       onClick={handleSubmit}
                       className="gap-1.5"
                     >
-                      {role === 'wg_lead' ? 'Open Lead Dashboard' : 'Join working group'}
+                      Complete signup
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
