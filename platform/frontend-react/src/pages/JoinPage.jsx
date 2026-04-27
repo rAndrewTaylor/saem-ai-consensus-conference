@@ -75,7 +75,7 @@ export function JoinPage() {
       .finally(() => setCheckingAccess(false));
   }, [inviteToken, accessToken]);
 
-  const canGoNext = name.trim().length >= 2;
+  const canGoNext = name.trim().length >= 2 && email.trim().includes('@');
   const canSubmit = (isInviteMode ? wg !== null : wg !== null) && role;
 
   const handleSubmit = async () => {
@@ -198,7 +198,7 @@ export function JoinPage() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-white/70">Email <span className="text-white/30">(optional)</span></label>
+                      <label className="mb-1.5 block text-sm font-medium text-white/70">Email</label>
                       <input
                         type="email"
                         value={email}
