@@ -485,6 +485,51 @@ def compute_round_results(
     return {"wg": wg_number, "round": round_name, "questions": results}
 
 
+@router.get("/my-status/{wg_number}")
+def get_my_status(
+    wg_number: int,
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
+):
+    """Return how many questions the participant has answered per round."""
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+
+    total_questions = db.query(func.count(Question.id)).filter(
+        Question.wg_id == wg.id,
+        Question.status.in_([QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED])
+    ).scalar() or 0
+
+    r1_answered = 0
+    r2_answered = 0
+    if token:
+        participant = db.query(Participant).filter(Participant.token == token).first()
+        if participant:
+            r1_answered = db.query(func.count(DelphiResponse.id)).join(
+                Question, DelphiResponse.question_id == Question.id
+            ).filter(
+                Question.wg_id == wg.id,
+                DelphiResponse.participant_id == participant.id,
+                DelphiResponse.round == DelphiRound.ROUND_1,
+            ).scalar() or 0
+            r2_answered = db.query(func.count(DelphiResponse.id)).join(
+                Question, DelphiResponse.question_id == Question.id
+            ).filter(
+                Question.wg_id == wg.id,
+                DelphiResponse.participant_id == participant.id,
+                DelphiResponse.round == DelphiRound.ROUND_2,
+            ).scalar() or 0
+
+    return {
+        "total_questions": total_questions,
+        "r1_answered": r1_answered,
+        "r2_answered": r2_answered,
+        "r1_complete": r1_answered >= total_questions and total_questions > 0,
+        "r2_complete": r2_answered > 0,
+    }
+
+
 @router.get("/results/{wg_number}/{round_name}")
 def get_round_results(wg_number: int, round_name: str, db: Session = Depends(get_db)):
     """Get computed results for a round."""

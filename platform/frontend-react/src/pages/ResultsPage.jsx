@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
-  BarChart3, TrendingUp, GitCompare, ArrowLeft, ChevronDown, ChevronRight,
+  BarChart3, TrendingUp, GitCompare, ArrowLeft, ArrowRight, ChevronDown, ChevronRight,
   AlertCircle, Lock, MessageSquare, Download
 } from 'lucide-react';
 import {
@@ -15,6 +15,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { api, getAdminToken } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -827,6 +828,23 @@ export function ResultsPage() {
   const [activeTab, setActiveTab] = useState('r1');
   const tabRefs = useRef({});
 
+  // Gate: check if participant has completed their survey before showing results
+  const [myStatus, setMyStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem(`saem_token_wg${wgNumber}`);
+    if (!token) {
+      setMyStatus({ r1_complete: false, r1_answered: 0, total_questions: 0 });
+      setStatusLoading(false);
+      return;
+    }
+    api(`/api/surveys/my-status/${wgNumber}`, { token })
+      .then(setMyStatus)
+      .catch(() => setMyStatus({ r1_complete: false, r1_answered: 0, total_questions: 0 }))
+      .finally(() => setStatusLoading(false));
+  }, [wgNumber]);
+
   // Underline position
   const [underline, setUnderline] = useState({ left: 0, width: 0 });
 
@@ -846,6 +864,44 @@ export function ResultsPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [activeTab]);
+
+  // Block results until participant has completed the survey
+  if (statusLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Skeleton className="h-10 w-48" />
+      </div>
+    );
+  }
+
+  const isAdmin = !!localStorage.getItem('saem_admin_token');
+  if (!isAdmin && myStatus && !myStatus.r1_complete) {
+    return (
+      <div className="flex flex-col bg-[#0A1628]">
+        <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-400">
+            <Lock className="h-7 w-7" />
+          </div>
+          <h1 className="text-xl font-bold text-white">Complete the survey first</h1>
+          <p className="mt-3 text-sm text-white/50">
+            To prevent bias, results are only visible after you've answered all questions in Round 1.
+            You've answered {myStatus.r1_answered} of {myStatus.total_questions} questions so far.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link to={`/survey/${wgNumber}/round_1`}>
+              <Button className="gap-1.5">
+                Continue survey
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to={`/wg/${wgNumber}`}>
+              <Button variant="secondary">Back to group</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col bg-[#0A1628]">
