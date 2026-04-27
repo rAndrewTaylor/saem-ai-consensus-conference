@@ -141,9 +141,9 @@ function GroupChart({ questions }) {
   const chartData = questions.map((q, i) => ({
     name: `Q${i + 1}`,
     fullText: q.text || q.question_text,
-    include: q.include_pct ?? q.include ?? 0,
-    modify: q.modify_pct ?? q.modify ?? 0,
-    exclude: q.exclude_pct ?? q.exclude ?? 0,
+    include: q.r1_include_pct ?? q.include_pct ?? q.include ?? 0,
+    modify: q.r1_modify_pct ?? q.modify_pct ?? q.modify ?? 0,
+    exclude: q.r1_exclude_pct ?? q.exclude_pct ?? q.exclude ?? 0,
   }));
 
   const CustomTooltip = ({ active, payload }) => {
@@ -194,14 +194,14 @@ function QuestionCard({ question, index, wgNumber, roundName }) {
       </p>
       <div className="mt-3">
         <InlineBar
-          include={question.include_pct ?? question.include ?? 0}
-          modify={question.modify_pct ?? question.modify ?? 0}
-          exclude={question.exclude_pct ?? question.exclude ?? 0}
+          include={question.r1_include_pct ?? question.include_pct ?? 0}
+          modify={question.r1_modify_pct ?? question.modify_pct ?? 0}
+          exclude={question.r1_exclude_pct ?? question.exclude_pct ?? 0}
         />
       </div>
       <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/50">
-        {question.importance_mean != null && (
-          <span>Importance: <span className="font-semibold text-white/80">{Number(question.importance_mean).toFixed(2)}</span></span>
+        {(question.r1_importance_mean ?? question.importance_mean) != null && (
+          <span>Importance: <span className="font-semibold text-white/80">{Number(question.r1_importance_mean ?? question.importance_mean).toFixed(2)}</span></span>
         )}
         {question.pairwise_score != null && (
           <span>Pairwise: <span className="font-semibold text-purple-400">{Number(question.pairwise_score).toFixed(2)}</span></span>
