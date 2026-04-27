@@ -286,12 +286,59 @@ export function WorkingGroupPage() {
         </section>
       )}
 
+      {/* ─── How this works (educational blurb) ─────────────────── */}
+      <section className="px-4 pb-16 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">How this works</h2>
+          <div className="mt-4 rounded-xl border border-white/[0.06] bg-[#0E1E35] p-5 sm:p-6">
+            <p className="text-sm leading-relaxed text-white/70">
+              This conference uses a <strong className="text-white/90">modified Delphi method</strong> — a structured, multi-round process
+              to build expert consensus on the most important research questions for AI in emergency medicine over the next decade.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <ProcessStep number="1" title="Round 1 — Rate the questions" active>
+                Read each candidate research question. For each one, tell us:
+                <strong className="text-white/90"> should it be included?</strong> (Include / Modify / Exclude),
+                <strong className="text-white/90"> how important is it?</strong> (1–9 scale), and optionally leave a comment explaining your reasoning.
+                You can also suggest entirely new questions. Your responses are <strong className="text-white/90">anonymous</strong> — no one sees individual votes.
+              </ProcessStep>
+
+              <ProcessStep number="2" title="Between rounds — AI synthesis">
+                After Round 1 closes, the platform computes group consensus statistics and uses AI to synthesize comment themes,
+                suggest question revisions, and identify gaps. Your co-leads review and finalize the revised question set.
+              </ProcessStep>
+
+              <ProcessStep number="3" title="Round 2 — Revote with context">
+                You'll see each remaining question alongside the <strong className="text-white/90">Round 1 group results</strong> (what % included vs. excluded, average importance).
+                Vote again with a simpler binary choice: Include or Exclude. Questions reaching ≥80% agreement are confirmed for the final agenda.
+              </ProcessStep>
+
+              <ProcessStep number="4" title="Pairwise ranking — head-to-head comparisons">
+                Running alongside both Delphi rounds: pick the more important question in quick side-by-side pairs.
+                Vote as many times as you like — the platform uses a statistical model to build a priority ranking.
+                Results are visible in real time.
+              </ProcessStep>
+
+              <ProcessStep number="5" title="Conference Day — May 21, Atlanta">
+                All participants convene for live deliberation, breakout discussions, and final voting.
+                The combined Delphi + pairwise results produce the <strong className="text-white/90">10-year research agenda</strong> for AI in emergency medicine.
+              </ProcessStep>
+            </div>
+
+            <p className="mt-5 text-xs text-white/40">
+              The full methodology is described in the Guide (top nav). Questions? Contact your co-leads or the conference chair.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Participate (activity cards) ─────────────────────────── */}
       <section className="bg-[#0A1628] px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Participate</h2>
           <p className="mt-2 text-white/50">
-            Each working group runs two Delphi rounds plus continuous pairwise ranking. Everything lives here.
+            Start with Round 1, then pairwise ranking. Round 2 opens after co-lead review.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -331,6 +378,22 @@ export function WorkingGroupPage() {
 }
 
 // ── Sub-components ──────────────────────────────────────────────────
+
+function ProcessStep({ number, title, active, children }) {
+  return (
+    <div className="flex gap-3">
+      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+        active ? 'bg-[#00B4D8] text-white' : 'bg-white/[0.06] text-white/40'
+      }`}>
+        {number}
+      </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-sm font-semibold text-white/90">{title}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-white/50">{children}</p>
+      </div>
+    </div>
+  );
+}
 
 function StatPill({ icon: Icon, label, value }) {
   return (
