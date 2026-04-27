@@ -709,7 +709,7 @@ export function DashboardPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-3 text-center text-white/60">{wg.question_count ?? '-'}</td>
+                        <td className="px-6 py-3 text-center text-white/60">{wg.total_questions ?? '-'}</td>
                         <td className="px-6 py-3 text-center font-medium text-emerald-400">{wg.confirmed ?? '-'}</td>
                         <td className="px-6 py-3 text-center text-white/60">{wg.r1_responses ?? '-'}</td>
                         <td className="px-6 py-3 text-center text-white/60">{wg.r2_responses ?? '-'}</td>
@@ -758,7 +758,7 @@ export function DashboardPage() {
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                       <div>
-                        <p className="font-semibold text-white/80">{wg.question_count ?? '-'}</p>
+                        <p className="font-semibold text-white/80">{wg.total_questions ?? '-'}</p>
                         <p className="text-white/40">Questions</p>
                       </div>
                       <div>
