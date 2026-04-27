@@ -286,7 +286,48 @@ def submit_response(
             existing.comment = comment
 
     db.commit()
+
+    # Recompute this question's aggregate stats so results are always live
+    _recompute_question_stats(question, delphi_round, db)
+
     return {"status": "recorded"}
+
+
+def _recompute_question_stats(question, delphi_round, db):
+    """Incrementally recompute a single question's result stats from raw responses."""
+    responses = db.query(DelphiResponse).filter(
+        DelphiResponse.question_id == question.id,
+        DelphiResponse.round == delphi_round,
+    ).all()
+
+    if not responses:
+        return
+
+    total = len(responses)
+    include_count = sum(1 for r in responses if r.disposition == DispositionVote.INCLUDE)
+    modify_count = sum(1 for r in responses if r.disposition == DispositionVote.INCLUDE_WITH_MODIFICATIONS)
+    exclude_count = sum(1 for r in responses if r.disposition == DispositionVote.EXCLUDE)
+    importance_ratings = [r.importance_rating for r in responses if r.importance_rating]
+
+    include_pct = round((include_count + modify_count) / total * 100, 1)
+    modify_pct = round(modify_count / total * 100, 1)
+    exclude_pct = round(exclude_count / total * 100, 1)
+    importance_mean = round(sum(importance_ratings) / len(importance_ratings), 2) if importance_ratings else None
+    importance_median = round(sorted(importance_ratings)[len(importance_ratings) // 2], 2) if importance_ratings else None
+
+    if delphi_round == DelphiRound.ROUND_1:
+        question.r1_include_pct = include_pct
+        question.r1_modify_pct = modify_pct
+        question.r1_exclude_pct = exclude_pct
+        question.r1_importance_mean = importance_mean
+        question.r1_importance_median = importance_median
+    else:
+        question.r2_include_pct = include_pct
+        question.r2_exclude_pct = exclude_pct
+        question.r2_importance_mean = importance_mean
+        question.r2_importance_median = importance_median
+
+    db.commit()
 
 
 @router.post("/respond/{wg_number}/{round_name}/batch")
