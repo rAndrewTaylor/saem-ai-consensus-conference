@@ -400,6 +400,44 @@ def list_participants(
     ]
 
 
+class ParticipantAdminUpdate(BaseModel):
+    wg_number: Optional[int] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+
+
+@router.patch("/{participant_id}")
+def admin_update_participant(
+    participant_id: int,
+    body: ParticipantAdminUpdate,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Admin: update a participant's WG, name, email, or role."""
+    p = db.query(Participant).filter(Participant.id == participant_id).first()
+    if not p:
+        raise HTTPException(404, "Participant not found")
+    if body.wg_number is not None:
+        wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
+        if not wg:
+            raise HTTPException(404, "Working group not found")
+        p.wg_id = wg.id
+    if body.name is not None:
+        p.name = sanitize_text(body.name, max_length=200)
+    if body.email is not None:
+        p.email = sanitize_text(body.email, max_length=200)
+    if body.role is not None:
+        p.role = body.role
+    db.commit()
+    write_audit_log(
+        db, admin.get("sub", "admin"),
+        "participant_update",
+        f"Updated participant {p.id} ({p.name})",
+    )
+    return {"ok": True, "id": p.id}
+
+
 @router.delete("/{participant_id}")
 def deactivate_participant(
     participant_id: int,
