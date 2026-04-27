@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,6 +16,9 @@ import {
   GraduationCap,
   Brain,
   Scale,
+  ChevronDown,
+  Info,
+  PlayCircle,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -144,233 +147,176 @@ export function WorkingGroupPage() {
         />
       </Helmet>
 
-      {/* ─── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-4 pt-10 pb-16 sm:px-6 sm:pt-14 sm:pb-20">
-        {/* Gradient glow */}
-        <div className={`pointer-events-none absolute -top-32 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-b ${style.glow} blur-3xl`} />
-
+      {/* ─── Compact Hero ────────────────────────────────────────── */}
+      <section className="relative overflow-hidden px-4 pt-8 pb-6 sm:px-6 sm:pt-10 sm:pb-8">
+        <div className={`pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b ${style.glow} blur-3xl`} />
         <div className="relative mx-auto max-w-5xl">
           <div className="flex items-center justify-between gap-3">
-            <Link
-              to="/#working-groups"
-              className="inline-flex items-center gap-1.5 text-sm text-white/40 transition hover:text-white/70"
-            >
-              <ArrowLeft className="h-4 w-4" /> All working groups
+            <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-white/40 transition hover:text-white/70">
+              <ArrowLeft className="h-4 w-4" /> Home
             </Link>
             {signedInName && (
               <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
                 <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Signed in as {signedInName}
+                {signedInName}
               </div>
             )}
           </div>
 
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            className="relative mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E1E35] p-8 sm:p-10"
-          >
-            {/* Large watermark WG number */}
-            <span className="pointer-events-none absolute -bottom-10 -right-6 select-none text-[14rem] font-black leading-none text-white opacity-[0.03] sm:text-[18rem]">
-              {wg.wg_number}
-            </span>
-
-            <div className="relative">
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge variant={style.badge} className="text-xs font-bold">
-                  WG {wg.wg_number}
-                </Badge>
-                {wg.pillar && (
-                  <div className={`inline-flex items-center gap-1.5 rounded-full ${style.bg} px-3 py-1`}>
-                    <PillarIcon className={`h-3.5 w-3.5 ${style.iconColor}`} />
-                    <span className={`text-xs font-semibold ${style.iconColor}`}>{wg.pillar} Pillar</span>
-                  </div>
-                )}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Badge variant={style.badge} className="text-xs font-bold">WG {wg.wg_number}</Badge>
+            {wg.pillar && (
+              <div className={`inline-flex items-center gap-1 rounded-full ${style.bg} px-2.5 py-0.5`}>
+                <PillarIcon className={`h-3 w-3 ${style.iconColor}`} />
+                <span className={`text-[11px] font-semibold ${style.iconColor}`}>{wg.pillar}</span>
               </div>
-
-              <h1 className="mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                {wg.name}
-              </h1>
-
-              {extras.tagline && (
-                <p className="mt-4 max-w-3xl text-lg text-white/60">{extras.tagline}</p>
-              )}
-
-              {wg.scope && (
-                <p className="mt-4 max-w-3xl text-base leading-relaxed text-white/50">{wg.scope}</p>
-              )}
-
-              {/* Stats */}
-              <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm">
-                <StatPill
-                  icon={ClipboardList}
-                  label="Total questions"
-                  value={wg.total_questions ?? 0}
-                />
-                <StatPill
-                  icon={CheckCircle2}
-                  label="Confirmed"
-                  value={wg.confirmed ?? 0}
-                />
-                <StatPill
-                  icon={Users}
-                  label="Co-leads"
-                  value={wg.co_leads?.length || 0}
-                />
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ─── Leadership ───────────────────────────────────────────── */}
-      <section className="px-4 pb-16 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">Leadership</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {wg.co_leads?.map((cl, i) => (
-              <Card key={i} className="border border-white/[0.06]">
-                <CardContent className="flex items-start gap-3 p-5">
-                  <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${style.bg}`}>
-                    <UserCheck className={`h-5 w-5 ${style.iconColor}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium uppercase tracking-wide text-white/30">Co-Lead</p>
-                    <p className="mt-0.5 text-sm font-semibold text-white">{cl.name}</p>
-                    {cl.institution && (
-                      <p className="mt-0.5 text-xs text-white/40">{cl.institution}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {extras.liaison && (
-              <Card className="border border-white/[0.06]">
-                <CardContent className="flex items-start gap-3 p-5">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-                    <Users className="h-5 w-5 text-white/60" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium uppercase tracking-wide text-white/30">
-                      {extras.liaison.role || 'Planning Committee Liaison'}
-                    </p>
-                    <p className="mt-0.5 text-sm font-semibold text-white">{extras.liaison.name}</p>
-                    <p className="mt-0.5 text-xs text-white/40">Planning Committee</p>
-                  </div>
-                </CardContent>
-              </Card>
             )}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Key topics ───────────────────────────────────────────── */}
-      {extras.keyTopics && extras.keyTopics.length > 0 && (
-        <section className="px-4 pb-16 sm:px-6">
-          <div className="mx-auto max-w-5xl">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">Key topics</h2>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {extras.keyTopics.map((topic, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-[#0E1E35] p-4"
-                >
-                  <CheckCircle2 className={`mt-0.5 h-4 w-4 flex-shrink-0 ${style.iconColor}`} />
-                  <span className="text-sm text-white/70">{topic}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      )}
-
-      {/* ─── How this works (educational blurb) ─────────────────── */}
-      <section className="px-4 pb-16 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40">How this works</h2>
-          <div className="mt-4 rounded-xl border border-white/[0.06] bg-[#0E1E35] p-5 sm:p-6">
-            <p className="text-sm leading-relaxed text-white/70">
-              This conference uses a <strong className="text-white/90">modified Delphi method</strong> — a structured, multi-round process
-              to build expert consensus on the most important research questions for AI in emergency medicine over the next decade.
-            </p>
-
-            <div className="mt-5 space-y-4">
-              <ProcessStep number="1" title="Round 1 — Rate the questions" active>
-                Read each candidate research question. For each one, tell us:
-                <strong className="text-white/90"> should it be included?</strong> (Include / Modify / Exclude),
-                <strong className="text-white/90"> how important is it?</strong> (1–9 scale), and optionally leave a comment explaining your reasoning.
-                You can also suggest entirely new questions. Your responses are <strong className="text-white/90">anonymous</strong> — no one sees individual votes.
-              </ProcessStep>
-
-              <ProcessStep number="2" title="Between rounds — AI synthesis">
-                After Round 1 closes, the platform computes group consensus statistics and uses AI to synthesize comment themes,
-                suggest question revisions, and identify gaps. Your co-leads review and finalize the revised question set.
-              </ProcessStep>
-
-              <ProcessStep number="3" title="Round 2 — Revote with context">
-                You'll see each remaining question alongside the <strong className="text-white/90">Round 1 group results</strong> (what % included vs. excluded, average importance).
-                Vote again with a simpler binary choice: Include or Exclude. Questions reaching ≥80% agreement are confirmed for the final agenda.
-              </ProcessStep>
-
-              <ProcessStep number="4" title="Pairwise ranking — head-to-head comparisons">
-                Running alongside both Delphi rounds: pick the more important question in quick side-by-side pairs.
-                Vote as many times as you like — the platform uses a statistical model to build a priority ranking.
-                Results are visible in real time.
-              </ProcessStep>
-
-              <ProcessStep number="5" title="Conference Day — May 21, Atlanta">
-                All participants convene for live deliberation, breakout discussions, and final voting.
-                The combined Delphi + pairwise results produce the <strong className="text-white/90">10-year research agenda</strong> for AI in emergency medicine.
-              </ProcessStep>
+            <div className="flex items-center gap-3 text-xs text-white/40">
+              <span>{wg.total_questions ?? 0} questions</span>
+              <span>{wg.co_leads?.length || 0} co-leads</span>
             </div>
-
-            <p className="mt-5 text-xs text-white/40">
-              The full methodology is described in the Guide (top nav). Questions? Contact your co-leads or the conference chair.
-            </p>
           </div>
+
+          <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            {wg.name}
+          </h1>
+          {extras.tagline && (
+            <p className="mt-2 max-w-3xl text-base text-white/50">{extras.tagline}</p>
+          )}
         </div>
       </section>
 
-      {/* ─── Participate (activity cards) ─────────────────────────── */}
-      <section className="bg-[#0A1628] px-4 py-16 sm:px-6 sm:py-20">
+      {/* ─── Primary action: START HERE ───────────────────────────── */}
+      <section className="px-4 pb-4 sm:px-6">
         <div className="mx-auto max-w-5xl">
-          <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Participate</h2>
-          <p className="mt-2 text-white/50">
-            Start with Round 1, then pairwise ranking. Round 2 opens after co-lead review.
-          </p>
+          <Link to={`/survey/${wg.wg_number}/round_1`}>
+            <div className="group relative overflow-hidden rounded-xl border border-[#00B4D8]/30 bg-gradient-to-r from-[#0C2340] to-[#0E1E35] p-5 transition-all hover:border-[#00B4D8]/50 hover:shadow-lg hover:shadow-[#00B4D8]/10 sm:p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#00B4D8]/15">
+                  <PlayCircle className="h-6 w-6 text-[#00B4D8]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#48CAE4]">Start here</p>
+                  <h2 className="mt-0.5 text-lg font-bold text-white sm:text-xl">Delphi Round 1 Survey</h2>
+                  <p className="mt-1 text-sm text-white/50">
+                    Rate each research question on importance and disposition. Takes 10–15 minutes.
+                  </p>
+                </div>
+                <ArrowRight className="hidden h-5 w-5 shrink-0 text-white/30 transition group-hover:translate-x-1 group-hover:text-[#00B4D8] sm:block" />
+              </div>
+            </div>
+          </Link>
+        </div>
+      </section>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      {/* ─── Activity cards (other activities) ────────────────────── */}
+      <section className="px-4 pb-6 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <ActivityCard
-              to={`/survey/${wg.wg_number}/round_1`}
-              icon={ClipboardList}
-              phase={PHASE_INFO.round_1.label}
-              blurb={PHASE_INFO.round_1.blurb}
-              accent="cyan"
+              to={`/rank/${wg.wg_number}`}
+              icon={GitCompare}
+              phase="Pairwise"
+              blurb="Head-to-head ranking"
+              accent="teal"
+              compact
             />
             <ActivityCard
               to={`/survey/${wg.wg_number}/round_2`}
               icon={ClipboardList}
-              phase={PHASE_INFO.round_2.label}
-              blurb={PHASE_INFO.round_2.blurb}
+              phase="Round 2"
+              blurb="Opens after R1 review"
               accent="navy"
-            />
-            <ActivityCard
-              to={`/rank/${wg.wg_number}`}
-              icon={GitCompare}
-              phase={PHASE_INFO.pairwise.label}
-              blurb={PHASE_INFO.pairwise.blurb}
-              accent="teal"
+              compact
             />
             <ActivityCard
               to={`/results/${wg.wg_number}`}
               icon={BarChart3}
-              phase={PHASE_INFO.results.label}
-              blurb={PHASE_INFO.results.blurb}
+              phase="Results"
+              blurb="Live rankings"
               accent="emerald"
+              compact
             />
           </div>
+        </div>
+      </section>
+
+      {/* ─── How this works (collapsible) ─────────────────────────── */}
+      <section className="px-4 pb-4 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <CollapsibleSection icon={Info} title="How this works" defaultOpen={false}>
+            <p className="text-sm leading-relaxed text-white/60">
+              This conference uses a <strong className="text-white/80">modified Delphi method</strong> — a structured, multi-round process
+              to build expert consensus on the most important research questions for AI in emergency medicine.
+            </p>
+            <div className="mt-4 space-y-3">
+              <ProcessStep number="1" title="Round 1 — Rate the questions" active>
+                For each question: <strong className="text-white/80">Include / Modify / Exclude</strong> +
+                importance (1–9) + optional comment. You can suggest new questions too. All responses are anonymous.
+              </ProcessStep>
+              <ProcessStep number="2" title="Between rounds — AI synthesis">
+                Platform computes consensus stats. AI synthesizes comment themes + revision suggestions. Co-leads review and finalize.
+              </ProcessStep>
+              <ProcessStep number="3" title="Round 2 — Revote with context">
+                See Round 1 group results inline. Binary Include/Exclude. ≥80% agreement = confirmed for the agenda.
+              </ProcessStep>
+              <ProcessStep number="4" title="Pairwise ranking">
+                Quick side-by-side pairs running alongside both rounds. Vote as many times as you like. Live rankings.
+              </ProcessStep>
+              <ProcessStep number="5" title="Conference Day — May 21">
+                Live deliberation, breakouts, final voting → 10-year research agenda.
+              </ProcessStep>
+            </div>
+          </CollapsibleSection>
+        </div>
+      </section>
+
+      {/* ─── About this group (collapsible) ───────────────────────── */}
+      <section className="px-4 pb-10 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <CollapsibleSection icon={Users} title="About this group" defaultOpen={false}>
+            {wg.scope && (
+              <p className="text-sm leading-relaxed text-white/60">{wg.scope}</p>
+            )}
+
+            {/* Co-leads */}
+            {wg.co_leads?.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Co-leads</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {wg.co_leads.map((cl, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-sm font-medium text-white/80">
+                      <UserCheck className={`h-3.5 w-3.5 ${style.iconColor}`} />
+                      {cl.name}
+                      {cl.institution && <span className="text-white/40">· {cl.institution}</span>}
+                    </span>
+                  ))}
+                  {extras.liaison && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-sm font-medium text-white/60">
+                      <Users className="h-3.5 w-3.5 text-white/40" />
+                      {extras.liaison.name}
+                      <span className="text-white/30">· Liaison</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Key topics */}
+            {extras.keyTopics?.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/30">Key topics</p>
+                <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {extras.keyTopics.map((topic, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-white/60">
+                      <CheckCircle2 className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${style.iconColor}`} />
+                      {topic}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CollapsibleSection>
         </div>
       </section>
     </div>
@@ -378,6 +324,37 @@ export function WorkingGroupPage() {
 }
 
 // ── Sub-components ──────────────────────────────────────────────────
+
+function CollapsibleSection({ icon: Icon, title, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-[#0E1E35]">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-white/[0.02]"
+      >
+        <Icon className="h-4 w-4 shrink-0 text-white/40" />
+        <span className="flex-1 text-sm font-semibold text-white/80">{title}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-white/30 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/[0.04] px-5 py-4">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function ProcessStep({ number, title, active, children }) {
   return (
@@ -412,8 +389,23 @@ const ACCENT_STYLES = {
   emerald: { bg: 'bg-emerald-500/10', icon: 'text-emerald-400', hover: 'group-hover:border-emerald-400/40' },
 };
 
-function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'navy' }) {
+function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'navy', compact = false }) {
   const a = ACCENT_STYLES[accent];
+
+  if (compact) {
+    return (
+      <Link to={to} className="group block">
+        <div className={`flex h-full flex-col items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E1E35] p-3 text-center transition-all hover:bg-[#142C4A] sm:p-4 ${a.hover}`}>
+          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${a.bg} sm:h-10 sm:w-10`}>
+            <Icon className={`h-4 w-4 ${a.icon} sm:h-5 sm:w-5`} />
+          </div>
+          <h3 className="text-xs font-semibold text-white sm:text-sm">{phase}</h3>
+          <p className="hidden text-[11px] leading-snug text-white/40 sm:block">{blurb}</p>
+        </div>
+      </Link>
+    );
+  }
+
   return (
     <Link to={to} className="group block">
       <div className={`relative flex h-full flex-col rounded-xl border border-white/[0.08] bg-[#0E1E35] p-5 transition-all hover:bg-[#142C4A] ${a.hover}`}>
