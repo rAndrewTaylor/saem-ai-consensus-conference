@@ -3,7 +3,6 @@ import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Men
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { getAdminToken, getLeadToken } from '@/lib/api';
 
 /**
@@ -175,9 +174,6 @@ export function Layout({ children }) {
           </div>
         )}
       </nav>
-
-      {/* Breadcrumbs */}
-      <Breadcrumbs />
 
       {/* Main content */}
       <main id="main-content" className="flex-1">{children}</main>
