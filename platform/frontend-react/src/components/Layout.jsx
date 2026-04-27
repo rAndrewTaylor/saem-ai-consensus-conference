@@ -55,10 +55,8 @@ export function Layout({ children }) {
       links.push({ to: '/join', label: 'Join', icon: UserPlus, highlight: true, section: 'util' });
     }
 
-    // Admin dashboard
-    if (isAdmin) {
-      links.push({ to: '/dashboard', label: 'Admin', icon: LayoutDashboard, section: 'admin' });
-    }
+    // Admin dashboard — always visible (page has its own login gate)
+    links.push({ to: '/dashboard', label: 'Admin', icon: LayoutDashboard, section: 'admin' });
 
     return links;
   }, [isSignedIn, isAdmin, isLead, wgNumber]);
