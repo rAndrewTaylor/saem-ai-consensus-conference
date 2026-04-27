@@ -270,30 +270,44 @@ export function SurveyPage() {
   const isRound2 = roundName?.toLowerCase() === 'round2';
   const roundLabel = roundName?.replace('round', 'Round ') || roundName;
 
-  // ── Fetch questions ─────────────────────────────────────────────
+  // Track which questions have been saved to server
+  const [savedToServer, setSavedToServer] = useState({});
+  const [savingId, setSavingId] = useState(null);
+
+  // ── Fetch questions + existing responses from server ────────────
   useEffect(() => {
     if (tokenLoading) return;
     setLoadingQ(true);
     setErrorQ(null);
 
-    api('/api/surveys/questions/' + wgNumber, { params: { round_name: roundName }, token })
-      .then((data) => {
-        const qs = Array.isArray(data) ? data : data.questions || [];
+    Promise.all([
+      api('/api/surveys/questions/' + wgNumber, { params: { round_name: roundName }, token }),
+      api(`/api/surveys/my-responses/${wgNumber}/${roundName}`, { token }).catch(() => ({ responses: {} })),
+    ])
+      .then(([qData, rData]) => {
+        const qs = Array.isArray(qData) ? qData : qData.questions || [];
         setQuestions(qs);
+        // Pre-populate with server-side responses (cross-device resume)
+        const serverResponses = rData.responses || {};
+        if (Object.keys(serverResponses).length > 0) {
+          setResponses(serverResponses);
+          const serverSaved = {};
+          Object.keys(serverResponses).forEach((id) => { serverSaved[id] = true; });
+          setSavedToServer(serverSaved);
+          setDraftSaved(true);
+        } else {
+          // Fall back to localStorage draft if no server responses
+          try {
+            const saved = localStorage.getItem(AUTOSAVE_KEY(wgNumber, roundName));
+            if (saved) {
+              setResponses(JSON.parse(saved));
+              setDraftSaved(true);
+            }
+          } catch {}
+        }
       })
       .catch((err) => setErrorQ(err.message))
       .finally(() => setLoadingQ(false));
-  }, [wgNumber, roundName, token, tokenLoading]);
-
-  // ── Restore autosaved draft ─────────────────────────────────────
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(AUTOSAVE_KEY(wgNumber, roundName));
-      if (saved) {
-        setResponses(JSON.parse(saved));
-        setDraftSaved(true);
-      }
-    } catch {}
 
     try {
       const savedSuggestion = localStorage.getItem(SUGGESTION_KEY(wgNumber, roundName));
@@ -303,9 +317,31 @@ export function SurveyPage() {
         setSuggestionContext(parsed.context || '');
       }
     } catch {}
-  }, [wgNumber, roundName]);
+  }, [wgNumber, roundName, token, tokenLoading]);
 
-  // ── Autosave on change ──────────────────────────────────────────
+  // ── Auto-save individual response to server when disposition is set ──
+  const autoSaveToServer = useCallback(async (questionId, response) => {
+    if (!response.disposition || !token) return;
+    setSavingId(questionId);
+    try {
+      await api(`/api/surveys/respond/${wgNumber}/${roundName}/${questionId}`, {
+        method: 'POST',
+        token,
+        body: {
+          disposition: response.disposition,
+          importance_rating: response.importance_rating || 5,
+          comment: response.comment || '',
+        },
+      });
+      setSavedToServer((prev) => ({ ...prev, [questionId]: true }));
+    } catch (err) {
+      console.error('Auto-save failed for question', questionId, err.message);
+    } finally {
+      setSavingId(null);
+    }
+  }, [wgNumber, roundName, token]);
+
+  // ── Also keep localStorage backup ──────────────────────────────
   useEffect(() => {
     if (Object.keys(responses).length === 0) return;
     try {
@@ -325,11 +361,15 @@ export function SurveyPage() {
   }, [suggestionText, suggestionContext, wgNumber, roundName]);
 
   const updateResponse = useCallback((questionId, updates) => {
-    setResponses((prev) => ({
-      ...prev,
-      [questionId]: { ...prev[questionId], ...updates },
-    }));
-  }, []);
+    setResponses((prev) => {
+      const updated = { ...prev[questionId], ...updates };
+      // Auto-save to server when disposition is set (the key action)
+      if (updated.disposition) {
+        autoSaveToServer(questionId, updated);
+      }
+      return { ...prev, [questionId]: updated };
+    });
+  }, [autoSaveToServer]);
 
   const { answered, total, percentage } = useMemo(() => {
     const t = questions.length;
@@ -526,12 +566,17 @@ export function SurveyPage() {
               <span className="font-medium text-white/40">of {total} answered</span>
             </div>
             <div className="flex items-center gap-3">
-              {draftSaved && (
+              {Object.keys(savedToServer).length > 0 ? (
                 <span className="hidden items-center gap-1 text-xs text-emerald-300 sm:flex">
                   <Save className="h-3 w-3" />
-                  Draft saved
+                  {savingId ? 'Saving...' : 'Saved to account'}
                 </span>
-              )}
+              ) : draftSaved ? (
+                <span className="hidden items-center gap-1 text-xs text-amber-300 sm:flex">
+                  <Save className="h-3 w-3" />
+                  Draft (local)
+                </span>
+              ) : null}
               <span className="rounded-md bg-purple-500/15 px-2 py-0.5 text-sm font-bold tabular-nums text-purple-300">
                 {percentage}%
               </span>
@@ -592,22 +637,39 @@ export function SurveyPage() {
               })}
             </div>
 
-            {/* ─── Submit Button ──────────────────────────────── */}
+            {/* ─── Submit / Finish ─────────────────────────────── */}
             <div className="mt-10 flex flex-col items-center gap-3">
-              <Button
-                size="lg"
-                loading={submitting}
-                disabled={answered === 0}
-                onClick={handleSubmit}
-                className="min-w-[200px]"
-              >
-                <Send className="h-4 w-4" />
-                Submit {answered} Response{answered !== 1 ? 's' : ''}
-              </Button>
-              {answered < total && (
-                <p className="text-xs text-white/40">
-                  {total - answered} question{total - answered !== 1 ? 's' : ''} remaining &mdash; you can submit partial responses
-                </p>
+              {answered === total && total > 0 ? (
+                <>
+                  <div className="flex items-center gap-2 text-emerald-300">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">All {total} responses saved</span>
+                  </div>
+                  <Button
+                    size="lg"
+                    onClick={() => setSubmitted(true)}
+                    className="min-w-[200px]"
+                  >
+                    <Send className="h-4 w-4" />
+                    Finish survey
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="lg"
+                    loading={submitting}
+                    disabled={answered === 0}
+                    onClick={handleSubmit}
+                    className="min-w-[200px]"
+                  >
+                    <Send className="h-4 w-4" />
+                    Save &amp; finish ({answered}/{total})
+                  </Button>
+                  <p className="text-xs text-white/40">
+                    {total - answered} question{total - answered !== 1 ? 's' : ''} remaining &mdash; your answers save automatically as you go
+                  </p>
+                </>
               )}
             </div>
 

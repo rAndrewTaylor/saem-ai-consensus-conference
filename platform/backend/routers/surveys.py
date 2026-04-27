@@ -485,6 +485,51 @@ def compute_round_results(
     return {"wg": wg_number, "round": round_name, "questions": results}
 
 
+@router.get("/my-responses/{wg_number}/{round_name}")
+def get_my_responses(
+    wg_number: int,
+    round_name: str,
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
+):
+    """Return the participant's existing responses for a round, so the
+    frontend can pre-populate the survey on page load (enables cross-device
+    resume and auto-save recovery)."""
+    if not token:
+        return {"responses": {}}
+    participant = db.query(Participant).filter(Participant.token == token).first()
+    if not participant:
+        return {"responses": {}}
+
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+    if not wg:
+        return {"responses": {}}
+
+    delphi_round = DelphiRound.ROUND_1 if round_name == "round_1" else DelphiRound.ROUND_2
+
+    responses = (
+        db.query(DelphiResponse)
+        .join(Question, DelphiResponse.question_id == Question.id)
+        .filter(
+            Question.wg_id == wg.id,
+            DelphiResponse.participant_id == participant.id,
+            DelphiResponse.round == delphi_round,
+        )
+        .all()
+    )
+
+    return {
+        "responses": {
+            r.question_id: {
+                "disposition": r.disposition.value if r.disposition else None,
+                "importance_rating": r.importance_rating,
+                "comment": r.comment or "",
+            }
+            for r in responses
+        }
+    }
+
+
 @router.get("/my-status/{wg_number}")
 def get_my_status(
     wg_number: int,
