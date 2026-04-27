@@ -3,18 +3,7 @@ import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Men
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
-import { getAdminToken, getLeadToken } from '@/lib/api';
-
-/**
- * Detect the signed-in WG number by scanning localStorage for saem_token_wgN keys.
- * Returns the WG number (1-5) or null if not signed in.
- */
-function getSignedInWg() {
-  for (let i = 1; i <= 5; i++) {
-    if (localStorage.getItem(`saem_token_wg${i}`)) return i;
-  }
-  return null;
-}
+import { getAdminToken, getLeadToken, getActiveWg } from '@/lib/api';
 
 export function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,7 +12,7 @@ export function Layout({ children }) {
 
   // Derive auth state from localStorage (re-evaluates on each render,
   // which is fine — nav renders on every route change)
-  const wgNumber = useMemo(() => getSignedInWg(), [location.pathname]);
+  const wgNumber = useMemo(() => getActiveWg(), [location.pathname]);
   const isAdmin = useMemo(() => !!getAdminToken(), [location.pathname]);
   const isLead = useMemo(() => !!getLeadToken(), [location.pathname]);
   const isSignedIn = wgNumber !== null;

@@ -45,7 +45,14 @@ export async function api(url, { method = 'GET', body, token, params } = {}) {
 
 // Token management
 export const getToken = (wg) => localStorage.getItem(`saem_token_wg${wg}`);
-export const setToken = (wg, token) => localStorage.setItem(`saem_token_wg${wg}`, token);
+export const setToken = (wg, token) => {
+  localStorage.setItem(`saem_token_wg${wg}`, token);
+  localStorage.setItem('saem_active_wg', String(wg));
+};
+export const getActiveWg = () => {
+  const v = localStorage.getItem('saem_active_wg');
+  return v ? parseInt(v, 10) : null;
+};
 export const getAnyParticipantToken = () => {
   for (let i = 0; i < localStorage.length; i += 1) {
     const key = localStorage.key(i);
