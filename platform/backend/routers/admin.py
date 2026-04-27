@@ -126,13 +126,30 @@ def dashboard_data(
     conference_sessions = db.query(ConferenceSession).count()
     conference_votes = db.query(ConferenceVote).count()
 
+    # Top-level aggregates for the overview stat cards
+    total_questions = sum(s["total_questions"] for s in wg_summaries)
+    total_confirmed = sum(s["confirmed"] for s in wg_summaries)
+    total_active = sum(s["active"] for s in wg_summaries)
+    total_removed = sum(s["removed"] for s in wg_summaries)
+    total_r1_participants = max((s["r1_participants"] for s in wg_summaries), default=0)
+    pending_ai_review = total_items - reviewed_items
+
     return {
+        "total_questions": total_questions,
+        "confirmed": total_confirmed,
+        "r1_participants": sum(s["r1_participants"] for s in wg_summaries),
+        "pending_ai_review": pending_ai_review,
+        "status_breakdown": {
+            "active": total_active,
+            "confirmed": total_confirmed,
+            "removed": total_removed,
+        },
         "working_groups": wg_summaries,
         "ai_synthesis": {
             "total_runs": total_runs,
             "total_items": total_items,
             "reviewed_items": reviewed_items,
-            "pending_review": total_items - reviewed_items,
+            "pending_review": pending_ai_review,
         },
         "conference": {
             "sessions": conference_sessions,
