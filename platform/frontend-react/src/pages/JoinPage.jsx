@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, ArrowLeft, User, UserCheck, CheckCircle2, ShieldAlert,
+  ArrowRight, ArrowLeft, User, UserCheck, CheckCircle2, ShieldAlert, LogIn, Mail,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,9 +43,12 @@ export function JoinPage() {
   const inviteToken = searchParams.get('token');
   const accessToken = searchParams.get('access');
 
+  const [mode, setMode] = useState('register'); // 'register' | 'signin'
   const [step, setStep] = useState(1); // 1=identity, 2=wg+role
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [signinEmail, setSigninEmail] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
   const [wg, setWg] = useState(null);
   const [role, setRole] = useState('participant');
   const [submitting, setSubmitting] = useState(false);
@@ -76,6 +79,27 @@ export function JoinPage() {
   }, [inviteToken, accessToken]);
 
   const canGoNext = name.trim().length >= 2 && email.trim().includes('@');
+
+  const handleSignIn = async () => {
+    if (!signinEmail.trim().includes('@')) {
+      toast({ message: 'Enter a valid email address', type: 'error' });
+      return;
+    }
+    setSigningIn(true);
+    try {
+      const data = await api('/api/participants/login', {
+        method: 'POST',
+        body: { email: signinEmail.trim() },
+      });
+      setToken(data.wg_number, data.token);
+      toast({ message: `Welcome back, ${data.name}!`, type: 'success' });
+      navigate(`/wg/${data.wg_number}`);
+    } catch (err) {
+      toast({ message: err.message || 'Could not find that email', type: 'error' });
+    } finally {
+      setSigningIn(false);
+    }
+  };
   const canSubmit = (isInviteMode ? wg !== null : wg !== null) && role;
 
   const handleSubmit = async () => {
@@ -127,20 +151,28 @@ export function JoinPage() {
   if ((!isInviteMode && !isSharedMode) || accessError || (isInviteMode && !wg)) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#0A1628] px-4 py-16 sm:px-6">
-        <Card className="w-full max-w-md">
-          <CardContent className="py-10 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/15 text-red-300">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <h1 className="mt-4 text-lg font-semibold text-white">Invite required</h1>
-            <p className="mt-2 text-sm text-white/55">
-              {accessError || 'Please use the official join link to access registration.'}
-            </p>
-            <Link to="/" className="mt-5 inline-block">
-              <Button variant="secondary" size="sm">Back to home</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="w-full max-w-md space-y-4">
+          <Card>
+            <CardContent className="py-10 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/15 text-red-300">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <h1 className="mt-4 text-lg font-semibold text-white">Invite required</h1>
+              <p className="mt-2 text-sm text-white/55">
+                {accessError || 'Please use the official join link to access registration.'}
+              </p>
+              <Link to="/" className="mt-5 inline-block">
+                <Button variant="secondary" size="sm">Back to home</Button>
+              </Link>
+            </CardContent>
+          </Card>
+          <SignInCard
+            signinEmail={signinEmail}
+            setSigninEmail={setSigninEmail}
+            signingIn={signingIn}
+            handleSignIn={handleSignIn}
+          />
+        </div>
       </div>
     );
   }
@@ -155,10 +187,39 @@ export function JoinPage() {
       <div className="pointer-events-none fixed -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#1B5E8A]/10 to-transparent blur-3xl" />
 
       <div className="relative w-full max-w-lg">
+        {/* Register / Sign in toggle */}
+        <div className="mb-5 flex items-center justify-center gap-2">
+          <button
+            onClick={() => setMode('register')}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              mode === 'register' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            New here? Register
+          </button>
+          <button
+            onClick={() => setMode('signin')}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              mode === 'signin' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            Returning? Sign in
+          </button>
+        </div>
+
+        {mode === 'signin' ? (
+          <SignInCard
+            signinEmail={signinEmail}
+            setSigninEmail={setSigninEmail}
+            signingIn={signingIn}
+            handleSignIn={handleSignIn}
+          />
+        ) : (
+        <>
         {/* Step indicator */}
         <div className="mb-5 flex items-center justify-center gap-3">
           <StepDot active={step >= 1} label="1" />
-          <div className={`h-px w-8 ${step >= 2 ? 'bg-purple-400' : 'bg-white/10'}`} />
+          <div className={`h-px w-8 ${step >= 2 ? 'bg-[#00B4D8]' : 'bg-white/10'}`} />
           <StepDot active={step >= 2} label="2" />
         </div>
 
@@ -336,15 +397,49 @@ export function JoinPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        </>
+        )}
       </div>
     </div>
+  );
+}
+
+function SignInCard({ signinEmail, setSigninEmail, signingIn, handleSignIn }) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00B4D8]/15 text-[#00B4D8]">
+            <LogIn className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-white">Welcome back</h2>
+            <p className="text-xs text-white/50">Enter the email you registered with</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={signinEmail}
+            onChange={(e) => setSigninEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
+            placeholder="your.email@institution.edu"
+            className="flex-1 rounded-lg border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/30 outline-none transition focus:border-[#00B4D8]/50 focus:ring-2 focus:ring-[#00B4D8]/20"
+          />
+          <Button onClick={handleSignIn} loading={signingIn} className="shrink-0">
+            <Mail className="h-4 w-4" />
+            Sign in
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function StepDot({ active, label }) {
   return (
     <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition ${
-      active ? 'bg-purple-500 text-white' : 'bg-white/[0.06] text-white/30'
+      active ? 'bg-[#00B4D8] text-white' : 'bg-white/[0.06] text-white/30'
     }`}>
       {label}
     </div>

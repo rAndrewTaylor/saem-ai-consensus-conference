@@ -235,6 +235,47 @@ def register_from_shared_link(
     }
 
 
+# --- Returning user login (email-based, no password) ---
+
+class ParticipantLogin(BaseModel):
+    email: str = Field(..., min_length=3, max_length=200)
+
+
+@router.post("/login")
+def login_participant(
+    body: ParticipantLogin,
+    db: Session = Depends(get_db),
+):
+    """Public: email-based login for returning participants.
+
+    Looks up the most recent active participant with this email.
+    No password — appropriate for a closed academic conference.
+    """
+    email = body.email.strip().lower()
+    p = (
+        db.query(Participant)
+        .filter(
+            func.lower(Participant.email) == email,
+            Participant.is_active == True,  # noqa: E712
+        )
+        .order_by(Participant.claimed_at.desc().nullslast())
+        .first()
+    )
+    if not p:
+        raise HTTPException(404, "No account found with that email. Check the address or register using your invite link.")
+
+    wg = p.working_group
+    return {
+        "token": p.token,
+        "name": p.name,
+        "email": p.email,
+        "role": p.role,
+        "wg_number": wg.number if wg else None,
+        "wg_name": wg.name if wg else None,
+        "wg_short_name": wg.short_name if wg else None,
+    }
+
+
 # --- Admin endpoints (auth enforced via require_admin dependency) ---
 
 @router.post("")

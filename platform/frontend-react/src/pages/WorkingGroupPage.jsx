@@ -156,9 +156,20 @@ export function WorkingGroupPage() {
               <ArrowLeft className="h-4 w-4" /> Home
             </Link>
             {signedInName && (
-              <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                {signedInName}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  {signedInName}
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem(`saem_token_wg${wgNum}`);
+                    window.location.href = '/';
+                  }}
+                  className="rounded-full px-2 py-1 text-[11px] text-white/30 transition hover:bg-white/[0.06] hover:text-white/60"
+                >
+                  Sign out
+                </button>
               </div>
             )}
           </div>
