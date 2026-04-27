@@ -58,8 +58,25 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
-/* Smooth scrolling */
-html { scroll-behavior: smooth; }
+/* Smooth scrolling + mobile viewport fix */
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+/* Prevent iOS Safari zoom on input focus (font-size must be ≥16px) */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* Ensure touch targets meet minimum size */
+@media (pointer: coarse) {
+  button, [role="button"], a { min-height: 44px; min-width: 44px; }
+  /* Exceptions for inline badges and tiny utility buttons */
+  .text-\[10px\], .text-\[11px\], span[class*="badge"] { min-height: auto; min-width: auto; }
+}
+
+/* Better tap highlight on mobile */
+@media (hover: none) {
+  * { -webkit-tap-highlight-color: rgba(0, 180, 216, 0.1); }
+}
 
 /* ── Theme-aware CSS custom properties ───────────────────────────── */
 /* These are RUNTIME CSS vars that respond to .light / .dark on <html>.

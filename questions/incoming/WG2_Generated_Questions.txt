@@ -1,0 +1,28 @@
+WG2: AI Technology — Infrastructure and Data Ecosystems
+Generated from WG2 literature review themes (19 domains, 94 articles)
+
+RQ1. What minimum EHR data quality standards (completeness, accuracy, temporal validity) should be met before an AI model is approved for emergency department deployment, and how should these standards be monitored over time?
+RQ2. How should emergency departments implement FHIR-based interoperability standards to enable safe, real-time data exchange between AI clinical decision support tools and diverse EHR systems?
+RQ3. What institutional data governance structures (committees, oversight roles, escalation pathways) are necessary to manage the full lifecycle of AI tools deployed in emergency care?
+RQ4. How can federated learning architectures enable multi-institutional AI model development for emergency medicine while preserving patient privacy and complying with HIPAA and GDPR?
+RQ5. What are the practical trade-offs between differential privacy protection levels and clinical AI model accuracy in emergency medicine applications, and how should acceptable thresholds be defined?
+RQ6. What de-identification and anonymization standards should be required for ED patient data used in AI training, and how should residual re-identification risk be quantified and monitored?
+RQ7. How should emergency departments detect and respond to algorithmic bias originating from training data that reflects historical healthcare inequities (e.g., racial disparities in care access and coding)?
+RQ8. What standardized benchmark datasets should the emergency medicine community develop to enable fair cross-institutional comparison of AI model performance?
+RQ9. How can common data models (OMOP, PCORnet) be adapted or extended to capture the temporal, high-acuity data patterns unique to emergency department encounters?
+RQ10. What real-world evidence validation methods are most appropriate for assessing whether an AI tool developed at one institution generalizes safely to other emergency departments with different patient populations and EHR systems?
+RQ11. How should clinical NLP systems be validated for emergency department documentation, given the unique challenges of abbreviation-heavy notes, rapid documentation cycles, and variable completeness?
+RQ12. What computational phenotyping approaches best identify acute conditions (sepsis, stroke, STEMI) from EHR data while maintaining accuracy across institutions with different coding practices?
+RQ13. What cloud infrastructure and edge computing architectures are needed to support real-time AI inference in emergency departments while maintaining HIPAA compliance and sub-second latency requirements?
+RQ14. What cybersecurity frameworks should protect AI systems deployed in emergency care against model inversion attacks, adversarial inputs, data poisoning, and ransomware?
+RQ15. How should patient consent models evolve from one-time informed consent to dynamic consent frameworks that give patients ongoing control over how their emergency care data is used for AI development?
+RQ16. Under what conditions can synthetic data generation adequately substitute for real patient data in training emergency medicine AI models, and what validation against real-world data should be required before clinical deployment?
+RQ17. What data labeling and annotation protocols are needed to produce high-quality training datasets from emergency department records, given inter-rater variability, documentation under time pressure, and abbreviation-heavy text?
+RQ18. How should social determinants of health data be integrated into emergency medicine AI systems to improve outcome prediction without introducing or amplifying equity-related biases?
+RQ19. What role should emergency medicine play in national or international AI model registries that track deployed clinical AI tools, their validation status, and post-deployment performance?
+RQ20. How should multi-institutional data sharing agreements be structured to enable emergency medicine AI research while protecting institutional interests, patient privacy, and ensuring equitable benefit distribution?
+RQ21. What methods should be used to continuously monitor AI model performance drift in operational emergency departments, and what performance degradation thresholds should trigger automatic rollback or human review?
+RQ22. How can the emergency medicine community ensure that training datasets for clinical AI are representative of the full diversity of ED patient populations, including rural, underinsured, and non-English-speaking patients?
+RQ23. What technical standards should govern the integration of AI-generated clinical predictions (sepsis risk, deterioration scores) into ED information displays and clinician workflows?
+RQ24. How should version control, audit trails, and reproducibility requirements be implemented for AI models that are iteratively updated after initial deployment in emergency care settings?
+RQ25. What data infrastructure investments (computing, storage, engineering talent, governance) should academic emergency departments prioritize to participate effectively in collaborative AI development?

@@ -341,11 +341,12 @@ export function PairwisePage() {
           <Progress value={progressPct} />
         </div>
 
-        {/* Keyboard hint */}
-        <div className="mt-3 flex items-center gap-2 text-xs text-white/40">
+        {/* Keyboard hint — desktop only */}
+        <div className="mt-3 hidden items-center gap-2 text-xs text-white/40 sm:flex">
           <Keyboard className="h-3.5 w-3.5" />
           <span>Press <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5 font-mono text-xs font-medium text-white/70">A</kbd> or <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5 font-mono text-xs font-medium text-white/70">B</kbd> to vote, <kbd className="rounded border border-white/[0.12] bg-white/[0.04] px-1.5 py-0.5 font-mono text-xs font-medium text-white/70">S</kbd> to skip</span>
         </div>
+        <p className="mt-3 text-center text-xs text-white/30 sm:hidden">Tap the question you think is more important</p>
       </div>
 
       {/* Pair comparison area */}

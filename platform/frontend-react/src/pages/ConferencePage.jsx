@@ -504,24 +504,24 @@ export function ConferencePage() {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                          className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-3"
+                          className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-3 sm:gap-3 sm:px-4"
                         >
-                          <GripVertical className="h-5 w-5 text-white/25 cursor-grab shrink-0" />
+                          <GripVertical className="hidden h-5 w-5 text-white/25 cursor-grab shrink-0 sm:block" />
                           <span className={cn(
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-8 sm:w-8 sm:text-sm',
                             idx === 0 ? 'bg-[#0C2340] text-white' : 'bg-white/[0.08] text-white/70'
                           )}>
                             {idx + 1}
                           </span>
-                          <span className="flex-1 text-sm text-white/90">
+                          <span className="min-w-0 flex-1 text-sm leading-snug text-white/90">
                             {q.text || q.question_text}
                           </span>
-                          <div className="flex shrink-0 gap-1">
+                          <div className="flex shrink-0 flex-col gap-0.5 sm:flex-row sm:gap-1">
                             <button
                               type="button"
                               onClick={() => moveItem(idx, -1)}
                               disabled={idx === 0}
-                              className="rounded-md p-1.5 text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30"
+                              className="flex h-9 w-9 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30 sm:h-7 sm:w-7"
                               aria-label="Move up"
                             >
                               <ArrowUp className="h-4 w-4" />
@@ -530,7 +530,7 @@ export function ConferencePage() {
                               type="button"
                               onClick={() => moveItem(idx, 1)}
                               disabled={idx === rankOrder.length - 1}
-                              className="rounded-md p-1.5 text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30"
+                              className="flex h-9 w-9 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30 sm:h-7 sm:w-7"
                               aria-label="Move down"
                             >
                               <ArrowDown className="h-4 w-4" />

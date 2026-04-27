@@ -138,8 +138,8 @@ function ImportanceSlider({ value, onChange }) {
           {value}
         </span>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="shrink-0 text-xs font-medium text-white/30">Low</span>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="hidden shrink-0 text-xs font-medium text-white/30 sm:block">Low</span>
         <input
           type="range"
           min={1}
@@ -147,9 +147,9 @@ function ImportanceSlider({ value, onChange }) {
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-[#00B4D8] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md"
+          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/[0.08] accent-[#00B4D8] [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00B4D8] [&::-webkit-slider-thumb]:shadow-lg sm:[&::-webkit-slider-thumb]:h-5 sm:[&::-webkit-slider-thumb]:w-5"
         />
-        <span className="shrink-0 text-xs font-medium text-white/30">Critical</span>
+        <span className="hidden shrink-0 text-xs font-medium text-white/30 sm:block">Critical</span>
       </div>
       <div className="flex justify-between px-0.5">
         {Array.from({ length: 9 }, (_, i) => (
@@ -192,8 +192,8 @@ function QuestionCard({ question, index, response, onUpdate, isRound2 }) {
             <R1ResultsBar results={question.r1_results} />
           )}
 
-          {/* Disposition buttons */}
-          <div className="flex flex-wrap gap-2">
+          {/* Disposition buttons — full-width on mobile for easy touch targets */}
+          <div className="grid grid-cols-3 gap-2">
             {DISPOSITIONS.map((d) => {
               const isActive = response.disposition === d.value;
               const Icon = d.icon;
@@ -202,14 +202,14 @@ function QuestionCard({ question, index, response, onUpdate, isRound2 }) {
                   key={d.value}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => onUpdate({ disposition: isActive ? null : d.value })}
-                  className={`inline-flex items-center gap-2 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 ${
+                  className={`flex items-center justify-center gap-1.5 rounded-lg border-2 px-2 py-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00B4D8]/40 sm:px-4 sm:py-2.5 sm:justify-start ${
                     isActive
                       ? d.activeClass + ' ring-2'
                       : 'border-white/[0.08] text-white/50 hover:border-white/[0.14] hover:bg-white/[0.04] hover:text-white/80'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {d.label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="text-xs sm:text-sm">{d.label}</span>
                 </motion.button>
               );
             })}
