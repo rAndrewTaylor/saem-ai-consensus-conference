@@ -123,9 +123,9 @@ def startup():
                 logger.info("Seeded %d co-lead records (with invite tokens)", added)
         except Exception:
             logger.exception("Co-lead seed failed (non-fatal)")
-        # Pre-seed demo data so /try is ready instantly for testers.
-        # Set AUTO_SEED_DEMO=0 in Railway env to disable before real rollout.
-        if os.environ.get("AUTO_SEED_DEMO", "1") != "0":
+        # Demo pre-seed disabled — real questions are live.
+        # Set AUTO_SEED_DEMO=1 to re-enable for testing.
+        if os.environ.get("AUTO_SEED_DEMO", "0") == "1":
             from .demo_seed import seed_demo_if_empty
             try:
                 result = seed_demo_if_empty(db)
