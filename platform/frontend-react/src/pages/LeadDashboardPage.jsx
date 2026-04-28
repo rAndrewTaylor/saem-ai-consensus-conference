@@ -206,7 +206,8 @@ export function LeadDashboardPage() {
                         <tr className="border-b border-white/[0.06] text-xs uppercase tracking-wider text-white/40">
                           <th className="px-6 py-3 font-medium">Question</th>
                           <th className="px-3 py-3 text-center font-medium">Status</th>
-                          <th className="px-3 py-3 text-right font-medium">R1 importance</th>
+                          <th className="px-3 py-3 text-right font-medium">Include %</th>
+                          <th className="px-3 py-3 text-right font-medium">Importance</th>
                           <th className="px-3 py-3 text-right font-medium">Pairwise</th>
                         </tr>
                       </thead>
@@ -223,6 +224,13 @@ export function LeadDashboardPage() {
                               >
                                 {q.status}
                               </Badge>
+                            </td>
+                            <td className="px-3 py-3 text-right font-mono text-xs">
+                              {q.r1_include_pct != null ? (
+                                <span className={q.r1_include_pct >= 80 ? 'text-emerald-400' : q.r1_include_pct <= 20 ? 'text-red-400' : 'text-white/70'}>
+                                  {Number(q.r1_include_pct).toFixed(0)}%
+                                </span>
+                              ) : <span className="text-white/20">—</span>}
                             </td>
                             <td className="px-3 py-3 text-right font-mono text-xs text-white/70">
                               {q.r1_importance_mean != null ? Number(q.r1_importance_mean).toFixed(1) : '—'}
@@ -286,6 +294,68 @@ export function LeadDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ─── Participant roster ─────────────────────────── */}
+        {participants.roster && participants.roster.length > 0 && (
+          <div className="mt-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-[#00B4D8]" />
+                  Member progress
+                  <Badge variant="default" className="ml-2">{participants.roster.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/[0.06] text-xs uppercase tracking-wider text-white/40">
+                        <th className="px-5 py-3 text-left font-medium">Name</th>
+                        <th className="px-3 py-3 text-left font-medium">Email</th>
+                        <th className="px-3 py-3 text-center font-medium">Round 1</th>
+                        <th className="px-3 py-3 text-center font-medium">Pairwise</th>
+                        <th className="px-3 py-3 text-center font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {participants.roster.map((p) => (
+                        <tr key={p.id} className="border-b border-white/[0.04] transition-colors hover:bg-white/[0.02]">
+                          <td className="px-5 py-3 font-medium text-white/90">{p.name || 'Anonymous'}</td>
+                          <td className="px-3 py-3 text-xs text-white/50">{p.email || '—'}</td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-mono text-xs font-semibold ${p.r1_complete ? 'text-emerald-400' : 'text-white/60'}`}>
+                              {p.r1_answered}/{p.r1_total}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-mono text-xs font-semibold ${p.pairwise_complete ? 'text-emerald-400' : 'text-white/60'}`}>
+                              {p.pairwise_count}/50
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {p.r1_complete && p.pairwise_complete ? (
+                              <Badge variant="success" className="gap-1 text-[10px]">
+                                <CheckCircle2 className="h-2.5 w-2.5" />
+                                Done
+                              </Badge>
+                            ) : p.r1_complete ? (
+                              <Badge variant="warning" className="text-[10px]">Needs pairwise</Badge>
+                            ) : p.r1_answered > 0 ? (
+                              <Badge variant="default" className="text-[10px]">In progress</Badge>
+                            ) : (
+                              <Badge variant="danger" className="text-[10px]">Not started</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* ─── Suggestions queue ─────────────────────────── */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2">

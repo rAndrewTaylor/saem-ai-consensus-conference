@@ -21,6 +21,63 @@ from ..auth import require_admin
 router = APIRouter()
 
 
+def _build_participant_roster(participants, wg, db):
+    """Build per-participant detail: name, email, R1 completion, pairwise count."""
+    if not participants:
+        return []
+
+    pids = [p.id for p in participants]
+    total_questions = (
+        db.query(func.count(Question.id))
+        .filter(Question.wg_id == wg.id, Question.status.in_([
+            QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED
+        ]))
+        .scalar() or 0
+    )
+
+    # R1 response count per participant
+    r1_counts = dict(
+        db.query(DelphiResponse.participant_id, func.count(DelphiResponse.id))
+        .join(Question, DelphiResponse.question_id == Question.id)
+        .filter(
+            Question.wg_id == wg.id,
+            DelphiResponse.participant_id.in_(pids),
+            DelphiResponse.round == DelphiRound.ROUND_1,
+        )
+        .group_by(DelphiResponse.participant_id)
+        .all()
+    )
+
+    # Pairwise count per participant
+    pw_counts = dict(
+        db.query(PairwiseVote.participant_id, func.count(PairwiseVote.id))
+        .filter(
+            PairwiseVote.wg_id == wg.id,
+            PairwiseVote.participant_id.in_(pids),
+        )
+        .group_by(PairwiseVote.participant_id)
+        .all()
+    )
+
+    roster = []
+    for p in participants:
+        r1 = r1_counts.get(p.id, 0)
+        pw = pw_counts.get(p.id, 0)
+        roster.append({
+            "id": p.id,
+            "name": p.name,
+            "email": p.email,
+            "role": p.role,
+            "r1_answered": r1,
+            "r1_total": total_questions,
+            "r1_complete": r1 >= total_questions and total_questions > 0,
+            "pairwise_count": pw,
+            "pairwise_complete": pw >= 50,
+            "registered_at": p.claimed_at.isoformat() if p.claimed_at else None,
+        })
+    return sorted(roster, key=lambda x: (not x["r1_complete"], -(x["r1_answered"])))  # complete first, then by progress
+
+
 def _get_co_lead_from_token(token: Optional[str], db: Session) -> CoLead:
     """Validate a co-lead invite token. Raises 401 on failure."""
     if not token:
@@ -186,13 +243,14 @@ def wg_summary(token: str, db: Session = Depends(get_db)):
                     "r1_include_pct": q.r1_include_pct,
                     "r2_importance_mean": q.r2_importance_mean,
                 }
-                for q in questions[:20]
+                for q in questions
             ],
         },
         "participants": {
             "total": len(participants),
             "named": len(named),
             "claimed": len(claimed),
+            "roster": _build_participant_roster(participants, wg, db),
         },
         "activity": {
             "r1_responses": r1_count,
@@ -232,6 +290,43 @@ def wg_summary(token: str, db: Session = Depends(get_db)):
 class CoLeadUpdate(BaseModel):
     email: Optional[str] = None
     institution: Optional[str] = None
+
+
+class CoLeadCreate(BaseModel):
+    name: str
+    wg_number: int
+    email: Optional[str] = None
+    institution: Optional[str] = None
+
+
+@router.post("")
+def create_co_lead(
+    body: CoLeadCreate,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Admin: add a new co-lead to a working group."""
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+    cl = CoLead(
+        name=body.name,
+        email=body.email,
+        institution=body.institution,
+        wg_id=wg.id,
+        invite_token=secrets.token_urlsafe(24),
+        is_active=True,
+    )
+    db.add(cl)
+    db.commit()
+    db.refresh(cl)
+    write_audit_log(db, admin.get("sub", "admin"), "co_lead_create", f"Added co-lead {cl.name} to WG{body.wg_number}")
+    return {
+        "id": cl.id,
+        "name": cl.name,
+        "wg_number": wg.number,
+        "invite_token": cl.invite_token,
+    }
 
 
 @router.get("")
