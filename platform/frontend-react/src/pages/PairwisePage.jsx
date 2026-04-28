@@ -274,7 +274,9 @@ export function PairwisePage() {
     );
   }
 
-  const progressPct = totalPairs > 0 ? (displayedCompleted / totalPairs) * 100 : 0;
+  const MINIMUM_COMPARISONS = 50;
+  const meetsMinimum = displayedCompleted >= MINIMUM_COMPARISONS;
+  const progressPct = Math.min(100, (displayedCompleted / MINIMUM_COMPARISONS) * 100);
 
   return (
     <div className="flex flex-col bg-[#0A1628]">
@@ -292,32 +294,40 @@ export function PairwisePage() {
             Pairwise Ranking
           </h1>
           <p className="mt-2 text-white/50">
-            Which research question is more important? Quick side-by-side comparisons.
+            Which research question is more important? Complete at least {MINIMUM_COMPARISONS} comparisons.
           </p>
         </div>
       </div>
 
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:py-12">
-      {/* Progress + Stats */}
+      {/* Progress toward minimum */}
       <div className="mb-8">
 
-        {/* Progress bar */}
+        {/* Minimum-target progress bar */}
         <div className="mt-5 space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-white/70">
+            <div className="flex items-baseline gap-1.5">
               <motion.span
                 key={displayedCompleted}
                 initial={{ y: -8, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="inline-block tabular-nums"
+                className="inline-block text-xl font-bold tabular-nums text-white"
               >
                 {displayedCompleted}
               </motion.span>
-              {totalPairs > 0 && (
-                <span className="text-white/40"> / {totalPairs} comparisons</span>
-              )}
-            </span>
+              <span className="font-medium text-white/40">of {MINIMUM_COMPARISONS} minimum</span>
+            </div>
             <div className="flex items-center gap-2">
+              {meetsMinimum ? (
+                <Badge variant="success" className="gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Minimum reached
+                </Badge>
+              ) : (
+                <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold tabular-nums text-amber-300">
+                  {MINIMUM_COMPARISONS - displayedCompleted} to go
+                </span>
+              )}
               {streak >= 2 && (
                 <motion.div
                   key={streak}
@@ -339,6 +349,9 @@ export function PairwisePage() {
             </div>
           </div>
           <Progress value={progressPct} />
+          {meetsMinimum && displayedCompleted > MINIMUM_COMPARISONS && (
+            <p className="text-xs text-emerald-300/60">Keep going — more comparisons = better rankings</p>
+          )}
         </div>
 
         {/* Keyboard hint — desktop only */}

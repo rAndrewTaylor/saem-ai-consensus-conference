@@ -303,3 +303,25 @@ def get_pairwise_stats(wg_number: int, db: Session = Depends(get_db)):
         "avg_response_time_ms": round(avg_response_time) if avg_response_time else None,
         "votes_per_participant": round(total_votes / unique_participants, 1) if unique_participants else 0,
     }
+
+
+@router.get("/my-count/{wg_number}")
+def get_my_pairwise_count(
+    wg_number: int,
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
+):
+    """Return how many pairwise votes this participant has made for a WG."""
+    if not token:
+        return {"count": 0, "minimum": 50}
+    participant = db.query(Participant).filter(Participant.token == token).first()
+    if not participant:
+        return {"count": 0, "minimum": 50}
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+    if not wg:
+        return {"count": 0, "minimum": 50}
+    count = db.query(PairwiseVote).filter(
+        PairwiseVote.participant_id == participant.id,
+        PairwiseVote.wg_id == wg.id,
+    ).count()
+    return {"count": count, "minimum": 50, "complete": count >= 50}

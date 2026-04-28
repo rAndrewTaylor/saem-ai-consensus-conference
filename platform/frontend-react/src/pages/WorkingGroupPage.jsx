@@ -85,6 +85,7 @@ export function WorkingGroupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [signedInName, setSignedInName] = useState(null);
+  const [pairwiseCount, setPairwiseCount] = useState(null);
 
   usePageTitle(wg ? `WG${wg.wg_number} \u00B7 ${wg.short_name || wg.name}` : `Working Group ${wgNumber}`);
 
@@ -103,13 +104,15 @@ export function WorkingGroupPage() {
       .catch((err) => setError(err.message || 'error'))
       .finally(() => setLoading(false));
 
-    // If the user has a participant token for this WG, check if it's a
-    // named invite (not anonymous) so we can show "Signed in as [name]"
+    // If the user has a participant token for this WG, check identity + pairwise progress
     const existingToken = getToken(wgNum);
     if (existingToken) {
       api('/api/participants/me', { params: { token: existingToken } })
         .then((data) => { if (data?.name) setSignedInName(data.name); })
-        .catch(() => { /* anonymous token, no name — ignore */ });
+        .catch(() => {});
+      api(`/api/pairwise/my-count/${wgNum}`, { token: existingToken })
+        .then((data) => { if (data?.count != null) setPairwiseCount(data.count); })
+        .catch(() => {});
     }
   }, [wgNum]);
 
@@ -228,9 +231,10 @@ export function WorkingGroupPage() {
               to={`/rank/${wg.wg_number}`}
               icon={GitCompare}
               phase="Pairwise"
-              blurb="Head-to-head ranking"
+              blurb={pairwiseCount != null ? `${pairwiseCount}/50 done` : 'Head-to-head ranking'}
               accent="teal"
               compact
+              badge={pairwiseCount != null && pairwiseCount >= 50 ? 'done' : pairwiseCount != null ? 'todo' : null}
             />
             <ActivityCard
               to={`/survey/${wg.wg_number}/round_2`}
@@ -400,18 +404,28 @@ const ACCENT_STYLES = {
   emerald: { bg: 'bg-emerald-500/10', icon: 'text-emerald-400', hover: 'group-hover:border-emerald-400/40' },
 };
 
-function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'navy', compact = false }) {
+function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'navy', compact = false, badge = null }) {
   const a = ACCENT_STYLES[accent];
 
   if (compact) {
     return (
       <Link to={to} className="group block">
-        <div className={`flex h-full flex-col items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E1E35] p-3 text-center transition-all hover:bg-[#142C4A] sm:p-4 ${a.hover}`}>
+        <div className={`relative flex h-full flex-col items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E1E35] p-3 text-center transition-all hover:bg-[#142C4A] sm:p-4 ${a.hover}`}>
+          {badge === 'done' && (
+            <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+              <CheckCircle2 className="h-3 w-3 text-white" />
+            </div>
+          )}
+          {badge === 'todo' && (
+            <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
+              <span className="text-[9px] font-bold text-white">!</span>
+            </div>
+          )}
           <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${a.bg} sm:h-10 sm:w-10`}>
             <Icon className={`h-4 w-4 ${a.icon} sm:h-5 sm:w-5`} />
           </div>
           <h3 className="text-xs font-semibold text-white sm:text-sm">{phase}</h3>
-          <p className="hidden text-[11px] leading-snug text-white/40 sm:block">{blurb}</p>
+          <p className="text-[11px] leading-snug text-white/40">{blurb}</p>
         </div>
       </Link>
     );
