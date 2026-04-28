@@ -82,6 +82,19 @@ export function PairwisePage() {
     }
   }, [displayedCompleted, completed]);
 
+  // Fetch initial count from server (persisted across sessions/devices)
+  useEffect(() => {
+    if (!token) return;
+    api(`/api/pairwise/my-count/${wgNum}`, { token })
+      .then((data) => {
+        if (data?.count != null) {
+          setCompleted(data.count);
+          setDisplayedCompleted(data.count);
+        }
+      })
+      .catch(() => {});
+  }, [token, wgNum]);
+
   // Fetch a pair
   const fetchPair = useCallback(async () => {
     if (!token) return;
@@ -91,8 +104,6 @@ export function PairwisePage() {
       const data = await api(`/api/pairwise/pair/${wgNum}`, { token });
       setPair(data.pair || data);
       setTotalPairs(data.total_pairs ?? totalPairs);
-      setCompleted(data.completed ?? completed);
-      setDisplayedCompleted(data.completed ?? completed);
       pairStartTime.current = Date.now();
     } catch (err) {
       if (err.status === 404 || err.status === 400 || err.message?.includes('No more pairs') || err.message?.includes('Need at least 2')) {
@@ -105,7 +116,7 @@ export function PairwisePage() {
     } finally {
       setPairLoading(false);
     }
-  }, [token, wgNum, toast, totalPairs, completed]);
+  }, [token, wgNum, toast, totalPairs]);
 
   // Fetch rankings
   const fetchRankings = useCallback(async () => {
