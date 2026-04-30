@@ -86,6 +86,7 @@ export function WorkingGroupPage() {
   const [error, setError] = useState(null);
   const [signedInName, setSignedInName] = useState(null);
   const [pairwiseCount, setPairwiseCount] = useState(null);
+  const [wgPosts, setWgPosts] = useState([]);
 
   usePageTitle(wg ? `WG${wg.wg_number} \u00B7 ${wg.short_name || wg.name}` : `Working Group ${wgNumber}`);
 
@@ -103,6 +104,11 @@ export function WorkingGroupPage() {
       })
       .catch((err) => setError(err.message || 'error'))
       .finally(() => setLoading(false));
+
+    // Fetch co-lead posts for this WG
+    api(`/api/wg-posts/public/${wgNum}`)
+      .then((data) => setWgPosts(Array.isArray(data) ? data : []))
+      .catch(() => {});
 
     // If the user has a participant token for this WG, check identity + pairwise progress
     const existingToken = getToken(wgNum);
@@ -255,6 +261,44 @@ export function WorkingGroupPage() {
           </div>
         </div>
       </section>
+
+      {/* ─── Updates from co-leads ──────────────────────────────── */}
+      {wgPosts.length > 0 && (
+        <section className="px-4 pb-4 sm:px-6">
+          <div className="mx-auto max-w-5xl">
+            <CollapsibleSection icon={Info} title={`Updates from your co-leads (${wgPosts.length})`} defaultOpen={true}>
+              <div className="space-y-3">
+                {wgPosts.map((post) => (
+                  <div key={post.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+                    <div className="flex items-center gap-2">
+                      {post.pinned && <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">Pinned</span>}
+                      <h3 className="text-sm font-semibold text-white/90">{post.title}</h3>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/60">{post.body}</p>
+                    {post.links && post.links.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {post.links.map((lnk, i) => (
+                          <a
+                            key={i}
+                            href={lnk.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full bg-[#00B4D8]/10 px-3 py-1 text-xs font-medium text-[#48CAE4] hover:bg-[#00B4D8]/20"
+                          >
+                            {lnk.label || 'Link'}
+                            <ArrowRight className="h-3 w-3" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-2 text-[10px] text-white/25">{post.author} &middot; {new Date(post.created_at).toLocaleDateString()}</p>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleSection>
+          </div>
+        </section>
+      )}
 
       {/* ─── How this works (collapsible) ─────────────────────────── */}
       <section className="px-4 pb-4 sm:px-6">

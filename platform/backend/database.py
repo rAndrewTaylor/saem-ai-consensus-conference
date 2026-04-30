@@ -116,6 +116,24 @@ class CoLead(Base):
     working_group = relationship("WorkingGroup", back_populates="co_leads")
 
 
+class WGPost(Base):
+    """Co-lead post — meeting notes, discussion summaries, links to resources."""
+    __tablename__ = "wg_posts"
+
+    id = Column(Integer, primary_key=True)
+    wg_id = Column(Integer, ForeignKey("working_groups.id"), nullable=False)
+    author_id = Column(Integer, ForeignKey("co_leads.id"), nullable=False)
+    title = Column(String(300), nullable=False)
+    body = Column(Text, nullable=False)
+    links = Column(JSON, nullable=True)  # [{"label": "...", "url": "..."}, ...]
+    pinned = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    working_group = relationship("WorkingGroup")
+    author = relationship("CoLead")
+
+
 class Participant(Base):
     """Participant. `token` is the invite token / session credential.
 

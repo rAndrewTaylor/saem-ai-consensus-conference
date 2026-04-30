@@ -52,6 +52,21 @@ export function LeadDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [posts, setPosts] = useState([]);
+  const [showPostForm, setShowPostForm] = useState(false);
+  const [postTitle, setPostTitle] = useState('');
+  const [postBody, setPostBody] = useState('');
+  const [postLinks, setPostLinks] = useState([{ label: '', url: '' }]);
+  const [postPinned, setPostPinned] = useState(false);
+  const [postSaving, setPostSaving] = useState(false);
+
+  const fetchPosts = () => {
+    if (!token) return;
+    api('/api/wg-posts', { params: { token } })
+      .then(setPosts)
+      .catch(() => {});
+  };
+
   useEffect(() => {
     if (!token) {
       setError('not-signed-in');
@@ -62,7 +77,41 @@ export function LeadDashboardPage() {
       .then(setData)
       .catch((err) => setError(err.message || 'Failed to load'))
       .finally(() => setLoading(false));
+    fetchPosts();
   }, [token]);
+
+  const savePost = async () => {
+    setPostSaving(true);
+    try {
+      const links = postLinks.filter((l) => l.url.trim());
+      await api('/api/wg-posts', {
+        method: 'POST',
+        params: { token },
+        body: {
+          title: postTitle.trim(),
+          body: postBody.trim(),
+          links: links.length > 0 ? links : null,
+          pinned: postPinned,
+        },
+      });
+      setPostTitle('');
+      setPostBody('');
+      setPostLinks([{ label: '', url: '' }]);
+      setPostPinned(false);
+      setShowPostForm(false);
+      fetchPosts();
+    } catch (err) {
+      alert(err.message || 'Failed to save');
+    } finally {
+      setPostSaving(false);
+    }
+  };
+
+  const deletePost = async (id) => {
+    if (!confirm('Delete this post?')) return;
+    await api(`/api/wg-posts/${id}`, { method: 'DELETE', params: { token } });
+    fetchPosts();
+  };
 
   const signOut = () => {
     clearLeadToken();
@@ -410,6 +459,126 @@ export function LeadDashboardPage() {
                     {s.approved && (
                       <Badge variant="success" className="mt-2 text-[10px]">Approved</Badge>
                     )}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ─── Notes & Resources ─────────────────────────── */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-[#00B4D8]" />
+                Notes &amp; Resources
+                <Badge variant="default" className="ml-2">{posts.length}</Badge>
+              </CardTitle>
+              {!showPostForm && (
+                <Button size="sm" variant="secondary" onClick={() => setShowPostForm(true)}>
+                  + New post
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {showPostForm && (
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+                  <input
+                    type="text"
+                    value={postTitle}
+                    onChange={(e) => setPostTitle(e.target.value)}
+                    placeholder="Title (e.g., Meeting notes — April 28)"
+                    className="w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-[#00B4D8]/50"
+                  />
+                  <textarea
+                    value={postBody}
+                    onChange={(e) => setPostBody(e.target.value)}
+                    placeholder="Meeting notes, discussion summary, or any update for your working group..."
+                    rows={5}
+                    className="w-full resize-y rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-[#00B4D8]/50"
+                  />
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-white/50">Links (Google Drive, papers, etc.)</p>
+                    {postLinks.map((link, i) => (
+                      <div key={i} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={link.label}
+                          onChange={(e) => {
+                            const updated = [...postLinks];
+                            updated[i] = { ...updated[i], label: e.target.value };
+                            setPostLinks(updated);
+                          }}
+                          placeholder="Label"
+                          className="w-1/3 rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1.5 text-xs text-white placeholder-white/30 outline-none"
+                        />
+                        <input
+                          type="url"
+                          value={link.url}
+                          onChange={(e) => {
+                            const updated = [...postLinks];
+                            updated[i] = { ...updated[i], url: e.target.value };
+                            setPostLinks(updated);
+                          }}
+                          placeholder="https://..."
+                          className="flex-1 rounded-lg border border-white/[0.1] bg-white/[0.04] px-2 py-1.5 text-xs text-white placeholder-white/30 outline-none"
+                        />
+                      </div>
+                    ))}
+                    {postLinks.length < 10 && (
+                      <button onClick={() => setPostLinks([...postLinks, { label: '', url: '' }])} className="text-xs text-[#00B4D8] hover:text-[#48CAE4]">
+                        + Add another link
+                      </button>
+                    )}
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-white/50">
+                    <input type="checkbox" checked={postPinned} onChange={(e) => setPostPinned(e.target.checked)} className="rounded" />
+                    Pin to top
+                  </label>
+                  <div className="flex gap-2">
+                    <Button size="sm" loading={postSaving} disabled={!postTitle.trim() || !postBody.trim()} onClick={savePost}>
+                      Publish
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowPostForm(false)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+
+              {posts.length === 0 && !showPostForm ? (
+                <p className="py-8 text-center text-sm text-white/40">
+                  No posts yet. Share meeting notes, discussion summaries, or resource links with your working group.
+                </p>
+              ) : (
+                posts.map((post) => (
+                  <div key={post.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        {post.pinned && <Badge variant="warning" className="mb-1 text-[10px]">Pinned</Badge>}
+                        <h3 className="text-sm font-semibold text-white">{post.title}</h3>
+                      </div>
+                      <button onClick={() => deletePost(post.id)} className="shrink-0 text-xs text-white/20 hover:text-red-400">Delete</button>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/60">{post.body}</p>
+                    {post.links && post.links.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {post.links.map((lnk, i) => (
+                          <a
+                            key={i}
+                            href={lnk.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full bg-[#00B4D8]/10 px-3 py-1 text-xs font-medium text-[#48CAE4] hover:bg-[#00B4D8]/20"
+                          >
+                            {lnk.label || 'Link'}
+                            <ArrowRight className="h-3 w-3" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-2 text-[10px] text-white/25">
+                      {post.author} &middot; {new Date(post.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 ))
               )}
