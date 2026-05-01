@@ -11,7 +11,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useToast } from '@/components/ui/toast';
-import { api } from '@/lib/api';
+import { api, downloadFile } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -983,35 +983,7 @@ export function DashboardPage() {
       <DemoModeCard onRefresh={() => { fetchDashboard(); fetchSessions(); }} />
 
       {/* Data Exports */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.55 }}
-        className="mt-8"
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Data Exports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { label: 'Delphi R1 CSV', href: '/api/export/delphi-r1' },
-                { label: 'Delphi R2 CSV', href: '/api/export/delphi-r2' },
-                { label: 'Pairwise CSV', href: '/api/export/pairwise' },
-                { label: 'AI Audit Log', href: '/api/export/ai-audit' },
-                { label: 'Full Results JSON', href: '/api/export/full-results' },
-              ].map((exp) => (
-                <a key={exp.label} href={exp.href} download>
-                  <Button variant="secondary" size="sm">
-                    <Download className="h-3.5 w-3.5" /> {exp.label}
-                  </Button>
-                </a>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <ExportsSection />
 
       {/* Confirmation dialog */}
       <ConfirmDialog
@@ -1027,5 +999,167 @@ export function DashboardPage() {
         }}
       />
     </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Exports — authenticated downloads (Bearer token via downloadFile helper)
+// ---------------------------------------------------------------------------
+function ExportsSection() {
+  const toast = useToast();
+  const [wg, setWg] = useState('1');
+  const [busy, setBusy] = useState(null);
+
+  const run = async (label, url, filename) => {
+    setBusy(label);
+    try {
+      await downloadFile(url, filename);
+      toast({ message: `Downloaded ${label}`, type: 'success' });
+    } catch (err) {
+      toast({
+        message: err?.message || `Download failed for ${label}`,
+        type: 'error',
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.55 }}
+      className="mt-8"
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-4 w-4 text-purple-400" /> Data Exports
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Full backup — primary action */}
+          <div className="mb-5 rounded-xl border border-purple-400/30 bg-purple-500/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white/90">
+                  Complete backup (ZIP)
+                </p>
+                <p className="text-xs text-white/50">
+                  Every table — participants, questions, Delphi responses,
+                  pairwise votes, conference data, AI synthesis log, audit log.
+                  Read-only; nothing is modified.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                loading={busy === 'Full backup'}
+                onClick={() =>
+                  run(
+                    'Full backup',
+                    '/api/admin/export/backup',
+                    'saem_consensus_backup.zip'
+                  )
+                }
+              >
+                <Download className="h-3.5 w-3.5" /> Download backup
+              </Button>
+            </div>
+          </div>
+
+          {/* Per-WG exports */}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs font-medium text-white/50">
+              Working group:
+            </label>
+            <select
+              value={wg}
+              onChange={(e) => setWg(e.target.value)}
+              className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-sm text-white/80 outline-none focus:border-purple-500"
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>WG {n}</option>
+              ))}
+            </select>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'Delphi R1 CSV'}
+              onClick={() =>
+                run(
+                  'Delphi R1 CSV',
+                  `/api/admin/export/delphi/${wg}/round_1`,
+                  `delphi_wg${wg}_round_1.csv`
+                )
+              }
+            >
+              <Download className="h-3.5 w-3.5" /> Delphi R1
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'Delphi R2 CSV'}
+              onClick={() =>
+                run(
+                  'Delphi R2 CSV',
+                  `/api/admin/export/delphi/${wg}/round_2`,
+                  `delphi_wg${wg}_round_2.csv`
+                )
+              }
+            >
+              <Download className="h-3.5 w-3.5" /> Delphi R2
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'Pairwise CSV'}
+              onClick={() =>
+                run(
+                  'Pairwise CSV',
+                  `/api/admin/export/pairwise/${wg}`,
+                  `pairwise_wg${wg}.csv`
+                )
+              }
+            >
+              <Download className="h-3.5 w-3.5" /> Pairwise
+            </Button>
+          </div>
+
+          {/* Cross-cutting exports */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'AI Audit Log'}
+              onClick={() =>
+                run(
+                  'AI Audit Log',
+                  '/api/admin/export/ai-synthesis',
+                  'ai_synthesis_audit_log.json'
+                )
+              }
+            >
+              <Download className="h-3.5 w-3.5" /> AI audit log
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'Full Results JSON'}
+              onClick={() =>
+                run(
+                  'Full Results JSON',
+                  '/api/admin/export/full-results',
+                  'full_results.json'
+                )
+              }
+            >
+              <Download className="h-3.5 w-3.5" /> Full results JSON
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

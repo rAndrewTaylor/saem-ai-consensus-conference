@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserPlus, Users, Copy, Check, Trash2, ChevronDown, Mail, Link as LinkIcon,
-  CheckCircle2, Clock, Loader2,
+  CheckCircle2, Clock, Loader2, AlertTriangle, RefreshCw,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -365,6 +365,9 @@ export function ParticipantsSection({ wgs }) {
             )}
           </AnimatePresence>
 
+          {/* ── Possible duplicate accounts ────────────────────────── */}
+          <DuplicatesPanel onDeactivated={fetchParticipants} />
+
           {/* ── List ───────────────────────────────────────────────── */}
           {loading ? (
             <p className="py-8 text-center text-sm text-white/40">Loading participants...</p>
@@ -438,5 +441,203 @@ export function ParticipantsSection({ wgs }) {
         </CardContent>
       </Card>
     </motion.div>
+  );
+}
+
+// ── Possible duplicate accounts ───────────────────────────────────────
+// Surfaces participants who share a name (or email) within the same WG.
+// Multi-WG membership is fine (someone in WG4 and WG5 = two rows, both
+// kept); two rows in the *same* WG is the case to triage. Each row shows
+// data counts so the admin can deactivate the empty / never-claimed one
+// and keep the one with responses.
+function DuplicatesPanel({ onDeactivated }) {
+  const toast = useToast();
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [acting, setActing] = useState(null);
+
+  const fetchDups = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api('/api/admin/participants/duplicates');
+      setGroups(Array.isArray(data?.groups) ? data.groups : []);
+    } catch (err) {
+      toast({
+        message: 'Could not load duplicates: ' + err.message,
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { fetchDups(); }, [fetchDups]);
+
+  const handleDeactivate = async (member) => {
+    const dataNote =
+      member.delphi_responses + member.pairwise_votes + member.conference_votes > 0
+        ? `\n\nThis copy has data (${member.delphi_responses} Delphi, ${member.pairwise_votes} pairwise, ${member.conference_votes} conference). Deactivating only blocks their token; existing responses stay in the database.`
+        : '\n\nThis copy has no data — safe to deactivate.';
+    const ok = confirm(
+      `Deactivate this copy of "${member.name}" in WG ${member.wg_number}?${dataNote}\n\nThis is reversible — re-activate by clearing is_active in the DB or re-issuing an invite.`
+    );
+    if (!ok) return;
+    setActing(member.id);
+    try {
+      await api(`/api/participants/${member.id}`, { method: 'DELETE' });
+      toast({ message: `Deactivated ${member.name} (#${member.id})`, type: 'success' });
+      await fetchDups();
+      onDeactivated && onDeactivated();
+    } catch (err) {
+      toast({ message: err.message, type: 'error' });
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const total = groups.length;
+
+  return (
+    <div className="mb-5 overflow-hidden rounded-xl border border-amber-400/20 bg-amber-500/[0.03]">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.02]"
+      >
+        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+        <span className="flex-1 text-sm font-semibold text-white/85">
+          Possible duplicate accounts
+          {!loading && total > 0 && (
+            <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+              {total} group{total === 1 ? '' : 's'}
+            </span>
+          )}
+          {!loading && total === 0 && (
+            <span className="ml-2 text-[11px] font-normal text-white/40">
+              none detected
+            </span>
+          )}
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); fetchDups(); }}
+          className="rounded-md p-1 text-white/40 transition hover:bg-white/[0.06] hover:text-white/80"
+          title="Re-scan"
+        >
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+        </button>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-white/30 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-amber-400/10 px-4 py-3">
+              {loading ? (
+                <p className="py-4 text-center text-xs text-white/40">Scanning…</p>
+              ) : total === 0 ? (
+                <p className="py-2 text-xs text-white/40">
+                  No participants share a name or email within the same WG.
+                  (Multi-WG membership — e.g. one person in WG 4 and WG 5 — is
+                  treated as legitimate and not flagged here.)
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-white/50">
+                    Each group below has multiple accounts in the <strong>same WG</strong>.
+                    The recommendation is to deactivate the copy without data
+                    (or the unclaimed copy) and keep the other. Deactivating
+                    only invalidates the invite token — existing responses are
+                    preserved.
+                  </p>
+                  {groups.map((g, gi) => (
+                    <div
+                      key={`${g.reason}-${gi}`}
+                      className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+                    >
+                      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+                        <Badge variant="warning" className="text-[10px]">
+                          WG {g.wg_number ?? '—'}
+                        </Badge>
+                        <span className="font-mono text-white/50">
+                          {g.reason === 'same_email' ? 'same email' : 'same name'}:
+                        </span>
+                        <span className="font-medium text-white/85">{g.match_value || '(blank)'}</span>
+                      </div>
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="text-[10px] uppercase tracking-wider text-white/35">
+                            <th className="px-2 py-1 font-medium">ID</th>
+                            <th className="px-2 py-1 font-medium">Email</th>
+                            <th className="px-2 py-1 font-medium">Status</th>
+                            <th className="px-2 py-1 text-right font-medium">Delphi</th>
+                            <th className="px-2 py-1 text-right font-medium">Pairwise</th>
+                            <th className="px-2 py-1 text-right font-medium">Conference</th>
+                            <th className="px-2 py-1 text-right font-medium"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {g.members.map((m) => {
+                            const hasData =
+                              m.delphi_responses + m.pairwise_votes + m.conference_votes > 0;
+                            return (
+                              <tr key={m.id} className="border-t border-white/[0.04]">
+                                <td className="px-2 py-1 font-mono text-white/50">#{m.id}</td>
+                                <td className="px-2 py-1 text-white/70">
+                                  {m.email || <span className="text-white/25">—</span>}
+                                </td>
+                                <td className="px-2 py-1">
+                                  {!m.is_active ? (
+                                    <Badge variant="danger" className="text-[10px]">Deactivated</Badge>
+                                  ) : m.claimed_at ? (
+                                    <Badge variant="success" className="text-[10px]">Claimed</Badge>
+                                  ) : (
+                                    <Badge variant="warning" className="text-[10px]">Not yet</Badge>
+                                  )}
+                                  {hasData && (
+                                    <span className="ml-1.5 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">
+                                      has data
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-2 py-1 text-right font-mono text-white/70">{m.delphi_responses}</td>
+                                <td className="px-2 py-1 text-right font-mono text-white/70">{m.pairwise_votes}</td>
+                                <td className="px-2 py-1 text-right font-mono text-white/70">{m.conference_votes}</td>
+                                <td className="px-2 py-1 text-right">
+                                  {m.is_active && (
+                                    <button
+                                      onClick={() => handleDeactivate(m)}
+                                      disabled={acting === m.id}
+                                      className="inline-flex items-center gap-1 rounded-md border border-white/[0.1] bg-white/[0.04] px-2 py-1 text-[10px] font-medium text-white/70 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                                      title="Deactivate this copy (data is preserved)"
+                                    >
+                                      {acting === m.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-3 w-3" />
+                                      )}
+                                      Deactivate
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

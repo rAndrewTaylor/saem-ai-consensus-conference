@@ -43,6 +43,42 @@ export async function api(url, { method = 'GET', body, token, params } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+// Authenticated file download — fetches with the admin Bearer token,
+// then triggers a browser save. <a href download> doesn't send custom
+// headers, so it can't be used for endpoints that require auth.
+export async function downloadFile(url, fallbackFilename = 'download') {
+  const adminToken = localStorage.getItem('saem_admin_token');
+  const headers = {};
+  if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    let detail = `Download failed (${res.status})`;
+    try {
+      const json = await res.json();
+      detail = json.detail || detail;
+    } catch {}
+    throw new ApiError(res.status, detail);
+  }
+
+  // Prefer the server's filename if it sent Content-Disposition
+  let filename = fallbackFilename;
+  const cd = res.headers.get('Content-Disposition') || '';
+  const match = cd.match(/filename\*?=(?:UTF-8'')?["']?([^;"'\n]+)["']?/i);
+  if (match) filename = decodeURIComponent(match[1]);
+
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Allow the browser to start the download before revoking
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+}
+
 // Token management
 export const getToken = (wg) => localStorage.getItem(`saem_token_wg${wg}`);
 export const setToken = (wg, token) => {

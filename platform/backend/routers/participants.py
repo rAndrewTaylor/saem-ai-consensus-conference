@@ -197,7 +197,15 @@ def register_from_shared_link(
     body: SharedRegister,
     db: Session = Depends(get_db),
 ):
-    """Shared-link registration for cases where emails are unavailable."""
+    """Shared-link registration for cases where emails are unavailable.
+
+    Dedup behavior: if an active participant already exists in this WG with
+    the same email (case-insensitive) — or, if no email was provided, the
+    same name — return that participant's existing token instead of
+    creating a new row. This is the path that produced most duplicate
+    accounts in production (people fall back to the shared link when their
+    invite link breaks; without dedup each attempt is a fresh account).
+    """
     if not _shared_join_token():
         raise HTTPException(403, "Shared join link is not configured")
     if not _is_valid_shared_join_token(body.access_token):
@@ -211,6 +219,29 @@ def register_from_shared_link(
 
     name = sanitize_text(body.name, max_length=200)
     email = sanitize_text(body.email, max_length=200) if body.email else None
+
+    existing = _find_existing_participant(db, wg_id=wg.id, name=name, email=email)
+    if existing is not None:
+        if not existing.claimed_at:
+            existing.claimed_at = datetime.utcnow()
+        # Refresh role / name in case they updated either
+        if name:
+            existing.name = name
+        if body.role:
+            existing.role = body.role
+        db.commit()
+        db.refresh(existing)
+        return {
+            "token": existing.token,
+            "name": existing.name,
+            "email": existing.email,
+            "role": existing.role,
+            "wg_number": wg.number,
+            "wg_name": wg.name,
+            "wg_short_name": wg.short_name,
+            "deduped": True,
+        }
+
     p = Participant(
         token=_new_token(),
         wg_id=wg.id,
@@ -232,7 +263,40 @@ def register_from_shared_link(
         "wg_number": wg.number,
         "wg_name": wg.name,
         "wg_short_name": wg.short_name,
+        "deduped": False,
     }
+
+
+def _find_existing_participant(
+    db: Session, *, wg_id: int, name: str | None, email: str | None
+) -> Participant | None:
+    """Look for an active participant in this WG that matches by email
+    (case-insensitive) or, lacking an email, by name. Returns the most
+    recent match so its token is what gets handed back."""
+    q = (
+        db.query(Participant)
+        .filter(
+            Participant.wg_id == wg_id,
+            Participant.is_active == True,  # noqa: E712
+        )
+    )
+    if email:
+        norm = email.strip().lower()
+        match = (
+            q.filter(func.lower(func.trim(Participant.email)) == norm)
+            .order_by(Participant.claimed_at.desc().nullslast(), Participant.id.desc())
+            .first()
+        )
+        if match:
+            return match
+    if name:
+        norm = name.strip().lower()
+        return (
+            q.filter(func.lower(func.trim(Participant.name)) == norm)
+            .order_by(Participant.claimed_at.desc().nullslast(), Participant.id.desc())
+            .first()
+        )
+    return None
 
 
 # --- Returning user login (email-based, no password) ---
@@ -284,13 +348,27 @@ def create_participant(
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """Admin: create a single named invitee. Returns the invite token."""
+    """Admin: create a single named invitee. Returns the invite token.
+
+    Dedup: if an active participant already exists in this WG with the
+    same email (case-insensitive) or, lacking email, the same name,
+    return that row's existing token instead of issuing a second invite.
+    """
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
 
     name = sanitize_text(body.name, max_length=200) if body.name else None
     email = sanitize_text(body.email, max_length=200) if body.email else None
+
+    existing = _find_existing_participant(db, wg_id=wg.id, name=name, email=email)
+    if existing is not None:
+        write_audit_log(
+            db, admin.get("sub", "admin"),
+            "participant_invite_dedup",
+            f"Re-used existing invite #{existing.id} for {name} (WG {body.wg_number})",
+        )
+        return _participant_to_dict(existing)
 
     p = Participant(
         token=_new_token(),
@@ -323,9 +401,14 @@ def bulk_create_participants(
         raise HTTPException(404, "Working group not found")
 
     created = []
+    deduped = []
     for inv in body.invitees:
         name = sanitize_text(inv.name, max_length=200) if inv.name else None
         email = sanitize_text(inv.email, max_length=200) if inv.email else None
+        existing = _find_existing_participant(db, wg_id=wg.id, name=name, email=email)
+        if existing is not None:
+            deduped.append(existing)
+            continue
         p = Participant(
             token=_new_token(),
             wg_id=wg.id,
@@ -343,9 +426,9 @@ def bulk_create_participants(
     write_audit_log(
         db, admin.get("sub", "admin"),
         "participant_invite_bulk",
-        f"Bulk-created {len(created)} invites (WG {body.wg_number})",
+        f"Bulk-created {len(created)} invites, re-used {len(deduped)} (WG {body.wg_number})",
     )
-    return [_participant_to_dict(p) for p in created]
+    return [_participant_to_dict(p) for p in created + deduped]
 
 
 @router.get("")
