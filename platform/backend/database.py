@@ -492,6 +492,28 @@ def _apply_additive_migrations():
         if added:
             log.info("Added missing co_leads columns: %s", added)
 
+    # Partial unique index on participants.(wg_id, lower(trim(email))) for
+    # active rows with non-empty email. Prevents two active participants
+    # in the same WG from sharing an email at the database level — even
+    # under concurrent registration. Postgres only; the dev SQLite path
+    # relies on the application-layer dedup.
+    if not is_sqlite:
+        with engine.begin() as conn:
+            try:
+                conn.execute(sa_text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_active_participant_email "
+                    "ON participants (wg_id, LOWER(TRIM(email))) "
+                    "WHERE is_active = TRUE AND email IS NOT NULL AND email <> ''"
+                ))
+            except Exception:
+                # If conflicting active duplicates still exist the index will
+                # fail to create. Log and continue — the merge script handles
+                # cleanup separately; we don't want startup to crash on it.
+                log.exception(
+                    "Could not create uq_active_participant_email "
+                    "(likely pre-existing duplicates); continuing without it"
+                )
+
 
 def get_db():
     """FastAPI dependency that yields a database session."""

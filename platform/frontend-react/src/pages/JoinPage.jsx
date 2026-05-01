@@ -54,8 +54,27 @@ export function JoinPage() {
   const [submitting, setSubmitting] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [accessError, setAccessError] = useState(null);
+  const [existingAccount, setExistingAccount] = useState(null);
   const isInviteMode = Boolean(inviteToken);
   const isSharedMode = !isInviteMode && Boolean(accessToken);
+
+  // Pre-flight: when the user has typed a plausible email, check if an
+  // account already exists. If yes, surface a "sign in instead" banner
+  // so they don't create a duplicate. Debounced so we don't spam the API.
+  useEffect(() => {
+    if (isInviteMode) return; // invite flow already binds to a known row
+    const trimmed = email.trim();
+    if (!trimmed.includes('@') || trimmed.length < 5) {
+      setExistingAccount(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      api('/api/participants/lookup-by-email', { params: { email: trimmed } })
+        .then((data) => setExistingAccount(data?.exists ? data : null))
+        .catch(() => setExistingAccount(null));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [email, isInviteMode]);
 
   useEffect(() => {
     if (!inviteToken && !accessToken) {
@@ -270,6 +289,41 @@ export function JoinPage() {
                       />
                     </div>
                   </div>
+
+                  {existingAccount && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-sm"
+                    >
+                      <p className="font-semibold text-amber-200">
+                        We already have an account for this email.
+                      </p>
+                      <p className="mt-1 text-amber-100/80">
+                        {existingAccount.name} &mdash; WG {existingAccount.wg_number}
+                        {existingAccount.wg_short_name ? ` (${existingAccount.wg_short_name})` : ''}.
+                        Sign in instead so you keep your existing responses.
+                      </p>
+                      <div className="mt-3 flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setMode('signin');
+                            setSigninEmail(email.trim());
+                          }}
+                        >
+                          <LogIn className="h-3.5 w-3.5" /> Sign in as this account
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setExistingAccount(null)}
+                        >
+                          I&apos;m a different person
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
 
                   <div className="mt-6 flex justify-end">
                     <Button disabled={!canGoNext} onClick={() => setStep(2)} className="gap-1.5">

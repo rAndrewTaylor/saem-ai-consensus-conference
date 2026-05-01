@@ -121,6 +121,27 @@ def register_participant(
     name = sanitize_text(body.name, max_length=200)
     email = sanitize_text(body.email, max_length=200) if body.email else None
 
+    existing = _find_existing_participant(db, wg_id=wg.id, name=name, email=email)
+    if existing is not None:
+        if not existing.claimed_at:
+            existing.claimed_at = datetime.utcnow()
+        if name:
+            existing.name = name
+        if body.role:
+            existing.role = body.role
+        db.commit()
+        db.refresh(existing)
+        return {
+            "token": existing.token,
+            "name": existing.name,
+            "email": existing.email,
+            "role": existing.role,
+            "wg_number": wg.number,
+            "wg_name": wg.name,
+            "wg_short_name": wg.short_name,
+            "deduped": True,
+        }
+
     p = Participant(
         token=_new_token(),
         wg_id=wg.id,
@@ -142,6 +163,50 @@ def register_participant(
         "wg_number": wg.number,
         "wg_name": wg.name,
         "wg_short_name": wg.short_name,
+        "deduped": False,
+    }
+
+
+@router.get("/lookup-by-email")
+def lookup_by_email(
+    email: str,
+    wg_number: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Public: pre-registration check — does an account already exist for
+    this email? Used by the registration form to nudge people toward
+    sign-in instead of creating yet another row.
+
+    Returns {"exists": false} if no match, or
+    {"exists": true, "name": "...", "wg_number": N, "wg_short_name": "..."}
+    when an active match is found. Never returns the token (security).
+    """
+    norm = (email or "").strip().lower()
+    if not norm or "@" not in norm:
+        return {"exists": False}
+
+    q = (
+        db.query(Participant)
+        .filter(
+            Participant.is_active == True,  # noqa: E712
+            func.lower(func.trim(Participant.email)) == norm,
+        )
+        .order_by(Participant.claimed_at.desc().nullslast(), Participant.id.desc())
+    )
+    if wg_number is not None:
+        wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+        if wg:
+            q = q.filter(Participant.wg_id == wg.id)
+    p = q.first()
+    if not p:
+        return {"exists": False}
+
+    wg = p.working_group
+    return {
+        "exists": True,
+        "name": p.name,
+        "wg_number": wg.number if wg else None,
+        "wg_short_name": wg.short_name if wg else None,
     }
 
 
@@ -314,19 +379,34 @@ def login_participant(
 
     Looks up the most recent active participant with this email.
     No password — appropriate for a closed academic conference.
+
+    On miss, suggests the closest known email (handles typos like
+    `umassmeorial.org` vs `umassmemorial.org` that produced duplicate
+    accounts in production).
     """
     email = body.email.strip().lower()
     p = (
         db.query(Participant)
         .filter(
-            func.lower(Participant.email) == email,
+            func.lower(func.trim(Participant.email)) == email,
             Participant.is_active == True,  # noqa: E712
         )
         .order_by(Participant.claimed_at.desc().nullslast())
         .first()
     )
     if not p:
-        raise HTTPException(404, "No account found with that email. Check the address or register using your invite link.")
+        suggestion = _suggest_similar_email(db, email)
+        if suggestion:
+            raise HTTPException(
+                404,
+                f"No account found with that email. Did you mean "
+                f"\"{suggestion}\"? Check for typos and try again.",
+            )
+        raise HTTPException(
+            404,
+            "No account found with that email. Check the address or "
+            "register using your invite link.",
+        )
 
     wg = p.working_group
     return {
@@ -338,6 +418,58 @@ def login_participant(
         "wg_name": wg.name if wg else None,
         "wg_short_name": wg.short_name if wg else None,
     }
+
+
+def _suggest_similar_email(db: Session, typed: str) -> Optional[str]:
+    """Find the closest existing active email by Levenshtein distance.
+    Returns the suggestion only if it's clearly close (distance ≤ 2 and
+    distance ≤ 25% of length); otherwise returns None to avoid noisy
+    suggestions."""
+    if not typed or "@" not in typed:
+        return None
+    rows = (
+        db.query(Participant.email)
+        .filter(
+            Participant.email.isnot(None),
+            Participant.is_active == True,  # noqa: E712
+        )
+        .distinct()
+        .all()
+    )
+    best: Optional[tuple[int, str]] = None
+    for (raw,) in rows:
+        cand = (raw or "").strip().lower()
+        if not cand or cand == typed:
+            continue
+        d = _levenshtein(typed, cand)
+        if best is None or d < best[0]:
+            best = (d, raw)  # preserve original casing in suggestion
+    if best is None:
+        return None
+    d, raw = best
+    if d <= 2 and d <= max(2, len(typed) // 4):
+        return raw
+    return None
+
+
+def _levenshtein(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        curr = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            curr[j] = min(
+                curr[j - 1] + 1,
+                prev[j] + 1,
+                prev[j - 1] + (0 if ca == cb else 1),
+            )
+        prev = curr
+    return prev[-1]
 
 
 # --- Admin endpoints (auth enforced via require_admin dependency) ---
