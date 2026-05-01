@@ -733,21 +733,25 @@ def list_duplicate_participants(
     seen_pair_sets: set = set()  # dedupe groups that match on both name and email
 
     def _emit(reason: str, members: list[Participant]):
-        if len(members) < 2:
+        # Only flag groups where 2+ members are still ACTIVE — once a
+        # cleanup has deactivated all but one, the group is no longer
+        # actionable and shouldn't clutter the admin panel.
+        active_members = [m for m in members if m.is_active]
+        if len(active_members) < 2:
             return
         # Stable identity for this group of participant ids
-        ids_key = tuple(sorted(m.id for m in members))
+        ids_key = tuple(sorted(m.id for m in active_members))
         if ids_key in seen_pair_sets:
             return
         seen_pair_sets.add(ids_key)
         groups.append({
             "reason": reason,
-            "wg_number": wg_lookup.get(members[0].wg_id, {}).get("number"),
+            "wg_number": wg_lookup.get(active_members[0].wg_id, {}).get("number"),
             "match_value": (
-                members[0].name if reason == "same_name"
-                else (members[0].email or "")
+                active_members[0].name if reason == "same_name"
+                else (active_members[0].email or "")
             ),
-            "members": [_row_dict(m) for m in members],
+            "members": [_row_dict(m) for m in active_members],
         })
 
     for (_wg_id, _name), members in by_name.items():
