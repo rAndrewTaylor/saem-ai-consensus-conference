@@ -36,14 +36,20 @@ const ROLE_OPTIONS = [
 ];
 
 export function JoinPage() {
-  usePageTitle('Join');
+  usePageTitle('Log in');
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('token');
   const accessToken = searchParams.get('access');
 
-  const [mode, setMode] = useState('register'); // 'register' | 'signin'
+  // When the user clicks "Log in" in the navbar (no invite/shared token in
+  // URL), default to the sign-in tab — that's almost always what they want.
+  // First-time invitees arrive via /invite/<token> or /join?token=… and
+  // should land on register; the access link still does the same.
+  const [mode, setMode] = useState(
+    inviteToken || accessToken ? 'register' : 'signin'
+  );
   const [step, setStep] = useState(1); // 1=identity, 2=wg+role
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -209,20 +215,20 @@ export function JoinPage() {
         {/* Register / Sign in toggle */}
         <div className="mb-5 flex items-center justify-center gap-2">
           <button
+            onClick={() => setMode('signin')}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              mode === 'signin' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            Log in
+          </button>
+          <button
             onClick={() => setMode('register')}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
               mode === 'register' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
             }`}
           >
             New here? Register
-          </button>
-          <button
-            onClick={() => setMode('signin')}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              mode === 'signin' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            Returning? Sign in
           </button>
         </div>
 
@@ -302,7 +308,7 @@ export function JoinPage() {
                       <p className="mt-1 text-amber-100/80">
                         {existingAccount.name} &mdash; WG {existingAccount.wg_number}
                         {existingAccount.wg_short_name ? ` (${existingAccount.wg_short_name})` : ''}.
-                        Sign in instead so you keep your existing responses.
+                        Log in instead so you keep your existing responses.
                       </p>
                       <div className="mt-3 flex gap-2">
                         <Button
@@ -312,7 +318,7 @@ export function JoinPage() {
                             setSigninEmail(email.trim());
                           }}
                         >
-                          <LogIn className="h-3.5 w-3.5" /> Sign in as this account
+                          <LogIn className="h-3.5 w-3.5" /> Log in as this account
                         </Button>
                         <Button
                           size="sm"
@@ -482,7 +488,7 @@ function SignInCard({ signinEmail, setSigninEmail, signingIn, handleSignIn }) {
           />
           <Button onClick={handleSignIn} loading={signingIn} className="shrink-0">
             <Mail className="h-4 w-4" />
-            Sign in
+            Log in
           </Button>
         </div>
       </CardContent>

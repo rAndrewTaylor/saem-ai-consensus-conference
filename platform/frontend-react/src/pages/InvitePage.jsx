@@ -114,7 +114,7 @@ export function InvitePage() {
                       Already registered?
                     </h2>
                     <p className="text-xs text-white/50">
-                      Sign in with the email you used at registration.
+                      Log in with the email you used at registration.
                     </p>
                   </div>
                 </div>
@@ -129,7 +129,7 @@ export function InvitePage() {
                   />
                   <Button onClick={handleSignIn} loading={signingIn} className="shrink-0">
                     <Mail className="h-4 w-4" />
-                    Sign in
+                    Log in
                   </Button>
                 </div>
               </CardContent>

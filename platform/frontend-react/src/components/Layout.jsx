@@ -39,9 +39,9 @@ export function Layout({ children }) {
     // Guide
     links.push({ to: '/guide', label: 'Guide', icon: BookOpen, section: 'util' });
 
-    // Join (only if not signed in)
+    // Log in (only if not signed in)
     if (!isSignedIn) {
-      links.push({ to: '/join', label: 'Join', icon: UserPlus, highlight: true, section: 'util' });
+      links.push({ to: '/join', label: 'Log in', icon: LogIn, highlight: true, section: 'util' });
     }
 
     // Admin dashboard — always visible (page has its own login gate)
