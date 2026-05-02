@@ -389,6 +389,68 @@ async def write_wg_opener(
     return opener
 
 
+def _findings_prompt(section: str, payload: dict) -> str:
+    section_briefs = {
+        "d1_network": (
+            "Summarize key findings from a question-similarity network "
+            "across 5 working groups."
+        ),
+        "d4_pillars": (
+            "Summarize the distribution of research questions across the "
+            "four pillars (Technology, Training, Self, Society) and 5 "
+            "working groups."
+        ),
+        "d5_cross_cutting": (
+            "Summarize the distribution of cross-cutting research topics "
+            "(equity, pediatrics, governance, deployment readiness, etc.) "
+            "across the 5 working groups."
+        ),
+    }
+    brief = section_briefs.get(section, "Summarize the data.")
+    data = json.dumps(payload, indent=2)
+    return f"""{brief}
+
+Data:
+{data}
+
+Write 3-4 short sentences (~70-100 words total) in a direct, neutral tone — the conference chair's voice. Highlight:
+- The most striking pattern in the data
+- Where the gaps or concentrations are
+- What this implies for inter-WG coordination going into Round 2
+
+Don't restate the methodology. Don't open with "The data shows…". Don't be cheerful.
+
+Return ONLY a JSON object: {{"summary": "<your 3-4 sentence summary>"}}"""
+
+
+async def summarize_findings(
+    section: str,
+    payload: dict,
+    *,
+    cache_dir: Optional[Path] = None,
+    model: str = DEFAULT_MODEL,
+    refresh: bool = False,
+) -> str:
+    cache_dir = cache_dir or DEFAULT_CACHE_DIR
+    sig = json.dumps(payload, sort_keys=True)
+    cache_path = cache_dir / "findings" / f"{_key(section, '1', model, sig)}.json"
+    if not refresh:
+        hit = _cache_load(cache_path)
+        if hit and "summary" in hit and not str(hit.get("summary", "")).startswith("failed:"):
+            return hit["summary"]
+    prompt = _findings_prompt(section, payload)
+    try:
+        res = await run_synthesis(prompt, input_data={"section": section}, model=model)
+        parsed = _parse_json(res["output"])
+        summary = parsed.get("summary", "").strip()
+    except Exception as exc:
+        logger.exception("Findings summary failed for %s: %s", section, exc)
+        return ""
+    if summary:
+        _cache_save(cache_path, {"summary": summary})
+    return summary
+
+
 async def label_themes(
     clusters: list[list[str]],
     *,

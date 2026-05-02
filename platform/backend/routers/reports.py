@@ -251,6 +251,7 @@ def _build_cross_wg_payload(db, bundle, qs) -> dict:
 
     # --- Pillar matrix (4 × 5) ---
     pillars_order = ["Technology", "Training", "Self", "Society"]
+    # Carry question_id through so we can build per-cell question lists.
     pillar_rows = []
     for tag_row in pillar_tags.itertuples(index=False):
         qid = int(tag_row.question_id)
@@ -258,6 +259,7 @@ def _build_cross_wg_payload(db, bundle, qs) -> dict:
             continue
         wg = int(qmap.loc[qid, "wg_id"])
         pillar_rows.append({
+            "qid": qid,
             "wg": wg,
             "primary": tag_row.primary,
             "secondary": tag_row.secondary,
@@ -267,15 +269,18 @@ def _build_cross_wg_payload(db, bundle, qs) -> dict:
     for p in pillars_order:
         wg_counts: dict[int, int] = {}
         cross_counts: dict[int, int] = {}
+        wg_qids: dict[int, list[int]] = {}
         for r in pillar_rows:
             if r["primary"] == p:
                 wg_counts[r["wg"]] = wg_counts.get(r["wg"], 0) + 1
+                wg_qids.setdefault(r["wg"], []).append(r["qid"])
                 if r["cross_cutting"]:
                     cross_counts[r["wg"]] = cross_counts.get(r["wg"], 0) + 1
         pillar_matrix.append({
             "pillar": p,
             "wg_counts": wg_counts,
             "cross_cutting_counts": cross_counts,
+            "wg_question_ids": wg_qids,
         })
 
     # --- Cross-cutting matrix (10 × 5) ---
@@ -286,14 +291,20 @@ def _build_cross_wg_payload(db, bundle, qs) -> dict:
             continue
         wg = int(qmap.loc[qid, "wg_id"])
         for tag in (tag_row.tags or []):
-            cc_rows.append({"wg": wg, "tag": tag})
+            cc_rows.append({"qid": qid, "wg": wg, "tag": tag})
     cross_cutting_matrix: list[dict] = []
     for tag in ai_tagging.CROSS_CUTTING_TAGS:
         wg_counts: dict[int, int] = {}
+        wg_qids: dict[int, list[int]] = {}
         for r in cc_rows:
             if r["tag"] == tag:
                 wg_counts[r["wg"]] = wg_counts.get(r["wg"], 0) + 1
-        cross_cutting_matrix.append({"tag": tag, "wg_counts": wg_counts})
+                wg_qids.setdefault(r["wg"], []).append(r["qid"])
+        cross_cutting_matrix.append({
+            "tag": tag,
+            "wg_counts": wg_counts,
+            "wg_question_ids": wg_qids,
+        })
 
     # --- Network (nodes with pre-computed positions + edges) ---
     network = _build_network_payload(qids, sim, qmap, qstats_map, qid_to_cluster)
@@ -320,12 +331,66 @@ def _build_cross_wg_payload(db, bundle, qs) -> dict:
     overlap_pairs.sort(key=lambda p: -p["similarity"])
     overlap_pairs = overlap_pairs[:50]  # send 50; UI can paginate
 
+    # --- AI key-findings summaries (cached) -----------------------------
+    # Compact payloads — Opus only needs aggregates, not every question.
+    network_summary_payload = {
+        "n_nodes": len(network["nodes"]) if network else 0,
+        "n_edges": len(network["edges"]) if network else 0,
+        "n_cross_wg_edges": sum(1 for e in (network["edges"] or []) if e["cross_wg"])
+            if network else 0,
+        "n_unconnected_dropped": (network or {}).get("n_dropped_unconnected", 0),
+        "top_hubs": [
+            {"qid": n["id"], "wg": n["wg"], "degree": n["degree"],
+             "short_text": n["short_text"][:120]}
+            for n in (network["nodes"] if network else [])[:10]
+        ],
+        "top_overlap_pairs": [
+            {"wg_a": p["wg_a"], "wg_b": p["wg_b"],
+             "sim": p["similarity"],
+             "short_a": p["text_a"][:120],
+             "short_b": p["text_b"][:120]}
+            for p in overlap_pairs[:8]
+        ],
+    }
+    pillar_summary_payload = {
+        "pillars": [
+            {"pillar": p["pillar"], "wg_counts": p["wg_counts"],
+             "cross_cutting_counts": p["cross_cutting_counts"]}
+            for p in pillar_matrix
+        ],
+    }
+    cc_summary_payload = {
+        "topics": [
+            {"tag": t["tag"], "wg_counts": t["wg_counts"]}
+            for t in cross_cutting_matrix
+        ],
+    }
+
+    loop = asyncio.new_event_loop()
+    try:
+        d1_summary = loop.run_until_complete(
+            ai_tagging.summarize_findings("d1_network", network_summary_payload)
+        )
+        d4_summary = loop.run_until_complete(
+            ai_tagging.summarize_findings("d4_pillars", pillar_summary_payload)
+        )
+        d5_summary = loop.run_until_complete(
+            ai_tagging.summarize_findings("d5_cross_cutting", cc_summary_payload)
+        )
+    finally:
+        loop.close()
+
     return {
         "network": network,
         "themes": themes_payload,
         "pillar_matrix": pillar_matrix,
         "cross_cutting_matrix": cross_cutting_matrix,
         "overlap_pairs": overlap_pairs,
+        "summaries": {
+            "d1_network": d1_summary,
+            "d4_pillars": d4_summary,
+            "d5_cross_cutting": d5_summary,
+        },
     }
 
 
