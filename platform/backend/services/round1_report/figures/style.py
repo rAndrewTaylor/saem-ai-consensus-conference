@@ -16,7 +16,13 @@ from contextlib import contextmanager
 from typing import Iterator
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
+
+# Headless backend — required when figures are rendered from FastAPI
+# request threads (otherwise macOS tries to open a GUI window).
+# Must be set BEFORE pyplot is imported.
+mpl.use("Agg", force=True)
+
+import matplotlib.pyplot as plt  # noqa: E402
 
 
 # --- Color palettes -----------------------------------------------------

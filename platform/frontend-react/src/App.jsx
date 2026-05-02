@@ -22,6 +22,7 @@ const TryPage = lazy(() => import('@/pages/TryPage').then(m => ({ default: m.Try
 const LeadClaimPage = lazy(() => import('@/pages/LeadClaimPage').then(m => ({ default: m.LeadClaimPage })));
 const LeadDashboardPage = lazy(() => import('@/pages/LeadDashboardPage').then(m => ({ default: m.LeadDashboardPage })));
 const JoinPage = lazy(() => import('@/pages/JoinPage').then(m => ({ default: m.JoinPage })));
+const Round1ReportPage = lazy(() => import('@/pages/Round1ReportPage').then(m => ({ default: m.Round1ReportPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function AnimatedRoutes() {
@@ -43,6 +44,7 @@ function AnimatedRoutes() {
           <Route path="/vote/:sessionId" element={<ConferencePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/results/:wgNumber" element={<ResultsPage />} />
+          <Route path="/reports/round1" element={<Round1ReportPage />} />
           <Route path="/guide" element={<GettingStartedPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
