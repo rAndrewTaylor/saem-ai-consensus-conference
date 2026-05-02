@@ -1040,7 +1040,41 @@ function ExportsSection() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Full backup — primary action */}
+          {/* Round 1 inter-round report — primary action */}
+          <div className="mb-3 rounded-xl border border-cyan-400/30 bg-cyan-500/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white/90">
+                  Round 1 Report (DOCX)
+                </p>
+                <p className="text-xs text-white/50">
+                  Per-WG figures, cross-WG similarity network, theme dendrogram,
+                  pillar coverage, cross-cutting topics. Generated against a
+                  live snapshot — first run takes ~3 minutes (Opus tagging),
+                  subsequent runs ~10 seconds (cached).
+                </p>
+              </div>
+              <Button
+                size="sm"
+                loading={busy === 'Round 1 Report'}
+                onClick={() => {
+                  if (!confirm(
+                    'Generate the Round 1 report?\n\nFirst run takes ~3 minutes ' +
+                    'while Claude Opus tags the agenda. Subsequent runs are ~10s.'
+                  )) return;
+                  run(
+                    'Round 1 Report',
+                    '/api/admin/reports/round1',
+                    'Round_1_Report.docx',
+                  );
+                }}
+              >
+                <Download className="h-3.5 w-3.5" /> Generate Round 1 report
+              </Button>
+            </div>
+          </div>
+
+          {/* Full backup — secondary action */}
           <div className="mb-5 rounded-xl border border-purple-400/30 bg-purple-500/5 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
