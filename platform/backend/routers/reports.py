@@ -134,6 +134,9 @@ def round1_data(
     # see aggregates across all WGs but not foreign-WG question text.
     # For simplicity here: return everything; the React page handles tier
     # masking. (Token never exposed in any case.)
+    # --- Cross-WG enrichment (drives the interactive figures) ----------
+    cross = _build_cross_wg_payload(db, bundle, qs)
+
     # NaN/Inf floats are not JSON compliant — replace with None so the
     # browser doesn't get a 500.
     import math
@@ -159,7 +162,252 @@ def round1_data(
         "overall": overall,
         "working_groups": wgs.to_dict(orient="records"),
         "questions": qs.to_dict(orient="records"),
+        **cross,
     })
+
+
+def _build_cross_wg_payload(db, bundle, qs) -> dict:
+    """Compute everything the client needs for D.1–D.5: similarity
+    network (with pre-computed node positions), theme clusters, pillar
+    matrix, cross-cutting matrix, and the D.2 overlap pairs table.
+
+    All pieces use cached embeddings + Opus tags from disk; nothing new
+    runs unless those caches are missing.
+    """
+    if bundle.questions.empty:
+        return {"network": None, "themes": [], "pillar_matrix": [],
+                "cross_cutting_matrix": [], "overlap_pairs": []}
+
+    from ..services.round1_report import ai_tagging, embeddings
+    import asyncio
+    import numpy as np
+
+    embs = embeddings.embed_questions(bundle.questions)
+    qids, sim = embeddings.cosine_similarity_matrix(embs)
+
+    loop = asyncio.new_event_loop()
+    try:
+        pillar_tags = loop.run_until_complete(
+            ai_tagging.tag_all_pillars(bundle.questions)
+        )
+        cc_tags = loop.run_until_complete(
+            ai_tagging.tag_all_cross_cutting(bundle.questions)
+        )
+    finally:
+        loop.close()
+
+    # --- Theme clusters (size + WG composition + Opus label) ---
+    from scipy.cluster.hierarchy import fcluster, linkage
+    from scipy.spatial.distance import squareform
+
+    qmap = bundle.questions.set_index("question_id")
+    qstats_map = qs.set_index("question_id") if not qs.empty else qs
+
+    themes_payload: list[dict] = []
+    qid_to_cluster: dict[int, int] = {}
+    if len(qids) >= 3:
+        dist = 1.0 - sim
+        np.fill_diagonal(dist, 0.0)
+        dist = (dist + dist.T) / 2
+        np.clip(dist, 0.0, None, out=dist)
+        Z = linkage(squareform(dist, checks=False), method="ward")
+        ca = fcluster(Z, t=10, criterion="maxclust")
+        groups: dict[int, list[str]] = {}
+        for qid, c in zip(qids, ca):
+            groups.setdefault(int(c), []).append(qmap.loc[qid, "text"])
+        order = sorted(groups.keys())
+        cluster_texts = [groups[c] for c in order]
+
+        loop = asyncio.new_event_loop()
+        try:
+            theme_clusters = loop.run_until_complete(
+                ai_tagging.label_themes(cluster_texts)
+            )
+        finally:
+            loop.close()
+
+        idx_map = {c: i for i, c in enumerate(order)}
+        for qid, c in zip(qids, ca):
+            qid_to_cluster[int(qid)] = idx_map[int(c)]
+
+        # Compose payload entries with WG composition counts
+        for i, c in enumerate(order):
+            wg_counts: dict[int, int] = {}
+            qids_in_cluster: list[int] = []
+            for qid, cc in zip(qids, ca):
+                if int(cc) == c:
+                    wg = int(qmap.loc[qid, "wg_id"])
+                    wg_counts[wg] = wg_counts.get(wg, 0) + 1
+                    qids_in_cluster.append(int(qid))
+            themes_payload.append({
+                "index": i,
+                "label": (theme_clusters[i].get("label") if i < len(theme_clusters) else None) or f"Cluster {i+1}",
+                "description": (theme_clusters[i].get("description") if i < len(theme_clusters) else "") or "",
+                "size": sum(wg_counts.values()),
+                "wg_counts": wg_counts,
+                "question_ids": qids_in_cluster,
+            })
+        themes_payload.sort(key=lambda t: -t["size"])
+
+    # --- Pillar matrix (4 × 5) ---
+    pillars_order = ["Technology", "Training", "Self", "Society"]
+    pillar_rows = []
+    for tag_row in pillar_tags.itertuples(index=False):
+        qid = int(tag_row.question_id)
+        if qid not in qmap.index:
+            continue
+        wg = int(qmap.loc[qid, "wg_id"])
+        pillar_rows.append({
+            "wg": wg,
+            "primary": tag_row.primary,
+            "secondary": tag_row.secondary,
+            "cross_cutting": bool(tag_row.cross_cutting),
+        })
+    pillar_matrix: list[dict] = []
+    for p in pillars_order:
+        wg_counts: dict[int, int] = {}
+        cross_counts: dict[int, int] = {}
+        for r in pillar_rows:
+            if r["primary"] == p:
+                wg_counts[r["wg"]] = wg_counts.get(r["wg"], 0) + 1
+                if r["cross_cutting"]:
+                    cross_counts[r["wg"]] = cross_counts.get(r["wg"], 0) + 1
+        pillar_matrix.append({
+            "pillar": p,
+            "wg_counts": wg_counts,
+            "cross_cutting_counts": cross_counts,
+        })
+
+    # --- Cross-cutting matrix (10 × 5) ---
+    cc_rows = []
+    for tag_row in cc_tags.itertuples(index=False):
+        qid = int(tag_row.question_id)
+        if qid not in qmap.index:
+            continue
+        wg = int(qmap.loc[qid, "wg_id"])
+        for tag in (tag_row.tags or []):
+            cc_rows.append({"wg": wg, "tag": tag})
+    cross_cutting_matrix: list[dict] = []
+    for tag in ai_tagging.CROSS_CUTTING_TAGS:
+        wg_counts: dict[int, int] = {}
+        for r in cc_rows:
+            if r["tag"] == tag:
+                wg_counts[r["wg"]] = wg_counts.get(r["wg"], 0) + 1
+        cross_cutting_matrix.append({"tag": tag, "wg_counts": wg_counts})
+
+    # --- Network (nodes with pre-computed positions + edges) ---
+    network = _build_network_payload(qids, sim, qmap, qstats_map, qid_to_cluster)
+
+    # --- D.2 cross-WG overlap pairs (top-25) ---
+    overlap_pairs: list[dict] = []
+    for i in range(len(qids)):
+        for j in range(i + 1, len(qids)):
+            s = float(sim[i, j])
+            if s < 0.55:
+                continue
+            qa, qb = qids[i], qids[j]
+            wg_a = int(qmap.loc[qa, "wg_id"])
+            wg_b = int(qmap.loc[qb, "wg_id"])
+            if wg_a == wg_b:
+                continue
+            overlap_pairs.append({
+                "qid_a": qa, "qid_b": qb,
+                "wg_a": wg_a, "wg_b": wg_b,
+                "text_a": qmap.loc[qa, "text"],
+                "text_b": qmap.loc[qb, "text"],
+                "similarity": round(s, 3),
+            })
+    overlap_pairs.sort(key=lambda p: -p["similarity"])
+    overlap_pairs = overlap_pairs[:50]  # send 50; UI can paginate
+
+    return {
+        "network": network,
+        "themes": themes_payload,
+        "pillar_matrix": pillar_matrix,
+        "cross_cutting_matrix": cross_cutting_matrix,
+        "overlap_pairs": overlap_pairs,
+    }
+
+
+def _build_network_payload(qids, sim, qmap, qstats_map, qid_to_cluster) -> dict:
+    """Use networkx + Kamada-Kawai (computed server-side) to produce
+    {nodes, edges} the client renders as plain SVG. Avoids shipping
+    d3-force / cytoscape on every page load."""
+    import networkx as nx
+    import numpy as np
+
+    threshold = 0.62
+    G = nx.Graph()
+    for qid in qids:
+        if qid not in qmap.index:
+            continue
+        wg = int(qmap.loc[qid, "wg_id"])
+        imp = qmap.loc[qid, "r1_importance_mean"]
+        G.add_node(qid, wg=wg,
+                    importance=(float(imp) if imp is not None and not (isinstance(imp, float) and np.isnan(imp)) else 5.0))
+
+    n = len(qids)
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = float(sim[i, j])
+            if s >= threshold:
+                G.add_edge(qids[i], qids[j], weight=s)
+
+    isolated = [n for n, d in G.degree() if d == 0]
+    G.remove_nodes_from(isolated)
+
+    if G.number_of_nodes() == 0:
+        return {"nodes": [], "edges": [], "threshold": threshold,
+                "n_dropped_unconnected": len(isolated)}
+
+    try:
+        pos = nx.kamada_kawai_layout(G)
+    except Exception:
+        pos = nx.spring_layout(G, seed=42, iterations=200)
+
+    # Normalize positions to a 0-1000 viewbox and round to 1 decimal
+    xs = [p[0] for p in pos.values()]
+    ys = [p[1] for p in pos.values()]
+    minx, maxx = min(xs), max(xs)
+    miny, maxy = min(ys), max(ys)
+    span_x = maxx - minx or 1
+    span_y = maxy - miny or 1
+
+    nodes: list[dict] = []
+    for node in G.nodes:
+        x, y = pos[node]
+        text = qmap.loc[node, "text"] if node in qmap.index else ""
+        short = qmap.loc[node, "short_text"] if node in qmap.index else ""
+        importance = G.nodes[node]["importance"]
+        nodes.append({
+            "id": int(node),
+            "wg": G.nodes[node]["wg"],
+            "importance": importance,
+            "degree": int(G.degree[node]),
+            "cluster": qid_to_cluster.get(int(node)),
+            "x": round((x - minx) / span_x * 1000, 1),
+            "y": round((y - miny) / span_y * 1000, 1),
+            "short_text": (short or text[:140]).replace("\n", " "),
+        })
+    nodes.sort(key=lambda n: -n["degree"])
+
+    edges = []
+    for u, v, d in G.edges(data=True):
+        wu = G.nodes[u]["wg"]; wv = G.nodes[v]["wg"]
+        edges.append({
+            "a": int(u), "b": int(v),
+            "wg_a": wu, "wg_b": wv,
+            "cross_wg": wu != wv,
+            "sim": round(float(d["weight"]), 3),
+        })
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "threshold": threshold,
+        "n_dropped_unconnected": len(isolated),
+        "viewbox": {"x": 0, "y": 0, "w": 1000, "h": 1000},
+    }
 
 
 # ----- /round1/figure/{name}.png — pre-rendered PNG bytes ---------------
