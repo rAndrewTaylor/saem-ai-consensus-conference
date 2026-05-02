@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from .style import (
@@ -187,6 +188,97 @@ def pairwise_leaderboard(
         ax.set_title(title)
         ax.axvline(50, ls=":", lw=0.6, color="#9CA3AF")
         ax.grid(axis="y", visible=False)
+        fig.tight_layout()
+        return fig
+
+
+def respondent_heatmap(
+    delphi_r1: pd.DataFrame,
+    questions: pd.DataFrame,
+    *,
+    wg_number: int,
+    style: str = "print",
+    width: Optional[float] = None,
+) -> plt.Figure:
+    """F5 — Per-respondent disposition heatmap.
+
+    Rows = questions (sorted by include%). Columns = respondents,
+    anonymized as P1, P2 ... in stable but non-identifying order.
+
+    Locked decision: this figure is shown only to co-lead and admin
+    tiers. Caller is responsible for tier gating; this just renders.
+    """
+    if questions.empty or delphi_r1.empty:
+        with style_context(style):
+            fig, ax = plt.subplots(figsize=(default_width(style, "double"), 2.5))
+            ax.text(0.5, 0.5, "No respondent data", ha="center", va="center",
+                    transform=ax.transAxes, color="#6B7280")
+            ax.set_axis_off()
+            return fig
+
+    # Anonymize: stable order based on first response time, then label P1..PN
+    first_seen = (
+        delphi_r1.groupby("participant_id")["created_at"].min()
+        .sort_values().reset_index()
+    )
+    pid_to_label = {int(pid): f"P{i+1}" for i, pid in enumerate(first_seen["participant_id"])}
+    n_p = len(pid_to_label)
+
+    # Sort questions by include% descending (most-supported on top)
+    q_sorted = questions.sort_values("r1_include_pct", ascending=True, na_position="first")
+    qids = [int(q) for q in q_sorted["question_id"]]
+    pids_ordered = list(pid_to_label.keys())
+
+    # Build matrix: 0 = no vote, 1 = exclude, 2 = modify, 3 = include
+    code = {"exclude": 1, "include_with_modifications": 2, "include": 3}
+    M = np.zeros((len(qids), n_p), dtype=int)
+    for _, r in delphi_r1.iterrows():
+        qid = int(r["question_id"])
+        pid = int(r["participant_id"])
+        if qid not in qids or pid not in pid_to_label:
+            continue
+        i = qids.index(qid)
+        j = pids_ordered.index(pid)
+        M[i, j] = code.get(r["disposition"], 0)
+
+    h = max(3.0, 0.22 * len(qids) + 1.2)
+    w = width or default_width(style, "double")
+    with style_context(style):
+        from matplotlib.colors import ListedColormap
+        cmap = ListedColormap([
+            "#F3F4F6",  # 0 — no vote
+            "#EF4444",  # 1 — exclude
+            "#F59E0B",  # 2 — modify
+            "#10B981",  # 3 — include
+        ])
+        fig, ax = plt.subplots(figsize=(w, h))
+        ax.imshow(M, aspect="auto", cmap=cmap, vmin=0, vmax=3)
+        # Question labels on y
+        labels = []
+        for qid in qids:
+            row = q_sorted[q_sorted["question_id"] == qid].iloc[0]
+            short = (row.get("short_text") or row.get("text", "")).strip().replace("\n", " ")
+            if len(short) > 50:
+                short = short[:49] + "…"
+            labels.append(f"Q{qid}: {short}")
+        ax.set_yticks(range(len(qids)))
+        ax.set_yticklabels(labels, fontsize=6)
+        ax.set_xticks(range(n_p))
+        ax.set_xticklabels([pid_to_label[p] for p in pids_ordered], fontsize=7)
+        ax.set_title(f"WG{wg_number}: Per-respondent disposition (co-lead view only)")
+        ax.set_xlabel("Respondent (anonymized)")
+        # Legend
+        from matplotlib.patches import Patch
+        ax.legend(
+            handles=[
+                Patch(color="#10B981", label="Include"),
+                Patch(color="#F59E0B", label="Modify"),
+                Patch(color="#EF4444", label="Exclude"),
+                Patch(color="#F3F4F6", label="No vote"),
+            ],
+            loc="upper right", bbox_to_anchor=(1.0, -0.05), ncol=4, fontsize=7,
+        )
+        ax.grid(visible=False)
         fig.tight_layout()
         return fig
 

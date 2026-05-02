@@ -19,6 +19,9 @@ gdrive
 # Platform runtime data
 platform/data/
 
+# Round 1 report — generated DOCX + AI/embedding cache (regeneratable)
+platform/reports/
+
 # Sensitive / local-only
 *.pst
 

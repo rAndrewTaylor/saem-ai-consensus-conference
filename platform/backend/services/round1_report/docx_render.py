@@ -37,6 +37,11 @@ def render(
     wg_summary: pd.DataFrame,
     overall: dict,
     per_wg_figures: dict[int, dict[str, bytes]],
+    cross_figures: Optional[dict[str, bytes]] = None,
+    pillar_tags: Optional[pd.DataFrame] = None,
+    cross_cutting_tags: Optional[pd.DataFrame] = None,
+    theme_clusters: Optional[list] = None,
+    similarity_data: Optional[tuple] = None,  # (qids, np.ndarray) for D.2 overlap table
     output_path: Optional[str] = None,
 ) -> bytes:
     """Build the report .docx and return its bytes.
@@ -64,7 +69,15 @@ def render(
             suggestions=bundle.suggestions[bundle.suggestions["wg_id"] == w["wg_id"]]
                 if not bundle.suggestions.empty else pd.DataFrame(),
         )
-    _section_d_stub(doc)
+    _section_d(
+        doc,
+        cross_figures=cross_figures or {},
+        pillar_tags=pillar_tags,
+        cross_cutting_tags=cross_cutting_tags,
+        theme_clusters=theme_clusters or [],
+        similarity_data=similarity_data,
+        questions=bundle.questions,
+    )
     _section_e_stub(doc)
     _appendix_stub(doc)
 
@@ -367,16 +380,155 @@ def _section_c_wg(
 
 # --- Stubs for later phases ----------------------------------------------
 
-def _section_d_stub(doc: "Document") -> None:
+def _section_d(
+    doc: "Document",
+    *,
+    cross_figures: dict[str, bytes],
+    pillar_tags: Optional[pd.DataFrame],
+    cross_cutting_tags: Optional[pd.DataFrame],
+    theme_clusters: list,
+    similarity_data: Optional[tuple],
+    questions: pd.DataFrame,
+) -> None:
     doc.add_heading("D. Cross-WG analysis", level=1)
-    p = doc.add_paragraph()
-    p.add_run("[Pending — Phase 3] ").italic = True
-    p.add_run(
-        "Question similarity network, theme dendrogram, pillar coverage matrix, "
-        "and cross-cutting topic heatmap. Driven by sentence-transformer embeddings "
-        "and Claude Opus theme/tag synthesis."
+    doc.add_paragraph(
+        "Embeddings of every active question (sentence-transformers/"
+        "all-MiniLM-L6-v2) feed the similarity network and theme "
+        "dendrogram. Pillar tags and cross-cutting topic tags come "
+        "from Claude Opus with full audit logging — co-leads should "
+        "spot-check 10% of tags before relying on the totals."
     )
+
+    # F6 — similarity network
+    if "F6" in cross_figures:
+        doc.add_heading("D.1 Question similarity across working groups", level=2)
+        doc.add_picture(io.BytesIO(cross_figures["F6"]), width=Inches(6.4))
+        cap = doc.add_paragraph(
+            "Figure D.1 — Force-directed graph of question similarity. "
+            "Nodes are sized by Round 1 importance and colored by WG. "
+            "Cross-WG edges are highlighted in red — these are the "
+            "candidate overlap pairs Section D.2 enumerates."
+        )
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for r in cap.runs:
+            r.italic = True; r.font.size = Pt(8)
+            r.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+
+    # D.2 — Top cross-WG overlap pairs (text + table)
+    overlaps = _compute_overlap_pairs(questions, similarity_data)
+    if overlaps is not None and not overlaps.empty:
+        doc.add_heading("D.2 Top cross-WG overlap pairs", level=2)
+        doc.add_paragraph(
+            "Pairs of questions in different working groups with cosine "
+            "similarity ≥ 0.55, sorted by similarity. Co-leads should "
+            "review each pair and pick: complementary (keep both, "
+            "cross-reference), coordinate (align scope/timing), or "
+            "merge (consolidate into one)."
+        )
+        t = doc.add_table(rows=1, cols=4)
+        t.style = "Light Grid Accent 1"
+        for i, h in enumerate(["WG-A · Q", "WG-B · Q", "Question texts", "Similarity"]):
+            c = t.rows[0].cells[i]; c.text = h
+            for r in c.paragraphs[0].runs: r.bold = True
+        for _, r in overlaps.head(25).iterrows():
+            row = t.add_row().cells
+            row[0].text = f"WG{int(r['wg_a'])} · Q{int(r['qid_a'])}"
+            row[1].text = f"WG{int(r['wg_b'])} · Q{int(r['qid_b'])}"
+            short_a = (r['text_a'] or "").replace("\n", " ")
+            short_b = (r['text_b'] or "").replace("\n", " ")
+            if len(short_a) > 100: short_a = short_a[:99] + "…"
+            if len(short_b) > 100: short_b = short_b[:99] + "…"
+            row[2].text = f"A: {short_a}\nB: {short_b}"
+            row[3].text = f"{r['similarity']:.2f}"
+
+    # F7 — theme dendrogram
+    if "F7" in cross_figures:
+        doc.add_heading("D.3 Theme clusters across the agenda", level=2)
+        doc.add_picture(io.BytesIO(cross_figures["F7"]), width=Inches(6.6))
+        cap = doc.add_paragraph(
+            "Figure D.3 — Hierarchical (Ward) clustering of every active "
+            "question across all WGs, with Opus-generated cluster labels "
+            "below."
+        )
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for r in cap.runs:
+            r.italic = True; r.font.size = Pt(8)
+            r.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+
+    if theme_clusters:
+        doc.add_heading("D.3a Cluster labels", level=3)
+        for c in theme_clusters:
+            p = doc.add_paragraph(style="List Bullet")
+            label = c.get("label") or "—"
+            desc = c.get("description") or ""
+            run = p.add_run(label)
+            run.bold = True
+            p.add_run(f" — {desc}")
+
+    # F8 — pillar coverage
+    if "F8" in cross_figures:
+        doc.add_heading("D.4 Pillar coverage", level=2)
+        doc.add_picture(io.BytesIO(cross_figures["F8"]), width=Inches(5.5))
+        cap = doc.add_paragraph(
+            "Figure D.4 — Distribution of questions across the four "
+            "Technology / Training / Self / Society pillars by working "
+            "group. (n×) marks how many of each cell's questions were "
+            "tagged cross-cutting (touching ≥3 pillars)."
+        )
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for r in cap.runs:
+            r.italic = True; r.font.size = Pt(8)
+            r.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+
+    # F9 — cross-cutting heatmap
+    if "F9" in cross_figures:
+        doc.add_heading("D.5 Cross-cutting topics", level=2)
+        doc.add_picture(io.BytesIO(cross_figures["F9"]), width=Inches(6.4))
+        cap = doc.add_paragraph(
+            "Figure D.5 — Distribution of cross-cutting topics by working "
+            "group. Tags assigned by Claude Opus from a fixed 10-tag set; "
+            "spot-check the audit log if a count looks surprising."
+        )
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for r in cap.runs:
+            r.italic = True; r.font.size = Pt(8)
+            r.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+
     doc.add_page_break()
+
+
+def _compute_overlap_pairs(
+    questions: pd.DataFrame,
+    sim_data: Optional[tuple] = None,
+) -> Optional[pd.DataFrame]:
+    """If we have similarity data, compute the cross-WG pair table.
+    Currently called only when cross_figures includes the matrix as
+    `_sim_data`; the orchestrator passes it through.
+    """
+    if sim_data is None or questions.empty:
+        return None
+    qids, sim = sim_data
+    qmap = questions.set_index("question_id")
+    rows = []
+    for i in range(len(qids)):
+        for j in range(i + 1, len(qids)):
+            s = float(sim[i, j])
+            if s < 0.55:
+                continue
+            qa, qb = qids[i], qids[j]
+            wga = int(qmap.loc[qa, "wg_id"])
+            wgb = int(qmap.loc[qb, "wg_id"])
+            if wga == wgb:
+                continue
+            rows.append({
+                "qid_a": qa, "qid_b": qb,
+                "wg_a": wga, "wg_b": wgb,
+                "text_a": qmap.loc[qa, "text"],
+                "text_b": qmap.loc[qb, "text"],
+                "similarity": s,
+            })
+    df = pd.DataFrame(rows).sort_values("similarity", ascending=False).reset_index(drop=True)
+    return df
 
 
 def _section_e_stub(doc: "Document") -> None:
