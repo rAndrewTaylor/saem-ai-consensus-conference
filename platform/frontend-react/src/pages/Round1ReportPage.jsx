@@ -351,15 +351,12 @@ function NetworkSVG({ network }) {
   const [selected, setSelected] = useState(null); // node id when isolated
   const [crossOnly, setCrossOnly] = useState(false);
 
-  if (!network || !network.nodes?.length) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-lg bg-white/[0.02] text-sm text-white/40">
-        No connections above similarity threshold
-      </div>
-    );
-  }
+  // Hooks MUST run unconditionally — pull nodes/edges defensively.
+  const nodes = network?.nodes ?? [];
+  const edges = network?.edges ?? [];
+  const threshold = network?.threshold ?? 0.62;
+  const n_dropped_unconnected = network?.n_dropped_unconnected ?? 0;
 
-  const { nodes, edges, threshold, n_dropped_unconnected } = network;
   const nodeById = useMemo(() => {
     const m = new Map();
     nodes.forEach((n) => m.set(n.id, n));
@@ -404,6 +401,15 @@ function NetworkSVG({ network }) {
   }, [selected, edges, nodeById]);
 
   const selectedNode = selected != null ? nodeById.get(selected) : null;
+
+  // After all hooks have run, it's safe to short-circuit on empty data.
+  if (!nodes.length) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-lg bg-white/[0.02] text-sm text-white/40">
+        No connections above similarity threshold
+      </div>
+    );
+  }
 
   return (
     <div>
