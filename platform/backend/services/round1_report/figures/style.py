@@ -130,3 +130,36 @@ def fig_to_png_bytes(fig: "plt.Figure") -> bytes:
     plt.close(fig)
     buf.seek(0)
     return buf.getvalue()
+
+
+def wrap_label(text: str, *, width: int = 55, max_lines: int = 2) -> str:
+    """Wrap a long question label to <=`max_lines` lines of <=`width`
+    chars each. Truncates with an ellipsis only when the wrapped form
+    still exceeds `max_lines`. Returns a string with embedded newlines
+    suitable for matplotlib tick labels.
+    """
+    import textwrap
+    text = " ".join((text or "").split())
+    lines = textwrap.wrap(text, width=width, break_long_words=False)
+    if not lines:
+        return ""
+    if len(lines) <= max_lines:
+        return "\n".join(lines)
+    # Truncate the last allowed line with an ellipsis
+    kept = lines[:max_lines]
+    last = kept[-1]
+    if len(last) > width - 1:
+        last = last[: width - 1].rstrip() + "…"
+    else:
+        last = last.rstrip(",.;:") + "…"
+    kept[-1] = last
+    return "\n".join(kept)
+
+
+def question_label(qid: int, text_or_short: str, *, width: int = 55,
+                    max_lines: int = 2, prefix_qid: bool = True) -> str:
+    """Produce a `Q{id}: wrapped text` label fit for a tick."""
+    body = wrap_label(text_or_short, width=width, max_lines=max_lines)
+    if prefix_qid:
+        return f"Q{qid}: {body}"
+    return body

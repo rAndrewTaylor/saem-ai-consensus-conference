@@ -135,6 +135,35 @@ Return ONLY a JSON object with this exact shape, no prose:
   "rationale": "<one sentence>"}}"""
 
 
+def _wg_opener_prompt(
+    wg_number: int,
+    wg_name: str,
+    pillar: str,
+    summary: dict,
+    top_questions: list[dict],
+    top_themes: list[str],
+) -> str:
+    return f"""You are the chair of a medical consensus conference, drafting a 2-paragraph interpretive opener for the Round 1 results section of Working Group {wg_number} ({wg_name}, pillar: {pillar}).
+
+Headline numbers:
+- {summary['n_invited']} members invited; {summary['n_r1_responders']} responded ({summary['response_rate_pct']:.0f}% rate)
+- {summary['n_questions']} active questions: {summary['n_confirmed']} confirmed, {summary['n_gray']} gray-zone, {summary['n_removed']} removed, {summary['n_open']} open
+- Pairwise: {summary['n_pairwise_voters']} voters, {summary['n_pairwise_votes']} votes
+- Delphi importance × pairwise score Spearman ρ = {summary.get('spearman_rho_delphi_pairwise')}
+- Free-text comments: {summary['n_comments']}; new questions suggested: {summary['n_suggestions']}
+
+Top 5 questions by Delphi importance (with pairwise score):
+{chr(10).join(f"  - Q{q['question_id']}: {q['text'][:140]} — importance {q['importance_mean']:.1f}, pairwise {q['pairwise_score']:.0f}" if q.get('pairwise_score') is not None else f"  - Q{q['question_id']}: {q['text'][:140]} — importance {q['importance_mean']:.1f}, pairwise n/a" for q in top_questions)}
+
+Most-prevalent thematic clusters touching this WG:
+{chr(10).join(f"  - {t}" for t in top_themes) if top_themes else "  (none yet)"}
+
+Write 2 short paragraphs (~80-120 words each), in a direct, neutral tone — the chair's voice. The first paragraph should describe what Round 1 surfaced for this WG (use the numbers; pick the 1-2 most striking patterns). The second should highlight what the group should pay attention to going into Round 2 — the gray-zone tension, the high-importance-but-low-pairwise gap, the cross-WG echo, etc. Don't summarize methodology. Don't make recommendations the co-leads should own. Don't be cheerful. Don't open with "In Round 1...".
+
+Return ONLY a JSON object:
+{{"opener": "<paragraph 1>\\n\\n<paragraph 2>"}}"""
+
+
 def _theme_label_prompt(question_texts: list[str]) -> str:
     bullets = "\n".join(f"  - {t}" for t in question_texts)
     return f"""You are labeling a thematic cluster from a research agenda.
@@ -315,6 +344,49 @@ async def tag_all_cross_cutting(
     logger.info("Cross-cutting tagging done: %d total (%d cached, %d new)",
                 len(df), n_cached, len(df) - n_cached)
     return df.drop(columns=["_cached"], errors="ignore")
+
+
+async def write_wg_opener(
+    wg_number: int,
+    wg_name: str,
+    pillar: str,
+    summary: dict,
+    top_questions: list[dict],
+    top_themes: list[str],
+    *,
+    cache_dir: Optional[Path] = None,
+    model: str = DEFAULT_MODEL,
+    refresh: bool = False,
+) -> str:
+    cache_dir = cache_dir or DEFAULT_CACHE_DIR
+    sig = "::".join([
+        str(wg_number),
+        str(summary.get('n_r1_responders')),
+        str(summary.get('n_confirmed')),
+        str(summary.get('n_gray')),
+        str(summary.get('n_removed')),
+        str(summary.get('n_pairwise_votes')),
+        str(round(summary.get('spearman_rho_delphi_pairwise') or 0, 2)),
+    ])
+    cache_path = cache_dir / "wg_opener" / f"{_key(str(wg_number), '1', model, sig)}.json"
+    if not refresh:
+        hit = _cache_load(cache_path)
+        if hit and "opener" in hit and not str(hit.get("opener", "")).startswith("failed:"):
+            return hit["opener"]
+
+    prompt = _wg_opener_prompt(wg_number, wg_name, pillar, summary,
+                                top_questions, top_themes)
+    try:
+        res = await run_synthesis(prompt, input_data={"wg_number": wg_number}, model=model)
+        parsed = _parse_json(res["output"])
+        opener = parsed.get("opener", "").strip()
+    except Exception as exc:
+        logger.exception("WG opener generation failed for WG%s: %s", wg_number, exc)
+        return ""
+
+    if opener:
+        _cache_save(cache_path, {"opener": opener})
+    return opener
 
 
 async def label_themes(

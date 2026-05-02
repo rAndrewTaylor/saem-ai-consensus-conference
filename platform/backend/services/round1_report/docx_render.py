@@ -42,6 +42,7 @@ def render(
     cross_cutting_tags: Optional[pd.DataFrame] = None,
     theme_clusters: Optional[list] = None,
     similarity_data: Optional[tuple] = None,  # (qids, np.ndarray) for D.2 overlap table
+    wg_openers: Optional[dict[int, str]] = None,
     output_path: Optional[str] = None,
 ) -> bytes:
     """Build the report .docx and return its bytes.
@@ -68,6 +69,7 @@ def render(
             figures=per_wg_figures.get(int(w["wg_id"]), {}),
             suggestions=bundle.suggestions[bundle.suggestions["wg_id"] == w["wg_id"]]
                 if not bundle.suggestions.empty else pd.DataFrame(),
+            opener=(wg_openers or {}).get(int(w["wg_number"])) or "",
         )
     _section_d(
         doc,
@@ -328,6 +330,7 @@ def _section_c_wg(
     q_stats: pd.DataFrame,
     figures: dict[str, bytes],
     suggestions: pd.DataFrame,
+    opener: str = "",
 ) -> None:
     doc.add_heading(f"C.{int(wg['wg_number'])} WG{int(wg['wg_number'])} — {wg['name']}", level=1)
     doc.add_paragraph(
@@ -337,6 +340,13 @@ def _section_c_wg(
         f"Pairwise: {int(wg['n_pairwise_votes'])} votes from {int(wg['n_pairwise_voters'])} voters"
         f"{' — flagged low-confidence' if wg['pairwise_low_confidence'] else ''}."
     )
+
+    # Opus-written interpretive opener (chair's voice). Two paragraphs.
+    if opener:
+        for para in opener.split("\n\n"):
+            para = para.strip()
+            if para:
+                doc.add_paragraph(para)
 
     # Bucket distribution
     p = doc.add_paragraph()

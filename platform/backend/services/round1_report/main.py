@@ -100,6 +100,7 @@ def generate_report(
     cross_cutting_tags_df = None
     theme_clusters: list[dict] = []
     similarity_data: Optional[tuple] = None
+    wg_openers: dict[int, str] = {}
 
     if not bundle.questions.empty:
         logger.info("Computing question embeddings")
@@ -146,6 +147,47 @@ def generate_report(
                     }
                 else:
                     qid_to_cluster = {qid: 0 for qid in qids}
+
+                # Per-WG interpretive openers (chair's voice). Run after
+                # clusters so we can pass the most-prevalent theme labels.
+                cluster_label_for = {
+                    i: (theme_clusters[i].get("label") if i < len(theme_clusters) else None)
+                    for i in range(len(theme_clusters))
+                }
+
+                async def _gen_openers():
+                    out: dict[int, str] = {}
+                    for _, w in wg_summary.iterrows():
+                        wg_id = int(w["wg_id"])
+                        wg_n = int(w["wg_number"])
+                        q_sub = q_stats[q_stats["wg_id"] == wg_id]
+                        top_q = (
+                            q_sub.dropna(subset=["importance_mean"])
+                                 .sort_values("importance_mean", ascending=False)
+                                 .head(5)
+                                 .to_dict(orient="records")
+                        )
+                        # Themes touching this WG, ranked by # of questions
+                        from collections import Counter
+                        ctr: Counter = Counter()
+                        for qid, c in qid_to_cluster.items():
+                            if qid in q_sub["question_id"].values:
+                                ctr[c] += 1
+                        top_themes = [
+                            cluster_label_for.get(c, f"Cluster {c+1}")
+                            for c, _ in ctr.most_common(4)
+                            if cluster_label_for.get(c)
+                        ]
+                        out[wg_n] = await ai_tagging.write_wg_opener(
+                            wg_number=wg_n,
+                            wg_name=w["name"],
+                            pillar=w.get("pillar") or "",
+                            summary=w.to_dict(),
+                            top_questions=top_q,
+                            top_themes=top_themes,
+                        )
+                    return out
+                wg_openers = loop.run_until_complete(_gen_openers())
             finally:
                 loop.close()
         else:
@@ -157,19 +199,21 @@ def generate_report(
             cross_figures["F6"] = fig_to_png_bytes(
                 fig_cross.similarity_network(
                     qids, sim, bundle.questions,
-                    threshold=similarity_threshold, style=style,
+                    threshold=max(similarity_threshold, 0.62),
+                    style=style,
                 )
             )
         except Exception:
             logger.exception("F6 failed")
 
-        # F7 — theme dendrogram
+        # F7 — theme cluster bars (replaces the unusable dendrogram)
         if not skip_ai and theme_clusters:
             try:
                 cross_figures["F7"] = fig_to_png_bytes(
-                    fig_cross.theme_dendrogram(
-                        qids, sim, theme_clusters,
+                    fig_cross.theme_clusters_bars(
+                        qids,
                         [qid_to_cluster.get(q, 0) for q in qids],
+                        theme_clusters,
                         bundle.questions, style=style,
                     )
                 )
@@ -212,5 +256,6 @@ def generate_report(
         cross_cutting_tags=cross_cutting_tags_df,
         theme_clusters=theme_clusters,
         similarity_data=similarity_data,
+        wg_openers=wg_openers,
         output_path=output_path,
     )
