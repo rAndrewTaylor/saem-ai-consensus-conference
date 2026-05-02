@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Menu, X, Sun, Moon, UserPlus, LogIn } from 'lucide-react';
+import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Menu, X, Sun, Moon, UserPlus, LogIn, FileBarChart } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -31,6 +31,13 @@ export function Layout({ children }) {
     // WG Lead dashboard
     if (isLead) {
       links.push({ to: '/lead', label: 'Lead View', icon: Crown, section: 'wg' });
+    }
+
+    // Round 1 Report — visible to anyone who's signed in (admin or
+    // participant); the page itself enforces the auth gate.
+    if (isSignedIn || isAdmin) {
+      links.push({ to: '/reports/round1', label: 'Round 1 Report',
+                   icon: FileBarChart, section: 'wg' });
     }
 
     // Conference Day
