@@ -50,6 +50,13 @@ export function Round1ReportPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // ALL hooks must run unconditionally — keep them above any early return.
+  const questionsById = useMemo(() => {
+    const m = new Map();
+    (data?.questions || []).forEach((q) => m.set(q.question_id, q));
+    return m;
+  }, [data]);
+
   const handleDownloadDocx = async () => {
     setDownloadingDocx(true);
     try {
@@ -99,13 +106,6 @@ export function Round1ReportPage() {
   const overlapPairs = data?.overlap_pairs || [];
   const network = data?.network || null;
   const summaries = data?.summaries || {};
-
-  // Question lookup map for the click-expand panels
-  const questionsById = useMemo(() => {
-    const m = new Map();
-    (data?.questions || []).forEach((q) => m.set(q.question_id, q));
-    return m;
-  }, [data]);
 
   return (
     <div className="flex flex-col bg-[#0A1628]">
