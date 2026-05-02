@@ -11,7 +11,6 @@ import {
   ScatterChart, Scatter, CartesianGrid, ReferenceLine,
   Cell, Legend
 } from 'recharts';
-import { useAdmin } from '@/hooks/useAdmin';
 import { api, getAdminToken } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -532,37 +531,22 @@ function PairwiseTab({ wgNumber }) {
 }
 
 // ---------------------------------------------------------------------------
-// Concordance Tab (admin only)
+// Concordance Tab — visible to admin and to any participant who has reached
+// this page (page-level gate already requires R1 completion or admin token)
 // ---------------------------------------------------------------------------
 function ConcordanceTab({ wgNumber }) {
-  const { isAdmin, loading: authLoading } = useAdmin();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!isAdmin) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     api(`/api/analysis/concordance/${wgNumber}`)
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [wgNumber, isAdmin]);
-
-  if (authLoading) {
-    return <Skeleton className="h-64 w-full rounded-xl" />;
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-white/40">
-        <Lock className="mb-3 h-10 w-10" />
-        <p className="text-base font-medium text-white/60">Admin access required</p>
-        <p className="mt-1 text-sm">Log in from the <Link to="/dashboard" className="text-purple-400 hover:underline">Dashboard</Link> to view concordance analysis.</p>
-      </div>
-    );
-  }
+  }, [wgNumber]);
 
   if (loading) {
     return (
@@ -923,6 +907,9 @@ export function ResultsPage() {
           </h1>
           <p className="mt-2 text-white/50">
             Consensus outcomes, rankings, and method concordance
+          </p>
+          <p className="mt-3 inline-block rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-300">
+            Pre-publication — SAEM 2026 working draft, do not distribute
           </p>
         </div>
       </div>

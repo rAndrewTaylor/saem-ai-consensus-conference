@@ -352,9 +352,14 @@ def review_item(
 def compute_concordance(
     wg_number: int,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
 ):
-    """Compute concordance between Delphi importance and pairwise ranking."""
+    """Compute concordance between Delphi importance and pairwise ranking.
+
+    Read-only aggregate output; no per-respondent data is exposed. Page-
+    level gating in the React app (ResultsPage) handles tier control —
+    requires admin token or a participant who has completed Round 1 in
+    their WG.
+    """
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
