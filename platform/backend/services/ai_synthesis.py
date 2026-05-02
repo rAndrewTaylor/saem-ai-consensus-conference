@@ -10,7 +10,7 @@ from ..config import ANTHROPIC_API_KEY
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
+DEFAULT_MODEL = "claude-opus-4-7"
 
 # Timeout and retry settings
 REQUEST_TIMEOUT_SECONDS = 60
