@@ -40,8 +40,8 @@ export function Layout({ children }) {
                    icon: FileBarChart, section: 'wg' });
     }
 
-    // Conference Day
-    links.push({ to: '/', label: 'Conference Day', icon: Radio, section: 'conf', hash: '#conference' });
+    // Conference Day — dedicated mobile-first landing for May 21
+    links.push({ to: '/day', label: 'Conference Day', icon: Radio, section: 'conf' });
 
     // Guide
     links.push({ to: '/guide', label: 'Guide', icon: BookOpen, section: 'util' });

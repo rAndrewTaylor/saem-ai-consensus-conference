@@ -193,6 +193,81 @@ def list_sessions(db: Session = Depends(get_db)):
     } for s in sessions]
 
 
+@router.get("/day-state")
+def day_state(db: Session = Depends(get_db)):
+    """Single endpoint that powers the conference-day landing page.
+
+    Returns every session, the active session (if any), live vote/comment
+    counts, and a static agenda block. Public — no auth — so the page
+    can poll without admin/participant credentials. Voting itself still
+    requires a participant token.
+    """
+    # All sessions enriched with WG metadata + counts
+    sessions = db.query(ConferenceSession).order_by(ConferenceSession.id).all()
+    wgs = {w.id: w for w in db.query(WorkingGroup).all()}
+    out_sessions: list[dict] = []
+    active_id: Optional[int] = None
+    for s in sessions:
+        wg = wgs.get(s.wg_id) if s.wg_id else None
+        vc = db.query(ConferenceVote).filter(ConferenceVote.session_id == s.id).count()
+        cc = db.query(ConferenceComment).filter(ConferenceComment.session_id == s.id).count()
+        unique_voters = (
+            db.query(func.count(func.distinct(ConferenceVote.participant_id)))
+            .filter(ConferenceVote.session_id == s.id)
+            .scalar()
+        ) or 0
+        if s.is_active and active_id is None:
+            active_id = s.id
+        out_sessions.append({
+            "id": s.id,
+            "wg_id": s.wg_id,
+            "wg_number": wg.number if wg else None,
+            "wg_short_name": wg.short_name if wg else None,
+            "wg_pillar": wg.pillar if wg else None,
+            "session_type": s.session_type,
+            "phase": s.phase,
+            "is_active": bool(s.is_active),
+            "started_at": s.started_at.isoformat() if s.started_at else None,
+            "ended_at": s.ended_at.isoformat() if s.ended_at else None,
+            "vote_count": vc,
+            "comment_count": cc,
+            "unique_voters": int(unique_voters),
+        })
+
+    # Static agenda — drives the timeline view. Times are local Atlanta
+    # (Eastern). Order matters — the frontend treats this as the
+    # canonical sequence.
+    agenda = [
+        {"time": "7:30 AM",  "title": "Coffee & networking",                     "kind": "break"},
+        {"time": "8:00 AM",  "title": "Welcome and conference goals",            "kind": "welcome"},
+        {"time": "8:20 AM",  "title": "Panel 1 — Clinical Practice & Operations","kind": "panel", "wg": 1},
+        {"time": "9:00 AM",  "title": "Panel 2 — Infrastructure & Data",         "kind": "panel", "wg": 2},
+        {"time": "9:40 AM",  "title": "Table Reactions: Technology",             "kind": "reaction", "block": "technology"},
+        {"time": "9:55 AM",  "title": "Break",                                   "kind": "break"},
+        {"time": "10:15 AM", "title": "Panel 3 — Education & Training",          "kind": "panel", "wg": 3},
+        {"time": "10:55 AM", "title": "Panel 4 — Human-AI Interaction",          "kind": "panel", "wg": 4},
+        {"time": "11:35 AM", "title": "Panel 5 — Ethics & Legal",                "kind": "panel", "wg": 5},
+        {"time": "12:15 PM", "title": "Table Reactions: People",                 "kind": "reaction", "block": "people"},
+        {"time": "12:30 PM", "title": "Networking lunch",                        "kind": "break"},
+        {"time": "1:30 PM",  "title": "World Café — three rotations",            "kind": "world_cafe"},
+        {"time": "2:30 PM",  "title": "Break",                                   "kind": "break"},
+        {"time": "2:50 PM",  "title": "Priority presentations (top 5 per WG)",   "kind": "presentation"},
+        {"time": "3:20 PM",  "title": "Cross-WG consensus vote (100-point allocation)", "kind": "vote", "session_type": "cross_wg_prioritization"},
+        {"time": "4:05 PM",  "title": "Final results & synthesis",               "kind": "results"},
+        {"time": "4:35 PM",  "title": "Summary & next steps",                    "kind": "wrap"},
+        {"time": "5:00 PM",  "title": "Adjourn",                                 "kind": "end"},
+    ]
+
+    return {
+        "now": datetime.utcnow().isoformat(),
+        "active_session_id": active_id,
+        "sessions": out_sessions,
+        "agenda": agenda,
+        "conference_date": "2026-05-21",
+        "venue": "Atlanta Marriott Marquis",
+    }
+
+
 @router.get("/sessions/{session_id}/questions")
 def get_session_questions(session_id: int, db: Session = Depends(get_db)):
     """Get the questions available for voting in a session."""
