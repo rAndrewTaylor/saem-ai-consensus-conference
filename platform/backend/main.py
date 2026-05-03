@@ -335,6 +335,44 @@ def publish_day_event(data: dict):
         q.put_nowait(data)
 
 
+@app.get("/api/events/day")
+async def sse_day_events(request: Request):
+    """Day-level event stream — fires when any session changes state.
+    The /day page subscribes once and refreshes its state on each
+    event instead of polling every 12s.
+
+    Declared BEFORE /api/events/{session_id} so the literal "day" path
+    isn't captured by the int-typed parameter route.
+    """
+    queue: asyncio.Queue = asyncio.Queue()
+    _day_queues.append(queue)
+
+    async def event_generator():
+        try:
+            yield f"event: connected\ndata: {json.dumps({'channel': 'day'})}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    data = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    yield f"data: {json.dumps(data)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            if queue in _day_queues:
+                _day_queues.remove(queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @app.get("/api/events/{session_id}")
 async def sse_conference_events(request: Request, session_id: int):
     """Server-Sent Events stream for live conference voting updates."""
@@ -359,40 +397,6 @@ async def sse_conference_events(request: Request, session_id: int):
             _session_queues.get(session_id, []).remove(queue)
             if not _session_queues.get(session_id):
                 _session_queues.pop(session_id, None)
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@app.get("/api/events/day")
-async def sse_day_events(request: Request):
-    """Day-level event stream — fires when any session changes state.
-    The /day page subscribes once and refreshes its state on each
-    event instead of polling every 12s."""
-    queue: asyncio.Queue = asyncio.Queue()
-    _day_queues.append(queue)
-
-    async def event_generator():
-        try:
-            yield f"event: connected\ndata: {json.dumps({'channel': 'day'})}\n\n"
-            while True:
-                if await request.is_disconnected():
-                    break
-                try:
-                    data = await asyncio.wait_for(queue.get(), timeout=30.0)
-                    yield f"data: {json.dumps(data)}\n\n"
-                except asyncio.TimeoutError:
-                    yield ": keepalive\n\n"
-        finally:
-            if queue in _day_queues:
-                _day_queues.remove(queue)
 
     return StreamingResponse(
         event_generator(),
