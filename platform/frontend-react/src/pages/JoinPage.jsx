@@ -42,6 +42,10 @@ export function JoinPage() {
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('token');
   const accessToken = searchParams.get('access');
+  // ?redirect=<path> tells us where to send the user after sign-in/register
+  const redirectTo = searchParams.get('redirect');
+  const safeRedirect = redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
+    ? redirectTo : null;
 
   // When the user clicks "Log in" in the navbar (no invite/shared token in
   // URL), default to the sign-in tab — that's almost always what they want.
@@ -118,7 +122,7 @@ export function JoinPage() {
       });
       setToken(data.wg_number, data.token);
       toast({ message: `Welcome back, ${data.name}!`, type: 'success' });
-      navigate(`/wg/${data.wg_number}`);
+      navigate(safeRedirect || `/wg/${data.wg_number}`);
     } catch (err) {
       toast({ message: err.message || 'Could not find that email', type: 'error' });
     } finally {
@@ -153,7 +157,7 @@ export function JoinPage() {
         });
       setToken(data.wg_number, data.token);
       toast({ message: `Welcome, ${data.name}!`, type: 'success' });
-      navigate(`/wg/${data.wg_number}`);
+      navigate(safeRedirect || `/wg/${data.wg_number}`);
     } catch (err) {
       toast({ message: err.message || 'Registration failed', type: 'error' });
     } finally {

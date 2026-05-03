@@ -82,6 +82,9 @@ export function Round1ReportPage() {
 
   if (error) {
     const isAuth = error.includes('401') || error.toLowerCase().includes('authoriz');
+    // After sign-in, send the user back here so we don't loop.
+    const here = typeof window !== 'undefined' ? window.location.pathname : '/reports/round1';
+    const signInHref = `/join?redirect=${encodeURIComponent(here)}`;
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-400">
@@ -91,7 +94,12 @@ export function Round1ReportPage() {
           {isAuth ? 'Sign in required' : 'Could not load report'}
         </h1>
         <p className="mt-3 text-sm text-white/60">{error}</p>
-        <Link to="/join" className="mt-6 inline-block">
+        {isAuth && (
+          <p className="mt-2 text-xs text-white/45">
+            Use the email you registered with for your working group.
+          </p>
+        )}
+        <Link to={signInHref} className="mt-6 inline-block">
           <Button variant="secondary" size="sm">Sign in</Button>
         </Link>
       </div>

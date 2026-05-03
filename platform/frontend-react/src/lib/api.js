@@ -16,11 +16,32 @@ export async function api(url, { method = 'GET', body, token, params } = {}) {
   }
 
   const headers = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  // Also check localStorage for admin token
-  const adminToken = localStorage.getItem('saem_admin_token');
-  if (!token && adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    // Auth fallback chain: admin first (covers admin endpoints), then any
+    // participant token in localStorage (covers endpoints that accept
+    // either admin or participant auth, e.g. the Round 1 report data,
+    // conference day-state, /me/contributions). Endpoints that require
+    // admin specifically still 401 a participant token, so this only
+    // adds capability where the backend allows it.
+    const adminToken = localStorage.getItem('saem_admin_token');
+    if (adminToken) {
+      headers['Authorization'] = `Bearer ${adminToken}`;
+    } else {
+      // Fall back to the most recently used participant token
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('saem_token_wg')) {
+          const ptoken = localStorage.getItem(key);
+          if (ptoken) {
+            headers['Authorization'] = `Bearer ${ptoken}`;
+            break;
+          }
+        }
+      }
+    }
+  }
 
   if (body) headers['Content-Type'] = 'application/json';
 
