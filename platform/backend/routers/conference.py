@@ -22,6 +22,16 @@ from ..validators import (
 router = APIRouter()
 
 
+def _publish_day(event: str, payload: dict) -> None:
+    """Best-effort notification on the global day-state SSE channel.
+    Imported lazily to avoid a circular import with backend.main."""
+    try:
+        from ..main import publish_day_event
+        publish_day_event({"event": event, **payload})
+    except Exception:
+        pass
+
+
 # --- Schemas ---
 
 class SessionCreate(BaseModel):
@@ -136,6 +146,9 @@ def start_session(
         action="session_start",
         detail=f"Started session {session_id} (type={cs.session_type})",
     )
+    _publish_day("session_started",
+                  {"session_id": cs.id, "session_type": cs.session_type,
+                   "phase": cs.phase, "wg_id": cs.wg_id})
     return {"session_id": cs.id, "is_active": True}
 
 
@@ -158,6 +171,8 @@ def stop_session(
         action="session_stop",
         detail=f"Stopped session {session_id} (type={cs.session_type})",
     )
+    _publish_day("session_stopped",
+                  {"session_id": cs.id, "session_type": cs.session_type})
     return {"session_id": cs.id, "is_active": False}
 
 
@@ -175,6 +190,7 @@ def update_phase(
         raise HTTPException(404, "Session not found")
     cs.phase = phase
     db.commit()
+    _publish_day("phase_changed", {"session_id": cs.id, "phase": cs.phase})
     return {"session_id": cs.id, "phase": cs.phase}
 
 
@@ -191,6 +207,56 @@ def list_sessions(db: Session = Depends(get_db)):
         "started_at": s.started_at.isoformat() if s.started_at else None,
         "vote_count": db.query(ConferenceVote).filter(ConferenceVote.session_id == s.id).count(),
     } for s in sessions]
+
+
+@router.get("/me/contributions")
+def my_contributions(
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(get_participant_token),
+):
+    """Per-participant rollup of conference-day activity. Returns empty
+    structure when no token is present so the page can render before
+    sign-in."""
+    if not token:
+        return {"signed_in": False, "sessions": [], "total_votes": 0,
+                 "total_comments": 0}
+    p = verify_participant_token(token, db)
+    sessions = db.query(ConferenceSession).order_by(ConferenceSession.id).all()
+    out = []
+    total_votes = 0
+    total_comments = 0
+    for s in sessions:
+        vote_count = (
+            db.query(ConferenceVote)
+            .filter(ConferenceVote.session_id == s.id,
+                    ConferenceVote.participant_id == p.id)
+            .count()
+        )
+        comment_count = (
+            db.query(ConferenceComment)
+            .filter(ConferenceComment.session_id == s.id,
+                    ConferenceComment.participant_id == p.id)
+            .count()
+        )
+        if vote_count or comment_count:
+            out.append({
+                "session_id": s.id,
+                "session_type": s.session_type,
+                "wg_id": s.wg_id,
+                "phase": s.phase,
+                "vote_count": vote_count,
+                "comment_count": comment_count,
+            })
+        total_votes += vote_count
+        total_comments += comment_count
+    return {
+        "signed_in": True,
+        "participant_id": p.id,
+        "name": p.name,
+        "sessions": out,
+        "total_votes": total_votes,
+        "total_comments": total_comments,
+    }
 
 
 @router.get("/day-state")

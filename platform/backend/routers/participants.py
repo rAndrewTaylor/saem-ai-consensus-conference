@@ -709,6 +709,32 @@ def claim_invite(token: str, db: Session = Depends(get_db)):
     }
 
 
+class ParticipantSelfUpdate(BaseModel):
+    """Fields a participant can update about themselves (demographics)."""
+    role: Optional[str] = None
+    career_stage: Optional[str] = None
+
+
+@router.post("/me/demographics")
+def update_self_demographics(
+    body: ParticipantSelfUpdate,
+    token: str,
+    db: Session = Depends(get_db),
+):
+    """Self-service demographic capture. Used by the /day landing page on
+    May 21 (and any time before) so the conference manuscript can analyze
+    by role + career stage."""
+    p = db.query(Participant).filter(Participant.token == token).first()
+    if not p or not p.is_active:
+        raise HTTPException(401, "Invalid token")
+    if body.role is not None:
+        p.role = sanitize_text(body.role, max_length=100)
+    if body.career_stage is not None:
+        p.career_stage = sanitize_text(body.career_stage, max_length=100)
+    db.commit()
+    return {"ok": True, "role": p.role, "career_stage": p.career_stage}
+
+
 @router.get("/me")
 def participant_me(token: str, db: Session = Depends(get_db)):
     """Public: look up a participant by their token. Used by the frontend
@@ -723,6 +749,8 @@ def participant_me(token: str, db: Session = Depends(get_db)):
         "name": p.name,
         "wg_number": p.working_group.number if p.working_group else None,
         "wg_short_name": p.working_group.short_name if p.working_group else None,
+        "role": p.role,
+        "career_stage": p.career_stage,
         "is_demo": is_demo,
         "is_tester": is_tester,
     }

@@ -317,11 +317,21 @@ async def admin_demo_reset(admin: dict = Depends(require_admin)):
 
 # Simple in-memory pub/sub per session (replaced by Redis in production)
 _session_queues: dict[int, list[asyncio.Queue]] = {}
+# Day-level channel: notified when admin starts/stops a session or
+# toggles a phase. Lets the conference-day landing page subscribe once
+# instead of polling.
+_day_queues: list[asyncio.Queue] = []
 
 
 def publish_vote_event(session_id: int, data: dict):
     """Push an event to all listeners for a given conference session."""
     for q in _session_queues.get(session_id, []):
+        q.put_nowait(data)
+
+
+def publish_day_event(data: dict):
+    """Push a day-state change to every subscriber of the global feed."""
+    for q in list(_day_queues):
         q.put_nowait(data)
 
 
@@ -349,6 +359,40 @@ async def sse_conference_events(request: Request, session_id: int):
             _session_queues.get(session_id, []).remove(queue)
             if not _session_queues.get(session_id):
                 _session_queues.pop(session_id, None)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.get("/api/events/day")
+async def sse_day_events(request: Request):
+    """Day-level event stream — fires when any session changes state.
+    The /day page subscribes once and refreshes its state on each
+    event instead of polling every 12s."""
+    queue: asyncio.Queue = asyncio.Queue()
+    _day_queues.append(queue)
+
+    async def event_generator():
+        try:
+            yield f"event: connected\ndata: {json.dumps({'channel': 'day'})}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    data = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    yield f"data: {json.dumps(data)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        finally:
+            if queue in _day_queues:
+                _day_queues.remove(queue)
 
     return StreamingResponse(
         event_generator(),
