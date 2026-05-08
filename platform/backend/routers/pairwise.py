@@ -11,7 +11,7 @@ import math
 
 from ..database import (
     get_db, WorkingGroup, Question, Participant, PairwiseVote,
-    PairwiseSuggestion, QuestionStatus, AuditLog,
+    PairwiseSuggestion, QuestionStatus, AuditLog, DelphiRound,
 )
 from ..validators import sanitize_text
 from ..auth import verify_participant_token, get_participant_token, require_admin
@@ -122,6 +122,8 @@ def submit_vote(
     norm_a = min(vote.question_a_id, vote.question_b_id)
     norm_b = max(vote.question_a_id, vote.question_b_id)
 
+    current_round = _current_round_for_wg(db, wg_number)
+
     try:
         pv = PairwiseVote(
             participant_id=participant.id,
@@ -130,17 +132,19 @@ def submit_vote(
             winner_id=vote.winner_id,
             wg_id=wg.id,
             response_time_ms=vote.response_time_ms,
+            round=current_round,
         )
         db.add(pv)
         db.flush()
     except IntegrityError:
         db.rollback()
-        # UniqueConstraint hit — update the existing vote instead
+        # UniqueConstraint hit — update the existing vote (same round only).
         existing = db.query(PairwiseVote).filter(
             PairwiseVote.participant_id == participant.id,
             PairwiseVote.question_a_id == norm_a,
             PairwiseVote.question_b_id == norm_b,
             PairwiseVote.wg_id == wg.id,
+            PairwiseVote.round == current_round,
         ).first()
         if existing:
             old_winner = existing.winner_id
@@ -198,21 +202,32 @@ def _update_scores_for_pair(question_a_id: int, question_b_id: int, db: Session)
 
 @router.get("/rankings/{wg_number}")
 def get_rankings(wg_number: int, db: Session = Depends(get_db)):
-    """Get current pairwise rankings for a working group."""
+    """Get current pairwise rankings for a working group.
+
+    Rankings reflect the WG's *current* round only (R2 if the WG has
+    transitioned, otherwise R1). Question.pairwise_wins/losses/score are
+    kept current-round-only; total_votes is also scoped to the current round.
+    """
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
+
+    current_round = _current_round_for_wg(db, wg_number)
 
     questions = db.query(Question).filter(
         Question.wg_id == wg.id,
         Question.status.in_([QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED])
     ).order_by(Question.pairwise_score.desc().nullslast()).all()
 
-    total_votes = db.query(PairwiseVote).filter(PairwiseVote.wg_id == wg.id).count()
+    total_votes = db.query(PairwiseVote).filter(
+        PairwiseVote.wg_id == wg.id,
+        PairwiseVote.round == current_round,
+    ).count()
 
     return {
         "wg_number": wg_number,
         "wg_name": wg.name,
+        "round": current_round.value,
         "total_votes": total_votes,
         "rankings": [{
             "rank": i + 1,
@@ -315,6 +330,15 @@ def _r2_started_at(db: Session, wg_number: int):
     return row
 
 
+def _current_round_for_wg(db: Session, wg_number: int) -> DelphiRound:
+    """Return the current Delphi round for a WG (R2 if it's transitioned, else R1)."""
+    return (
+        DelphiRound.ROUND_2
+        if _r2_started_at(db, wg_number) is not None
+        else DelphiRound.ROUND_1
+    )
+
+
 @router.get("/my-count/{wg_number}")
 def get_my_pairwise_count(
     wg_number: int,
@@ -337,16 +361,15 @@ def get_my_pairwise_count(
     if not wg:
         return {"count": 0, "minimum": 50}
 
-    r2_started = _r2_started_at(db, wg_number)
-    q = db.query(PairwiseVote).filter(
+    current_round = _current_round_for_wg(db, wg_number)
+    count = db.query(PairwiseVote).filter(
         PairwiseVote.participant_id == participant.id,
         PairwiseVote.wg_id == wg.id,
-    )
-    if r2_started is not None:
-        q = q.filter(PairwiseVote.created_at >= r2_started)
-    count = q.count()
+        PairwiseVote.round == current_round,
+    ).count()
 
-    # Also expose the cumulative count so the UI can show both if it wants.
+    # Cumulative across rounds — useful if the UI ever wants to show "you've
+    # voted N times in this WG over both rounds".
     total = db.query(PairwiseVote).filter(
         PairwiseVote.participant_id == participant.id,
         PairwiseVote.wg_id == wg.id,
@@ -356,6 +379,6 @@ def get_my_pairwise_count(
         "count": count,
         "minimum": 50,
         "complete": count >= 50,
-        "round": "round_2" if r2_started is not None else "round_1",
+        "round": current_round.value,
         "total_all_rounds": total,
     }

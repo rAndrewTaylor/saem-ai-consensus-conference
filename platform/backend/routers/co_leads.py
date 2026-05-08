@@ -14,7 +14,7 @@ import secrets
 from ..database import (
     get_db, WorkingGroup, CoLead, Question, Participant,
     DelphiResponse, DelphiSuggestion, PairwiseVote, PairwiseSuggestion,
-    QuestionStatus, DelphiRound, write_audit_log,
+    QuestionStatus, DelphiRound, AuditLog, write_audit_log,
 )
 from ..auth import require_admin
 
@@ -81,12 +81,23 @@ def _build_participant_roster(participants, wg, db):
         .all()
     )
 
-    # Pairwise count per participant
+    # Determine current round (R2 if WG has had its R2 transition, else R1)
+    r2_started_at = (
+        db.query(func.min(AuditLog.created_at))
+        .filter(AuditLog.action.like(f"wg{wg.number}_r2_%"))
+        .scalar()
+    )
+    current_round = (
+        DelphiRound.ROUND_2 if r2_started_at is not None else DelphiRound.ROUND_1
+    )
+
+    # Pairwise count per participant — current round only.
     pw_counts = dict(
         db.query(PairwiseVote.participant_id, func.count(PairwiseVote.id))
         .filter(
             PairwiseVote.wg_id == wg.id,
             PairwiseVote.participant_id.in_(pids),
+            PairwiseVote.round == current_round,
         )
         .group_by(PairwiseVote.participant_id)
         .all()

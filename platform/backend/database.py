@@ -254,12 +254,15 @@ class PairwiseVote(Base):
     question_b_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
     winner_id = Column(Integer, ForeignKey("questions.id"), nullable=True)  # null = "can't decide"
     wg_id = Column(Integer, ForeignKey("working_groups.id"), nullable=False)
+    round = Column(SQLEnum(DelphiRound), nullable=True)  # round in which the vote was cast
     response_time_ms = Column(Integer)  # how long they took to decide
     created_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
+        # Unique per (participant, pair, wg, round) so a participant can vote
+        # on the same pair in R1 and again in R2 (e.g., after wording revisions).
         UniqueConstraint(
-            "participant_id", "question_a_id", "question_b_id", "wg_id",
+            "participant_id", "question_a_id", "question_b_id", "wg_id", "round",
             name="uq_pairwise_vote",
         ),
     )

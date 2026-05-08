@@ -292,6 +292,39 @@ def main():
              f"imp={old['r1_importance_mean']:.1f})", now),
         )
 
+    # Reset Question.pairwise_wins/losses to count R2-era votes only, so the
+    # ranking score on each question reflects the current round.
+    cur.execute(
+        """
+        UPDATE questions q
+        SET pairwise_wins = COALESCE((
+              SELECT COUNT(*) FROM pairwise_votes pv
+              WHERE pv.winner_id = q.id AND pv.wg_id = q.wg_id
+                AND pv.round = 'ROUND_2'
+            ), 0),
+            pairwise_losses = COALESCE((
+              SELECT COUNT(*) FROM pairwise_votes pv
+              WHERE pv.wg_id = q.wg_id AND pv.round = 'ROUND_2'
+                AND (pv.question_a_id = q.id OR pv.question_b_id = q.id)
+                AND pv.winner_id IS NOT NULL AND pv.winner_id != q.id
+            ), 0),
+            pairwise_score = (
+              (COALESCE((SELECT COUNT(*) FROM pairwise_votes pv
+                         WHERE pv.winner_id = q.id AND pv.wg_id = q.wg_id
+                           AND pv.round = 'ROUND_2'), 0) + 1.0)
+              /
+              (COALESCE((SELECT COUNT(*) FROM pairwise_votes pv
+                         WHERE pv.wg_id = q.wg_id AND pv.round = 'ROUND_2'
+                           AND (pv.question_a_id = q.id OR pv.question_b_id = q.id)
+                           AND pv.winner_id IS NOT NULL), 0) + 2.0)
+            ) * 100
+        WHERE q.wg_id = %s
+          AND q.status::text IN ('ACTIVE', 'REVISED', 'CONFIRMED')
+        """,
+        (wg_id,),
+    )
+    print(f"Reset pairwise wins/losses/score to R2-only for {cur.rowcount} questions.")
+
     conn.commit()
     print("Done. Changes committed. Verify via "
           f"/api/surveys/questions/{args.wg}?round_name=round_2")
