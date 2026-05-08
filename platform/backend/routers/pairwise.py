@@ -11,7 +11,7 @@ import math
 
 from ..database import (
     get_db, WorkingGroup, Question, Participant, PairwiseVote,
-    PairwiseSuggestion, QuestionStatus
+    PairwiseSuggestion, QuestionStatus, AuditLog,
 )
 from ..validators import sanitize_text
 from ..auth import verify_participant_token, get_participant_token, require_admin
@@ -305,13 +305,29 @@ def get_pairwise_stats(wg_number: int, db: Session = Depends(get_db)):
     }
 
 
+def _r2_started_at(db: Session, wg_number: int):
+    """Return the timestamp the R2 transition first ran for a WG, or None."""
+    row = (
+        db.query(func.min(AuditLog.created_at))
+        .filter(AuditLog.action.like(f"wg{wg_number}_r2_%"))
+        .scalar()
+    )
+    return row
+
+
 @router.get("/my-count/{wg_number}")
 def get_my_pairwise_count(
     wg_number: int,
     token: str = Depends(get_participant_token),
     db: Session = Depends(get_db),
 ):
-    """Return how many pairwise votes this participant has made for a WG."""
+    """Return how many pairwise votes this participant has made for the
+    current round of a WG.
+
+    If the WG has transitioned to R2, the count is restricted to votes cast
+    after the transition timestamp so participants see fresh progress against
+    the 50-vote target instead of a cumulative R1+R2 number.
+    """
     if not token:
         return {"count": 0, "minimum": 50}
     participant = db.query(Participant).filter(Participant.token == token).first()
@@ -320,8 +336,26 @@ def get_my_pairwise_count(
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         return {"count": 0, "minimum": 50}
-    count = db.query(PairwiseVote).filter(
+
+    r2_started = _r2_started_at(db, wg_number)
+    q = db.query(PairwiseVote).filter(
+        PairwiseVote.participant_id == participant.id,
+        PairwiseVote.wg_id == wg.id,
+    )
+    if r2_started is not None:
+        q = q.filter(PairwiseVote.created_at >= r2_started)
+    count = q.count()
+
+    # Also expose the cumulative count so the UI can show both if it wants.
+    total = db.query(PairwiseVote).filter(
         PairwiseVote.participant_id == participant.id,
         PairwiseVote.wg_id == wg.id,
     ).count()
-    return {"count": count, "minimum": 50, "complete": count >= 50}
+
+    return {
+        "count": count,
+        "minimum": 50,
+        "complete": count >= 50,
+        "round": "round_2" if r2_started is not None else "round_1",
+        "total_all_rounds": total,
+    }

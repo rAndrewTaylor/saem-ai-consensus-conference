@@ -363,19 +363,35 @@ export function LeadDashboardPage() {
                         <th className="px-5 py-3 text-left font-medium">Name</th>
                         <th className="px-3 py-3 text-left font-medium">Email</th>
                         <th className="px-3 py-3 text-center font-medium">Round 1</th>
+                        <th className="px-3 py-3 text-center font-medium">Round 2</th>
                         <th className="px-3 py-3 text-center font-medium">Pairwise</th>
                         <th className="px-3 py-3 text-center font-medium">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {participants.roster.map((p) => (
+                      {participants.roster.map((p) => {
+                        // Show R2 column only after the R2 transition has run
+                        // for this WG (signal: R2 question count differs from R1).
+                        const r2Open = (p.r2_total ?? 0) > 0 && p.r2_total !== p.r1_total;
+                        const currentComplete = r2Open ? p.r2_complete : p.r1_complete;
+                        const currentAnswered = r2Open ? (p.r2_answered ?? 0) : p.r1_answered;
+                        return (
                         <tr key={p.id} className="border-b border-white/[0.04] transition-colors hover:bg-white/[0.02]">
                           <td className="px-5 py-3 font-medium text-white/90">{p.name || 'Anonymous'}</td>
                           <td className="px-3 py-3 text-xs text-white/50">{p.email || '—'}</td>
                           <td className="px-3 py-3 text-center">
                             <span className={`font-mono text-xs font-semibold ${p.r1_complete ? 'text-emerald-400' : 'text-white/60'}`}>
-                              {p.r1_answered}/{p.r1_total}
+                              {p.r1_answered}/{p.r1_total ?? '—'}
                             </span>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {r2Open ? (
+                              <span className={`font-mono text-xs font-semibold ${p.r2_complete ? 'text-emerald-400' : 'text-white/60'}`}>
+                                {p.r2_answered ?? 0}/{p.r2_total}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-xs text-white/30">—</span>
+                            )}
                           </td>
                           <td className="px-3 py-3 text-center">
                             <span className={`font-mono text-xs font-semibold ${p.pairwise_complete ? 'text-emerald-400' : 'text-white/60'}`}>
@@ -383,21 +399,22 @@ export function LeadDashboardPage() {
                             </span>
                           </td>
                           <td className="px-3 py-3 text-center">
-                            {p.r1_complete && p.pairwise_complete ? (
+                            {currentComplete && p.pairwise_complete ? (
                               <Badge variant="success" className="gap-1 text-[10px]">
                                 <CheckCircle2 className="h-2.5 w-2.5" />
                                 Done
                               </Badge>
-                            ) : p.r1_complete ? (
+                            ) : currentComplete ? (
                               <Badge variant="warning" className="text-[10px]">Needs pairwise</Badge>
-                            ) : p.r1_answered > 0 ? (
+                            ) : currentAnswered > 0 ? (
                               <Badge variant="default" className="text-[10px]">In progress</Badge>
                             ) : (
                               <Badge variant="danger" className="text-[10px]">Not started</Badge>
                             )}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

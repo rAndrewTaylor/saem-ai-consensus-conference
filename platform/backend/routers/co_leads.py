@@ -27,7 +27,21 @@ def _build_participant_roster(participants, wg, db):
         return []
 
     pids = [p.id for p in participants]
-    total_questions = (
+
+    # R1 total: questions that existed in Round 1. Anything not added by the
+    # chair-curated R2 transition counts; for WGs that haven't run R2 yet this
+    # naturally matches every active question.
+    r1_total_questions = (
+        db.query(func.count(Question.id))
+        .filter(
+            Question.wg_id == wg.id,
+            (Question.source == None) | (Question.source != "chair_round_2"),
+        )
+        .scalar() or 0
+    )
+
+    # R2 total: questions currently in the R2 ask (ACTIVE or REVISED).
+    r2_total_questions = (
         db.query(func.count(Question.id))
         .filter(Question.wg_id == wg.id, Question.status.in_([
             QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED
@@ -35,14 +49,33 @@ def _build_participant_roster(participants, wg, db):
         .scalar() or 0
     )
 
-    # R1 response count per participant
+    # R1 response count per participant (distinct questions answered)
     r1_counts = dict(
-        db.query(DelphiResponse.participant_id, func.count(DelphiResponse.id))
+        db.query(
+            DelphiResponse.participant_id,
+            func.count(func.distinct(DelphiResponse.question_id)),
+        )
         .join(Question, DelphiResponse.question_id == Question.id)
         .filter(
             Question.wg_id == wg.id,
             DelphiResponse.participant_id.in_(pids),
             DelphiResponse.round == DelphiRound.ROUND_1,
+        )
+        .group_by(DelphiResponse.participant_id)
+        .all()
+    )
+
+    # R2 response count per participant (distinct questions answered)
+    r2_counts = dict(
+        db.query(
+            DelphiResponse.participant_id,
+            func.count(func.distinct(DelphiResponse.question_id)),
+        )
+        .join(Question, DelphiResponse.question_id == Question.id)
+        .filter(
+            Question.wg_id == wg.id,
+            DelphiResponse.participant_id.in_(pids),
+            DelphiResponse.round == DelphiRound.ROUND_2,
         )
         .group_by(DelphiResponse.participant_id)
         .all()
@@ -62,6 +95,7 @@ def _build_participant_roster(participants, wg, db):
     roster = []
     for p in participants:
         r1 = r1_counts.get(p.id, 0)
+        r2 = r2_counts.get(p.id, 0)
         pw = pw_counts.get(p.id, 0)
         roster.append({
             "id": p.id,
@@ -69,13 +103,25 @@ def _build_participant_roster(participants, wg, db):
             "email": p.email,
             "role": p.role,
             "r1_answered": r1,
-            "r1_total": total_questions,
-            "r1_complete": r1 >= total_questions and total_questions > 0,
+            "r1_total": r1_total_questions,
+            "r1_complete": r1 >= r1_total_questions and r1_total_questions > 0,
+            "r2_answered": r2,
+            "r2_total": r2_total_questions,
+            "r2_complete": r2 >= r2_total_questions and r2_total_questions > 0,
             "pairwise_count": pw,
             "pairwise_complete": pw >= 50,
             "registered_at": p.claimed_at.isoformat() if p.claimed_at else None,
         })
-    return sorted(roster, key=lambda x: (not x["r1_complete"], -(x["r1_answered"])))  # complete first, then by progress
+    # Sort by current-ask progress: R2-incomplete first, then by R2 progress.
+    return sorted(
+        roster,
+        key=lambda x: (
+            x["r2_complete"],
+            -(x["r2_answered"]),
+            not x["r1_complete"],
+            -(x["r1_answered"]),
+        ),
+    )
 
 
 def _get_co_lead_from_token(token: Optional[str], db: Session) -> CoLead:

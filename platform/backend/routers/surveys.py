@@ -541,7 +541,15 @@ def get_my_status(
     if not wg:
         raise HTTPException(404, "Working group not found")
 
-    total_questions = db.query(func.count(Question.id)).filter(
+    # R1 total: questions that existed in Round 1 (everything not added by
+    # the chair-curated R2 transition).
+    r1_total = db.query(func.count(Question.id)).filter(
+        Question.wg_id == wg.id,
+        (Question.source == None) | (Question.source != "chair_round_2"),
+    ).scalar() or 0
+
+    # R2 total: currently-active questions (the current Delphi ask).
+    r2_total = db.query(func.count(Question.id)).filter(
         Question.wg_id == wg.id,
         Question.status.in_([QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED])
     ).scalar() or 0
@@ -551,14 +559,14 @@ def get_my_status(
     if token:
         participant = db.query(Participant).filter(Participant.token == token).first()
         if participant:
-            r1_answered = db.query(func.count(DelphiResponse.id)).join(
+            r1_answered = db.query(func.count(func.distinct(DelphiResponse.question_id))).join(
                 Question, DelphiResponse.question_id == Question.id
             ).filter(
                 Question.wg_id == wg.id,
                 DelphiResponse.participant_id == participant.id,
                 DelphiResponse.round == DelphiRound.ROUND_1,
             ).scalar() or 0
-            r2_answered = db.query(func.count(DelphiResponse.id)).join(
+            r2_answered = db.query(func.count(func.distinct(DelphiResponse.question_id))).join(
                 Question, DelphiResponse.question_id == Question.id
             ).filter(
                 Question.wg_id == wg.id,
@@ -567,31 +575,57 @@ def get_my_status(
             ).scalar() or 0
 
     return {
-        "total_questions": total_questions,
+        # `total_questions` historically meant the current ask — kept for backward compat.
+        "total_questions": r2_total,
+        "r1_total": r1_total,
+        "r2_total": r2_total,
         "r1_answered": r1_answered,
         "r2_answered": r2_answered,
-        "r1_complete": r1_answered >= total_questions and total_questions > 0,
-        "r2_complete": r2_answered > 0,
+        "r1_complete": r1_answered >= r1_total and r1_total > 0,
+        "r2_complete": r2_answered >= r2_total and r2_total > 0,
     }
 
 
 @router.get("/results/{wg_number}/{round_name}")
 def get_round_results(wg_number: int, round_name: str, db: Session = Depends(get_db)):
-    """Get computed results for a round."""
+    """Get computed results for a round.
+
+    `round_name` accepts "round_1"/"round_2" or "1"/"2". The result set is
+    filtered by round: R1 returns every question that existed in R1 (so
+    REMOVED v1 questions still appear with their R1 stats); R2 returns only
+    the current R2 ask (ACTIVE + REVISED).
+    """
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
 
-    questions = db.query(Question).filter(Question.wg_id == wg.id).order_by(Question.id).all()
+    is_r2 = round_name in ("round_2", "2")
+    is_r1 = round_name in ("round_1", "1")
+
+    q_query = db.query(Question).filter(Question.wg_id == wg.id)
+    if is_r2:
+        # Current ask — exclude R1-only/REMOVED rows.
+        q_query = q_query.filter(Question.status.in_([
+            QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED
+        ]))
+    elif is_r1:
+        # Everything that existed in R1 — exclude questions added by the R2
+        # transition.
+        q_query = q_query.filter(
+            (Question.source == None) | (Question.source != "chair_round_2")
+        )
+    questions = q_query.order_by(Question.id).all()
 
     return {
         "wg_number": wg_number,
         "wg_name": wg.name,
-        "round": round_name,
+        "round": "round_2" if is_r2 else ("round_1" if is_r1 else round_name),
         "questions": [{
             "id": q.id,
             "text": q.text,
-            "status": q.status.value,
+            "status": q.status.value if q.status else None,
+            "version": q.version,
+            "source": q.source,
             "r1_include_pct": q.r1_include_pct,
             "r1_modify_pct": q.r1_modify_pct,
             "r1_exclude_pct": q.r1_exclude_pct,

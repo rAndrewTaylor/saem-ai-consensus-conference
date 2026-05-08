@@ -180,7 +180,23 @@ function GroupChart({ questions }) {
 // ---------------------------------------------------------------------------
 // Question card
 // ---------------------------------------------------------------------------
-function QuestionCard({ question, index, wgNumber, roundName }) {
+function QuestionCard({ question, index, wgNumber, roundName, round }) {
+  // Pick R1 or R2 stats based on which round tab we're rendering.
+  const isR2 = round === 2 || roundName === 'round_2';
+  const includePct = isR2
+    ? (question.r2_include_pct ?? question.include_pct)
+    : (question.r1_include_pct ?? question.include_pct);
+  const modifyPct = isR2
+    ? (question.r2_modify_pct ?? question.modify_pct)
+    : (question.r1_modify_pct ?? question.modify_pct);
+  const excludePct = isR2
+    ? (question.r2_exclude_pct ?? question.exclude_pct)
+    : (question.r1_exclude_pct ?? question.exclude_pct);
+  const importance = isR2
+    ? (question.r2_importance_mean ?? question.importance_mean)
+    : (question.r1_importance_mean ?? question.importance_mean);
+  const hasRoundData = includePct != null || modifyPct != null || excludePct != null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -191,24 +207,32 @@ function QuestionCard({ question, index, wgNumber, roundName }) {
       <p className="text-sm font-medium leading-relaxed text-white/90">
         {question.text || question.question_text}
       </p>
-      <div className="mt-3">
-        <InlineBar
-          include={question.r1_include_pct ?? question.include_pct ?? 0}
-          modify={question.r1_modify_pct ?? question.modify_pct ?? 0}
-          exclude={question.r1_exclude_pct ?? question.exclude_pct ?? 0}
-        />
-      </div>
-      <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/50">
-        {(question.r1_importance_mean ?? question.importance_mean) != null && (
-          <span>Importance: <span className="font-semibold text-white/80">{Number(question.r1_importance_mean ?? question.importance_mean).toFixed(2)}</span></span>
-        )}
-        {question.pairwise_score != null && (
-          <span>Pairwise: <span className="font-semibold text-purple-400">{Number(question.pairwise_score).toFixed(2)}</span></span>
-        )}
-        {question.n_responses != null && (
-          <span>N = {question.n_responses}</span>
-        )}
-      </div>
+      {hasRoundData ? (
+        <>
+          <div className="mt-3">
+            <InlineBar
+              include={includePct ?? 0}
+              modify={modifyPct ?? 0}
+              exclude={excludePct ?? 0}
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-3 text-xs text-white/50">
+            {importance != null && (
+              <span>Importance: <span className="font-semibold text-white/80">{Number(importance).toFixed(2)}</span></span>
+            )}
+            {question.pairwise_score != null && (
+              <span>Pairwise: <span className="font-semibold text-purple-400">{Number(question.pairwise_score).toFixed(2)}</span></span>
+            )}
+            {question.n_responses != null && (
+              <span>N = {question.n_responses}</span>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="mt-3 text-xs italic text-white/40">
+          No Round {isR2 ? 2 : 1} data yet for this question.
+        </div>
+      )}
       {wgNumber && roundName && question.id && (
         <CommentViewer wgNumber={wgNumber} roundName={roundName} questionId={question.id} />
       )}
@@ -227,7 +251,7 @@ function DelphiTab({ wgNumber, round }) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api(`/api/surveys/results/${wgNumber}/${round}`)
+    api(`/api/surveys/results/${wgNumber}/round_${round}`)
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -256,7 +280,7 @@ function DelphiTab({ wgNumber, round }) {
   const questions = data?.questions || data?.results || [];
   const grouped = {
     confirmed: questions.filter((q) => q.status === 'confirmed'),
-    active: questions.filter((q) => q.status === 'active' || q.status === 'gray_zone'),
+    active: questions.filter((q) => ['active', 'gray_zone', 'revised', 'near_consensus'].includes(q.status)),
     removed: questions.filter((q) => q.status === 'removed'),
   };
 
@@ -319,7 +343,7 @@ function DelphiTab({ wgNumber, round }) {
             {/* Individual question cards */}
             <div className="space-y-3">
               {qs.map((q, i) => (
-                <QuestionCard key={q.id || i} question={q} index={i} wgNumber={wgNumber} roundName={currentRound} />
+                <QuestionCard key={q.id || i} question={q} index={i} wgNumber={wgNumber} roundName={currentRound} round={round} />
               ))}
             </div>
           </motion.section>

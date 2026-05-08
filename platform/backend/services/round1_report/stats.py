@@ -17,11 +17,17 @@ from statsmodels.stats.proportion import proportion_confint
 from .data import ReportBundle
 
 
-# --- Consensus thresholds (match the methodology doc) -------------------
-
-# Locked decisions from Round_1_Analysis_Plan.md §3.
+# --- Consensus thresholds ------------------------------------------------
+#
+# Canonical (methodology doc): include% ≥ 80% = Confirmed; 21–79% = Gray; ≤20% = Removed.
+# Buckets here are *review-priority labels*, not advancement gates — every
+# R1 question advances to R2. Importance is used only as a within-bucket
+# review-priority modifier: a ≥80% include question with importance < 7 is
+# downshifted from "confirmed" to "gray" so co-leads spend revision time on
+# it. It still advances. See Round_1_Analysis_Plan.md §3 for the full
+# framing.
 CONFIRMED_INCLUDE_PCT = 80.0
-CONFIRMED_IMPORTANCE_MEAN = 7.0
+CONFIRMED_IMPORTANCE_MEAN = 7.0  # review-flag threshold, not a gate
 GRAY_LOWER_INCLUDE_PCT = 60.0
 REMOVED_EXCLUDE_PCT = 80.0
 REMOVED_INCLUDE_FLOOR = 40.0

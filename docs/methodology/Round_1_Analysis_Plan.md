@@ -88,13 +88,18 @@ Every question, every WG section, the same six numbers:
 
 All six already exist on the `questions` table — `compute-results` recomputes them. The plan **assumes we run `compute-results` for each WG once before generating the report**, so the values are current as of the report's timestamp.
 
-**Consensus buckets** (used throughout):
-- **Confirmed:** include% ≥ 80% AND importance mean ≥ 7
-- **Near-consensus / gray-zone:** include% 60–79% OR (include% ≥ 80% AND importance mean < 7)
-- **Removed:** exclude% ≥ 80% (or include% < 40% AND no path to consensus)
-- **Open:** everything else — heads to Round 2 unchanged
+**Consensus buckets** (review-priority labels used throughout the report):
+- **Confirmed:** include% ≥ 80%
+- **Gray-zone:** include% 21–79%
+- **Removed (candidate):** include% ≤ 20%
 
-These thresholds match the methodology doc; the report uses them but does **not** apply them automatically — co-leads still make the final call per question.
+These match the canonical methodology doc (`AI_Enhanced_Consensus_Methodology.md` §3.5).
+
+**Every R1 question advances to R2 regardless of bucket** — the buckets do not gate advancement. They label which questions get the most co-lead/chair attention during R2 prep. Confirmed questions advance for stability re-rating in R2; gray-zone questions advance with co-lead-authored revisions for re-rating; "Removed (candidate)" questions are flagged for chair-level retirement review. Final confirmation against the agenda happens after R2, per the canonical thresholds.
+
+**Importance as a review-priority modifier** (not a gate): within the Confirmed bucket, questions with importance mean < 7 are additionally flagged for co-lead revision review. They still advance to R2; the flag is purely to prioritize where co-leads spend revision time. Importance is never used to remove or block a question from advancing.
+
+The report uses these labels but does **not** apply them automatically — co-leads still make the final call per question.
 
 ---
 
