@@ -361,18 +361,31 @@ function PairwiseTab({ wgNumber }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Which round's pairwise rankings to display. Defaults to whichever round
+  // the backend reports as current; participants can switch to inspect
+  // historical R1 rankings even after the WG has transitioned.
+  const [round, setRound] = useState(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
+    const url = round
+      ? `/api/pairwise/rankings/${wgNumber}?round=${round}`
+      : `/api/pairwise/rankings/${wgNumber}`;
     Promise.all([
-      api(`/api/pairwise/rankings/${wgNumber}`),
+      api(url),
       api(`/api/pairwise/stats/${wgNumber}`),
     ])
-      .then(([r, s]) => { setRankings(r); setStats(s); })
+      .then(([r, s]) => {
+        setRankings(r);
+        setStats(s);
+        // Adopt the backend's reported current round on first load so the
+        // toggle reflects what the user is actually looking at.
+        if (round === null && r?.round) setRound(r.round);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [wgNumber]);
+  }, [wgNumber, round]);
 
   if (loading) {
     return (
@@ -423,9 +436,27 @@ function PairwiseTab({ wgNumber }) {
 
   return (
     <div className="space-y-6">
-      {/* Export button */}
-      {getAdminToken() && (
-        <div className="flex justify-end">
+      {/* Round toggle + export */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] p-1 text-xs">
+          {['round_1', 'round_2'].map((r) => {
+            const isActive = (round || rankings?.round) === r;
+            return (
+              <button
+                key={r}
+                onClick={() => setRound(r)}
+                className={`rounded-md px-3 py-1 font-medium transition ${
+                  isActive
+                    ? 'bg-purple-500/20 text-purple-200'
+                    : 'text-white/50 hover:bg-white/[0.04] hover:text-white/80'
+                }`}
+              >
+                {r === 'round_1' ? 'Round 1' : 'Round 2'}
+              </button>
+            );
+          })}
+        </div>
+        {getAdminToken() && (
           <a
             href={`/api/admin/export/pairwise/${wgNumber}`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.08] hover:text-white"
@@ -433,8 +464,8 @@ function PairwiseTab({ wgNumber }) {
             <Download className="h-3.5 w-3.5" />
             Download Results
           </a>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Stats */}
       {stats && (
@@ -446,7 +477,7 @@ function PairwiseTab({ wgNumber }) {
             <CardContent className="py-4">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 {[
-                  { label: 'Total Votes', value: stats.total_votes ?? '-' },
+                  { label: 'Votes (this round)', value: rankings?.total_votes ?? stats.total_votes ?? '-' },
                   { label: 'Participants', value: stats.unique_participants ?? stats.participants ?? '-' },
                   { label: 'Skips', value: stats.total_skips ?? stats.skips ?? '-' },
                   { label: 'Avg Response', value: stats.avg_response_time ? `${Number(stats.avg_response_time).toFixed(1)}s` : '-' },

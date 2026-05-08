@@ -1,6 +1,6 @@
 """Pairwise comparison routes — Bradley-Terry ranking engine."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
@@ -201,44 +201,120 @@ def _update_scores_for_pair(question_a_id: int, question_b_id: int, db: Session)
 # --- Rankings ---
 
 @router.get("/rankings/{wg_number}")
-def get_rankings(wg_number: int, db: Session = Depends(get_db)):
-    """Get current pairwise rankings for a working group.
+def get_rankings(
+    wg_number: int,
+    round_name: Optional[str] = Query(None, alias="round"),
+    db: Session = Depends(get_db),
+):
+    """Get pairwise rankings for a working group, scoped to a single round.
 
-    Rankings reflect the WG's *current* round only (R2 if the WG has
-    transitioned, otherwise R1). Question.pairwise_wins/losses/score are
-    kept current-round-only; total_votes is also scoped to the current round.
+    Query param `round_name` (alias `round`) accepts "round_1" / "round_2"
+    (also "1" / "2"). If omitted, defaults to the WG's current round (R2
+    once transitioned). Wins/losses/score are computed on the fly from the
+    round-filtered pairwise_votes so historical R1 rankings remain
+    queryable even after a WG has transitioned to R2.
     """
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
 
-    current_round = _current_round_for_wg(db, wg_number)
+    if round_name in ("round_1", "1"):
+        target_round = DelphiRound.ROUND_1
+    elif round_name in ("round_2", "2"):
+        target_round = DelphiRound.ROUND_2
+    else:
+        target_round = _current_round_for_wg(db, wg_number)
 
-    questions = db.query(Question).filter(
-        Question.wg_id == wg.id,
-        Question.status.in_([QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED])
-    ).order_by(Question.pairwise_score.desc().nullslast()).all()
+    # Question pool depends on round: R2 → currently-active questions; R1 →
+    # everything that existed in R1 (including REMOVED questions, with their
+    # R1 stats preserved).
+    q_query = db.query(Question).filter(Question.wg_id == wg.id)
+    if target_round == DelphiRound.ROUND_2:
+        q_query = q_query.filter(Question.status.in_([
+            QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED
+        ]))
+    else:
+        q_query = q_query.filter(
+            (Question.source == None) | (Question.source != "chair_round_2")
+        )
+    questions = q_query.all()
+
+    # Compute round-scoped wins/losses per question on the fly.
+    qids = [q.id for q in questions]
+    wins_map = dict(
+        db.query(PairwiseVote.winner_id, func.count(PairwiseVote.id))
+        .filter(
+            PairwiseVote.wg_id == wg.id,
+            PairwiseVote.round == target_round,
+            PairwiseVote.winner_id.in_(qids),
+        )
+        .group_by(PairwiseVote.winner_id)
+        .all()
+    )
+    # Losses: vote where this question was a loser (in the pair, not the winner, winner_id IS NOT NULL)
+    losses_rows_a = (
+        db.query(PairwiseVote.question_a_id, func.count(PairwiseVote.id))
+        .filter(
+            PairwiseVote.wg_id == wg.id,
+            PairwiseVote.round == target_round,
+            PairwiseVote.question_a_id.in_(qids),
+            PairwiseVote.winner_id.isnot(None),
+            PairwiseVote.winner_id != PairwiseVote.question_a_id,
+        )
+        .group_by(PairwiseVote.question_a_id)
+        .all()
+    )
+    losses_rows_b = (
+        db.query(PairwiseVote.question_b_id, func.count(PairwiseVote.id))
+        .filter(
+            PairwiseVote.wg_id == wg.id,
+            PairwiseVote.round == target_round,
+            PairwiseVote.question_b_id.in_(qids),
+            PairwiseVote.winner_id.isnot(None),
+            PairwiseVote.winner_id != PairwiseVote.question_b_id,
+        )
+        .group_by(PairwiseVote.question_b_id)
+        .all()
+    )
+    losses_map: dict[int, int] = {}
+    for qid, n in losses_rows_a:
+        losses_map[qid] = losses_map.get(qid, 0) + n
+    for qid, n in losses_rows_b:
+        losses_map[qid] = losses_map.get(qid, 0) + n
+
+    enriched = []
+    for q in questions:
+        w = wins_map.get(q.id, 0)
+        l = losses_map.get(q.id, 0)
+        total = w + l
+        if total > 0:
+            score_val = round((w + 1) / (total + 2) * 100, 1)
+        else:
+            score_val = 50.0
+        enriched.append({
+            "question_id": q.id,
+            "text": q.text,
+            "score": score_val,
+            "wins": w,
+            "losses": l,
+            "total_comparisons": total,
+            "delphi_status": q.status.value if q.status else None,
+        })
+    enriched.sort(key=lambda r: r["score"], reverse=True)
+    for i, r in enumerate(enriched):
+        r["rank"] = i + 1
 
     total_votes = db.query(PairwiseVote).filter(
         PairwiseVote.wg_id == wg.id,
-        PairwiseVote.round == current_round,
+        PairwiseVote.round == target_round,
     ).count()
 
     return {
         "wg_number": wg_number,
         "wg_name": wg.name,
-        "round": current_round.value,
+        "round": target_round.value,
         "total_votes": total_votes,
-        "rankings": [{
-            "rank": i + 1,
-            "question_id": q.id,
-            "text": q.text,
-            "score": q.pairwise_score or 50.0,
-            "wins": q.pairwise_wins or 0,
-            "losses": q.pairwise_losses or 0,
-            "total_comparisons": (q.pairwise_wins or 0) + (q.pairwise_losses or 0),
-            "delphi_status": q.status.value,
-        } for i, q in enumerate(questions)],
+        "rankings": enriched,
     }
 
 
