@@ -11,7 +11,7 @@ import os
 
 from ..database import (
     get_db, WorkingGroup, Participant, DelphiResponse, PairwiseVote,
-    write_audit_log,
+    DelphiRound, write_audit_log,
 )
 from ..auth import require_admin
 from ..validators import sanitize_text
@@ -85,6 +85,8 @@ def _new_token() -> str:
 
 def _participant_to_dict(p: Participant, response_counts: dict | None = None) -> dict:
     counts = response_counts or {}
+    r1 = counts.get("r1", 0)
+    r2 = counts.get("r2", 0)
     return {
         "id": p.id,
         "name": p.name,
@@ -94,7 +96,11 @@ def _participant_to_dict(p: Participant, response_counts: dict | None = None) ->
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "claimed_at": p.claimed_at.isoformat() if p.claimed_at else None,
         "is_active": p.is_active,
-        "delphi_response_count": counts.get("delphi", 0),
+        # Per-round Delphi counts (preferred for the admin participants table).
+        "r1_response_count": r1,
+        "r2_response_count": r2,
+        # Backward-compat: combined count (still consumed by some screens).
+        "delphi_response_count": counts.get("delphi", r1 + r2),
         "pairwise_vote_count": counts.get("pairwise", 0),
     }
 
@@ -588,11 +594,31 @@ def list_participants(
     if not participants:
         return []
 
-    # Batch-load response counts
+    # Batch-load response counts per round so the admin table can show R1
+    # and R2 separately. Count distinct questions to keep numbers honest if
+    # a participant somehow submitted the same question twice.
     pids = [p.id for p in participants]
-    delphi_counts = dict(
-        db.query(DelphiResponse.participant_id, func.count(DelphiResponse.id))
-        .filter(DelphiResponse.participant_id.in_(pids))
+    r1_counts = dict(
+        db.query(
+            DelphiResponse.participant_id,
+            func.count(func.distinct(DelphiResponse.question_id)),
+        )
+        .filter(
+            DelphiResponse.participant_id.in_(pids),
+            DelphiResponse.round == DelphiRound.ROUND_1,
+        )
+        .group_by(DelphiResponse.participant_id)
+        .all()
+    )
+    r2_counts = dict(
+        db.query(
+            DelphiResponse.participant_id,
+            func.count(func.distinct(DelphiResponse.question_id)),
+        )
+        .filter(
+            DelphiResponse.participant_id.in_(pids),
+            DelphiResponse.round == DelphiRound.ROUND_2,
+        )
         .group_by(DelphiResponse.participant_id)
         .all()
     )
@@ -607,7 +633,8 @@ def list_participants(
         _participant_to_dict(
             p,
             {
-                "delphi": delphi_counts.get(p.id, 0),
+                "r1": r1_counts.get(p.id, 0),
+                "r2": r2_counts.get(p.id, 0),
                 "pairwise": pairwise_counts.get(p.id, 0),
             },
         )
