@@ -206,59 +206,113 @@ export function WorkingGroupPage() {
         </div>
       </section>
 
-      {/* ─── Primary action: START HERE ───────────────────────────── */}
-      <section className="px-4 pb-4 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <Link to={`/survey/${wg.wg_number}/round_1`}>
-            <div className="group relative overflow-hidden rounded-xl border border-[#00B4D8]/30 bg-gradient-to-r from-[#0C2340] to-[#0E1E35] p-5 transition-all hover:border-[#00B4D8]/50 hover:shadow-lg hover:shadow-[#00B4D8]/10 sm:p-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#00B4D8]/15">
-                  <PlayCircle className="h-6 w-6 text-[#00B4D8]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#48CAE4]">Start here</p>
-                  <h2 className="mt-0.5 text-lg font-bold text-white sm:text-xl">Delphi Round 1 Survey</h2>
-                  <p className="mt-1 text-sm text-white/50">
-                    Rate each research question on importance and disposition. Takes 10–15 minutes.
-                  </p>
-                </div>
-                <ArrowRight className="hidden h-5 w-5 shrink-0 text-white/30 transition group-hover:translate-x-1 group-hover:text-[#00B4D8] sm:block" />
+      {/* ─── Primary action: contextual to phase ─────────────────── */}
+      {(() => {
+        const r1 = wg.r1_status || 'open';
+        const r2 = wg.r2_status || 'not_started';
+        // Decide which action gets the START-HERE treatment.
+        let primary;
+        if (r2 === 'open') {
+          primary = {
+            to: `/survey/${wg.wg_number}/round_2`,
+            label: 'Start here',
+            title: 'Delphi Round 2 Survey',
+            blurb: 'Re-rate the chair-curated R2 questions. Takes 10–15 minutes.',
+          };
+        } else if (r1 === 'open') {
+          primary = {
+            to: `/survey/${wg.wg_number}/round_1`,
+            label: 'Start here',
+            title: 'Delphi Round 1 Survey',
+            blurb: 'Rate each research question on importance and disposition. Takes 10–15 minutes.',
+          };
+        } else if (r2 === 'closed' && r1 === 'closed') {
+          // All voting done — point to results
+          primary = {
+            to: `/results/${wg.wg_number}`,
+            label: 'View now',
+            title: 'Results',
+            blurb: 'All Delphi rounds and pairwise voting are closed. View the final group results.',
+          };
+        } else if (r2 === 'not_started') {
+          // R1 closed, R2 not yet — informational card, no link.
+          primary = {
+            to: null,
+            label: 'Round 1 closed',
+            title: 'Round 2 — coming soon',
+            blurb: "Round 1 is closed for this WG. Round 2 will open shortly — we'll email you when it does.",
+          };
+        }
+        const Inner = (
+          <div className={`group relative overflow-hidden rounded-xl border ${primary.to ? 'border-[#00B4D8]/30 bg-gradient-to-r from-[#0C2340] to-[#0E1E35] hover:border-[#00B4D8]/50 hover:shadow-lg hover:shadow-[#00B4D8]/10' : 'border-white/[0.08] bg-white/[0.02]'} p-5 transition-all sm:p-6`}>
+            <div className="flex items-center gap-4">
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${primary.to ? 'bg-[#00B4D8]/15' : 'bg-white/[0.06]'}`}>
+                <PlayCircle className={`h-6 w-6 ${primary.to ? 'text-[#00B4D8]' : 'text-white/40'}`} />
               </div>
+              <div className="min-w-0 flex-1">
+                <p className={`text-xs font-semibold uppercase tracking-wider ${primary.to ? 'text-[#48CAE4]' : 'text-white/40'}`}>{primary.label}</p>
+                <h2 className="mt-0.5 text-lg font-bold text-white sm:text-xl">{primary.title}</h2>
+                <p className="mt-1 text-sm text-white/50">{primary.blurb}</p>
+              </div>
+              {primary.to && (
+                <ArrowRight className="hidden h-5 w-5 shrink-0 text-white/30 transition group-hover:translate-x-1 group-hover:text-[#00B4D8] sm:block" />
+              )}
             </div>
-          </Link>
-        </div>
-      </section>
+          </div>
+        );
+        return (
+          <section className="px-4 pb-4 sm:px-6">
+            <div className="mx-auto max-w-5xl">
+              {primary.to ? <Link to={primary.to}>{Inner}</Link> : Inner}
+            </div>
+          </section>
+        );
+      })()}
 
-      {/* ─── Activity cards (other activities) ────────────────────── */}
+      {/* ─── Activity cards (phase-aware) ─────────────────────────── */}
       <section className="px-4 pb-6 sm:px-6">
         <div className="mx-auto max-w-5xl">
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <ActivityCard
-              to={`/rank/${wg.wg_number}`}
-              icon={GitCompare}
-              phase="Pairwise"
-              blurb={pairwiseCount != null ? `${pairwiseCount}/50 done` : 'Head-to-head ranking'}
-              accent="teal"
-              compact
-              badge={pairwiseCount != null && pairwiseCount >= 50 ? 'done' : pairwiseCount != null ? 'todo' : null}
-            />
-            <ActivityCard
-              to={`/survey/${wg.wg_number}/round_2`}
-              icon={ClipboardList}
-              phase="Round 2"
-              blurb="Opens after R1 review"
-              accent="navy"
-              compact
-            />
-            <ActivityCard
-              to={`/results/${wg.wg_number}`}
-              icon={BarChart3}
-              phase="Results"
-              blurb="Live rankings"
-              accent="emerald"
-              compact
-            />
-          </div>
+          {(() => {
+            const r1 = wg.r1_status || 'open';
+            const r2 = wg.r2_status || 'not_started';
+            const pairwiseOpen = r1 === 'open' || r2 === 'open';
+            const r2BadgeAndBlurb = r2 === 'open'
+              ? { blurb: 'Active', badge: null }
+              : r2 === 'closed'
+                ? { blurb: 'Closed', badge: null }
+                : { blurb: 'Coming soon', badge: null };
+            return (
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <ActivityCard
+                  to={pairwiseOpen ? `/rank/${wg.wg_number}` : null}
+                  icon={GitCompare}
+                  phase="Pairwise"
+                  blurb={pairwiseOpen ? (pairwiseCount != null ? `${pairwiseCount}/50 done` : 'Head-to-head ranking') : 'Closed'}
+                  accent="teal"
+                  compact
+                  badge={pairwiseOpen && pairwiseCount != null && pairwiseCount >= 50 ? 'done' : pairwiseOpen && pairwiseCount != null ? 'todo' : null}
+                  disabled={!pairwiseOpen}
+                />
+                <ActivityCard
+                  to={r2 === 'open' ? `/survey/${wg.wg_number}/round_2` : null}
+                  icon={ClipboardList}
+                  phase="Round 2"
+                  blurb={r2BadgeAndBlurb.blurb}
+                  accent="navy"
+                  compact
+                  disabled={r2 !== 'open'}
+                />
+                <ActivityCard
+                  to={`/results/${wg.wg_number}`}
+                  icon={BarChart3}
+                  phase="Results"
+                  blurb={r1 === 'closed' && r2 === 'closed' ? 'Final results' : 'Live rankings'}
+                  accent="emerald"
+                  compact
+                />
+              </div>
+            );
+          })()}
           {/* Cross-WG report link */}
           <div className="mt-3">
             <Link
@@ -468,49 +522,55 @@ const ACCENT_STYLES = {
   emerald: { bg: 'bg-emerald-500/10', icon: 'text-emerald-400', hover: 'group-hover:border-emerald-400/40' },
 };
 
-function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'navy', compact = false, badge = null }) {
+function ActivityCard({ to, icon: Icon, phase, blurb, accent = 'navy', compact = false, badge = null, disabled = false }) {
   const a = ACCENT_STYLES[accent];
+  const dim = disabled || !to;
 
-  if (compact) {
-    return (
-      <Link to={to} className="group block">
-        <div className={`relative flex h-full flex-col items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E1E35] p-3 text-center transition-all hover:bg-[#142C4A] sm:p-4 ${a.hover}`}>
-          {badge === 'done' && (
-            <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
-              <CheckCircle2 className="h-3 w-3 text-white" />
-            </div>
-          )}
-          {badge === 'todo' && (
-            <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
-              <span className="text-[9px] font-bold text-white">!</span>
-            </div>
-          )}
-          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${a.bg} sm:h-10 sm:w-10`}>
-            <Icon className={`h-4 w-4 ${a.icon} sm:h-5 sm:w-5`} />
-          </div>
-          <h3 className="text-xs font-semibold text-white sm:text-sm">{phase}</h3>
-          <p className="text-[11px] leading-snug text-white/40">{blurb}</p>
+  const compactInner = (
+    <div className={`relative flex h-full flex-col items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E1E35] p-3 text-center transition-all sm:p-4 ${dim ? 'opacity-50 cursor-not-allowed' : `hover:bg-[#142C4A] ${a.hover}`}`}>
+      {!dim && badge === 'done' && (
+        <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+          <CheckCircle2 className="h-3 w-3 text-white" />
         </div>
-      </Link>
-    );
-  }
+      )}
+      {!dim && badge === 'todo' && (
+        <div className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500">
+          <span className="text-[9px] font-bold text-white">!</span>
+        </div>
+      )}
+      <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${a.bg} sm:h-10 sm:w-10`}>
+        <Icon className={`h-4 w-4 ${a.icon} sm:h-5 sm:w-5`} />
+      </div>
+      <h3 className="text-xs font-semibold text-white sm:text-sm">{phase}</h3>
+      <p className="text-[11px] leading-snug text-white/40">{blurb}</p>
+    </div>
+  );
 
-  return (
-    <Link to={to} className="group block">
-      <div className={`relative flex h-full flex-col rounded-xl border border-white/[0.08] bg-[#0E1E35] p-5 transition-all hover:bg-[#142C4A] ${a.hover}`}>
-        <div className="flex items-start gap-3">
-          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${a.bg}`}>
-            <Icon className={`h-5 w-5 ${a.icon}`} />
+  const wideInner = (
+    <div className={`relative flex h-full flex-col rounded-xl border border-white/[0.08] bg-[#0E1E35] p-5 transition-all ${dim ? 'opacity-50 cursor-not-allowed' : `hover:bg-[#142C4A] ${a.hover}`}`}>
+      <div className="flex items-start gap-3">
+        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${a.bg}`}>
+          <Icon className={`h-5 w-5 ${a.icon}`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-white">{phase}</h3>
+            {!dim && <ArrowRight className="h-4 w-4 flex-shrink-0 text-white/20 transition group-hover:translate-x-0.5 group-hover:text-white/60" />}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-white">{phase}</h3>
-              <ArrowRight className="h-4 w-4 flex-shrink-0 text-white/20 transition group-hover:translate-x-0.5 group-hover:text-white/60" />
-            </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-white/50">{blurb}</p>
-          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-white/50">{blurb}</p>
         </div>
       </div>
+    </div>
+  );
+
+  const inner = compact ? compactInner : wideInner;
+
+  if (dim) {
+    return <div className="block">{inner}</div>;
+  }
+  return (
+    <Link to={to} className="group block">
+      {inner}
     </Link>
   );
 }

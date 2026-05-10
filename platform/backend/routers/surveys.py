@@ -68,6 +68,8 @@ def list_working_groups(db: Session = Depends(get_db)):
             "scope": wg.scope,
             "total_questions": total,
             "confirmed": confirmed,
+            "r1_status": wg.r1_status,
+            "r2_status": wg.r2_status,
             "co_leads": [{"name": cl.name, "institution": cl.institution} for cl in wg.co_leads],
         })
     return result
@@ -237,6 +239,29 @@ def activate_questions(
 
 # --- Response Collection ---
 
+def _ensure_round_open(db: Session, wg_number: int, round_name: str):
+    """Refuse responses unless the WG has the named round open."""
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+    if round_name == "round_1" and wg.r1_status != "open":
+        raise HTTPException(
+            409,
+            f"Round 1 is closed for WG{wg_number}. No further responses accepted.",
+        )
+    if round_name == "round_2" and wg.r2_status != "open":
+        msg = (
+            "not yet open"
+            if wg.r2_status == "not_started"
+            else "closed"
+        )
+        raise HTTPException(
+            409,
+            f"Round 2 is {msg} for WG{wg_number}. No responses accepted.",
+        )
+    return wg
+
+
 @router.post("/respond/{wg_number}/{round_name}/{question_id}")
 def submit_response(
     wg_number: int, round_name: str, question_id: int,
@@ -248,6 +273,8 @@ def submit_response(
     if not token:
         raise HTTPException(401, "Authorization header required")
     participant = verify_participant_token(token, db)
+
+    _ensure_round_open(db, wg_number, round_name)
 
     question = db.query(Question).get(question_id)
     if not question:
@@ -341,6 +368,8 @@ def submit_batch_responses(
     if not token:
         raise HTTPException(401, "Authorization header required")
     participant = verify_participant_token(token, db)
+
+    _ensure_round_open(db, wg_number, round_name)
 
     delphi_round = DelphiRound.ROUND_1 if round_name == "round_1" else DelphiRound.ROUND_2
 

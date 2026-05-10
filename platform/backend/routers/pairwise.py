@@ -45,6 +45,11 @@ def get_pair(
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
+    if not _pairwise_voting_open(wg):
+        raise HTTPException(
+            409,
+            f"Pairwise voting is paused for WG{wg_number} — no Delphi round is currently open.",
+        )
 
     questions = db.query(Question).filter(
         Question.wg_id == wg.id,
@@ -113,6 +118,11 @@ def submit_vote(
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
+    if not _pairwise_voting_open(wg):
+        raise HTTPException(
+            409,
+            f"Pairwise voting is paused for WG{wg_number} — no Delphi round is currently open.",
+        )
 
     # Validate winner_id is one of the two questions or None
     if vote.winner_id is not None and vote.winner_id not in (vote.question_a_id, vote.question_b_id):
@@ -413,6 +423,11 @@ def _current_round_for_wg(db: Session, wg_number: int) -> DelphiRound:
         if _r2_started_at(db, wg_number) is not None
         else DelphiRound.ROUND_1
     )
+
+
+def _pairwise_voting_open(wg) -> bool:
+    """Pairwise is collectable when at least one round is currently open."""
+    return wg.r1_status == "open" or wg.r2_status == "open"
 
 
 @router.get("/my-count/{wg_number}")

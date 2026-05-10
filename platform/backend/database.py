@@ -92,6 +92,11 @@ class WorkingGroup(Base):
     short_name = Column(String(50), nullable=False)
     pillar = Column(String(50))  # Technology, Training, Self, Society
     scope = Column(Text)
+    # Per-round phase. Determines what's collectable and how the WG page renders.
+    #   r1_status: 'open' | 'closed'
+    #   r2_status: 'not_started' | 'open' | 'closed'
+    r1_status = Column(String(20), default="open", nullable=False)
+    r2_status = Column(String(20), default="not_started", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     questions = relationship("Question", back_populates="working_group")
