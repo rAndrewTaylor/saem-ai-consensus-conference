@@ -65,7 +65,9 @@ def _build_participant_roster(participants, wg, db):
         .all()
     )
 
-    # R2 response count per participant (distinct questions answered)
+    # R2 response count per participant — only counts votes on questions
+    # currently in the R2 ask (excludes orphaned R2 votes left on questions
+    # that were retired during chair-curation).
     r2_counts = dict(
         db.query(
             DelphiResponse.participant_id,
@@ -74,6 +76,9 @@ def _build_participant_roster(participants, wg, db):
         .join(Question, DelphiResponse.question_id == Question.id)
         .filter(
             Question.wg_id == wg.id,
+            Question.status.in_([
+                QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED
+            ]),
             DelphiResponse.participant_id.in_(pids),
             DelphiResponse.round == DelphiRound.ROUND_2,
         )

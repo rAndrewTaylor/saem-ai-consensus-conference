@@ -11,7 +11,7 @@ import os
 
 from ..database import (
     get_db, WorkingGroup, Participant, DelphiResponse, PairwiseVote,
-    DelphiRound, write_audit_log,
+    Question, QuestionStatus, DelphiRound, write_audit_log,
 )
 from ..auth import require_admin
 from ..validators import sanitize_text
@@ -610,14 +610,21 @@ def list_participants(
         .group_by(DelphiResponse.participant_id)
         .all()
     )
+    # Restrict R2 counts to currently-active questions so the admin table
+    # tracks progress against the live R2 ask (not orphaned votes on retired
+    # questions from chair-curation transitions).
     r2_counts = dict(
         db.query(
             DelphiResponse.participant_id,
             func.count(func.distinct(DelphiResponse.question_id)),
         )
+        .join(Question, DelphiResponse.question_id == Question.id)
         .filter(
             DelphiResponse.participant_id.in_(pids),
             DelphiResponse.round == DelphiRound.ROUND_2,
+            Question.status.in_([
+                QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED
+            ]),
         )
         .group_by(DelphiResponse.participant_id)
         .all()

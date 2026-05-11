@@ -595,10 +595,16 @@ def get_my_status(
                 DelphiResponse.participant_id == participant.id,
                 DelphiResponse.round == DelphiRound.ROUND_1,
             ).scalar() or 0
+            # Count only R2 responses on currently-active questions; votes
+            # left on retired questions (from pre-transition exploration)
+            # don't count toward the R2 progress bar.
             r2_answered = db.query(func.count(func.distinct(DelphiResponse.question_id))).join(
                 Question, DelphiResponse.question_id == Question.id
             ).filter(
                 Question.wg_id == wg.id,
+                Question.status.in_([
+                    QuestionStatus.ACTIVE, QuestionStatus.CONFIRMED, QuestionStatus.REVISED
+                ]),
                 DelphiResponse.participant_id == participant.id,
                 DelphiResponse.round == DelphiRound.ROUND_2,
             ).scalar() or 0
