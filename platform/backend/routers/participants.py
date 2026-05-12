@@ -87,6 +87,8 @@ def _participant_to_dict(p: Participant, response_counts: dict | None = None) ->
     counts = response_counts or {}
     r1 = counts.get("r1", 0)
     r2 = counts.get("r2", 0)
+    pw_r1 = counts.get("pairwise_r1", 0)
+    pw_r2 = counts.get("pairwise_r2", 0)
     return {
         "id": p.id,
         "name": p.name,
@@ -96,12 +98,15 @@ def _participant_to_dict(p: Participant, response_counts: dict | None = None) ->
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "claimed_at": p.claimed_at.isoformat() if p.claimed_at else None,
         "is_active": p.is_active,
-        # Per-round Delphi counts (preferred for the admin participants table).
+        # Per-round Delphi counts.
         "r1_response_count": r1,
         "r2_response_count": r2,
-        # Backward-compat: combined count (still consumed by some screens).
+        # Per-round pairwise counts.
+        "r1_pairwise_count": pw_r1,
+        "r2_pairwise_count": pw_r2,
+        # Backward-compat: combined counts (still consumed by some screens).
         "delphi_response_count": counts.get("delphi", r1 + r2),
-        "pairwise_vote_count": counts.get("pairwise", 0),
+        "pairwise_vote_count": counts.get("pairwise", pw_r1 + pw_r2),
     }
 
 
@@ -629,9 +634,23 @@ def list_participants(
         .group_by(DelphiResponse.participant_id)
         .all()
     )
-    pairwise_counts = dict(
+    # Per-round pairwise counts. PairwiseVote.round was backfilled when we
+    # added the column; new votes set it on insert.
+    pw_r1_counts = dict(
         db.query(PairwiseVote.participant_id, func.count(PairwiseVote.id))
-        .filter(PairwiseVote.participant_id.in_(pids))
+        .filter(
+            PairwiseVote.participant_id.in_(pids),
+            PairwiseVote.round == DelphiRound.ROUND_1,
+        )
+        .group_by(PairwiseVote.participant_id)
+        .all()
+    )
+    pw_r2_counts = dict(
+        db.query(PairwiseVote.participant_id, func.count(PairwiseVote.id))
+        .filter(
+            PairwiseVote.participant_id.in_(pids),
+            PairwiseVote.round == DelphiRound.ROUND_2,
+        )
         .group_by(PairwiseVote.participant_id)
         .all()
     )
@@ -642,7 +661,8 @@ def list_participants(
             {
                 "r1": r1_counts.get(p.id, 0),
                 "r2": r2_counts.get(p.id, 0),
-                "pairwise": pairwise_counts.get(p.id, 0),
+                "pairwise_r1": pw_r1_counts.get(p.id, 0),
+                "pairwise_r2": pw_r2_counts.get(p.id, 0),
             },
         )
         for p in participants

@@ -388,10 +388,20 @@ export function ParticipantsSection({ wgs }) {
                     <th className="px-3 py-2 font-medium">Email</th>
                     <th className="px-3 py-2 font-medium">WG</th>
                     <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 text-right font-medium">R1</th>
-                    <th className="px-3 py-2 text-right font-medium">R2</th>
-                    <th className="px-3 py-2 text-right font-medium">Pairwise</th>
+                    <th className="px-3 py-2 text-right font-medium" colSpan="2">Delphi</th>
+                    <th className="px-3 py-2 text-right font-medium" colSpan="2">Pairwise</th>
                     <th className="px-3 py-2 text-right font-medium"></th>
+                  </tr>
+                  <tr className="border-b border-white/[0.06] text-[10px] uppercase tracking-wider text-white/30">
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th className="px-3 pb-2 text-right font-medium">R1</th>
+                    <th className="px-3 pb-2 text-right font-medium">R2</th>
+                    <th className="px-3 pb-2 text-right font-medium">R1</th>
+                    <th className="px-3 pb-2 text-right font-medium">R2</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -419,7 +429,8 @@ export function ParticipantsSection({ wgs }) {
                       </td>
                       <td className="px-3 py-2 text-right font-mono text-xs text-white/70">{p.r1_response_count ?? 0}</td>
                       <td className="px-3 py-2 text-right font-mono text-xs text-white/70">{p.r2_response_count ?? 0}</td>
-                      <td className="px-3 py-2 text-right font-mono text-xs text-white/70">{p.pairwise_vote_count}</td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-white/70">{p.r1_pairwise_count ?? 0}</td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-white/70">{p.r2_pairwise_count ?? 0}</td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex justify-end gap-1.5">
                           <CopyLinkButton token={p.token} small />
