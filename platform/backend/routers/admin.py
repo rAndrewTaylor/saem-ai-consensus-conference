@@ -43,7 +43,9 @@ def dashboard_data(
             func.count(Question.id).label("total"),
             func.sum(case((Question.status == QuestionStatus.CONFIRMED, 1), else_=0)).label("confirmed"),
             func.sum(case((Question.status == QuestionStatus.ACTIVE, 1), else_=0)).label("active"),
+            func.sum(case((Question.status == QuestionStatus.REVISED, 1), else_=0)).label("revised"),
             func.sum(case((Question.status == QuestionStatus.REMOVED, 1), else_=0)).label("removed"),
+            func.sum(case((Question.status == QuestionStatus.DRAFT, 1), else_=0)).label("draft"),
         )
         .group_by(Question.wg_id)
         .all()
@@ -53,7 +55,9 @@ def dashboard_data(
             "total": row.total,
             "confirmed": int(row.confirmed or 0),
             "active": int(row.active or 0),
+            "revised": int(row.revised or 0),
             "removed": int(row.removed or 0),
+            "draft": int(row.draft or 0),
         }
         for row in question_counts
     }
@@ -100,7 +104,9 @@ def dashboard_data(
 
     wg_summaries = []
     for wg in wgs:
-        qdata = q_map.get(wg.id, {"total": 0, "confirmed": 0, "active": 0, "removed": 0})
+        qdata = q_map.get(wg.id, {
+            "total": 0, "confirmed": 0, "active": 0, "revised": 0, "removed": 0, "draft": 0,
+        })
         r1 = r1_map.get(wg.id, {"responses": 0, "participants": 0})
         wg_summaries.append({
             "wg_number": wg.number,
@@ -110,7 +116,9 @@ def dashboard_data(
             "total_questions": qdata["total"],
             "confirmed": qdata["confirmed"],
             "active": qdata["active"],
+            "revised": qdata["revised"],
             "removed": qdata["removed"],
+            "draft": qdata["draft"],
             "r1_responses": r1["responses"],
             "r1_participants": r1["participants"],
             "r2_responses": r2_map.get(wg.id, 0),
@@ -133,7 +141,9 @@ def dashboard_data(
     total_questions = sum(s["total_questions"] for s in wg_summaries)
     total_confirmed = sum(s["confirmed"] for s in wg_summaries)
     total_active = sum(s["active"] for s in wg_summaries)
+    total_revised = sum(s["revised"] for s in wg_summaries)
     total_removed = sum(s["removed"] for s in wg_summaries)
+    total_draft = sum(s["draft"] for s in wg_summaries)
     total_r1_participants = max((s["r1_participants"] for s in wg_summaries), default=0)
     pending_ai_review = total_items - reviewed_items
 
@@ -144,8 +154,10 @@ def dashboard_data(
         "pending_ai_review": pending_ai_review,
         "status_breakdown": {
             "active": total_active,
+            "revised": total_revised,
             "confirmed": total_confirmed,
             "removed": total_removed,
+            "draft": total_draft,
         },
         "working_groups": wg_summaries,
         "ai_synthesis": {

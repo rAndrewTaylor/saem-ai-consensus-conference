@@ -95,6 +95,7 @@ function pillarVariant(name) {
 const STATUS_COLORS = {
   confirmed: '#10b981',
   active: '#00B4D8',
+  revised: '#a78bfa',  // R2-curated questions carried forward from R1
   removed: '#ef4444',
   draft: '#6b6680',
 };
