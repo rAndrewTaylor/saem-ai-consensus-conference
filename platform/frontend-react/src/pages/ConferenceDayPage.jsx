@@ -17,6 +17,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { queueSubmit, subscribe as subscribeQueue } from '@/lib/offlineQueue';
 import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
+import { StageView, useStageDisplay } from '@/components/stage/StageView';
+import { AdminControlStrip } from '@/components/stage/AdminControlStrip';
+import { getAdminToken } from '@/lib/api';
 import QRCode from 'qrcode';
 
 // Poll the day-state endpoint every 12s so the page reacts when admin
@@ -209,6 +212,13 @@ export function ConferenceDayPage() {
     return <PrintView data={data} agendaWithTimes={agendaWithTimes} />;
   }
 
+  // Stage integration: when a chair drives the display mode (panel:N,
+  // welcome, tables, cross-wg), every audience phone shows that content
+  // in line above the agenda/contributions. Admin sees a control strip.
+  const isAdmin = Boolean(getAdminToken());
+  const stage = useStageDisplay(isAdmin);
+  const inLiveSegment = stage.mode && stage.mode !== 'idle';
+
   return (
     <div className="flex flex-col bg-[#0A1628] min-h-screen pb-24">
       <Helmet>
@@ -216,15 +226,45 @@ export function ConferenceDayPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Helmet>
 
-      {/* Sticky "What's happening now" header */}
-      <NowBar
-        active={activeSession}
-        currentAgenda={currentAgenda}
-        online={online}
-        onTapVote={() => activeSession && navigate(`/vote/${activeSession.id}`)}
-      />
+      {isAdmin && (
+        <AdminControlStrip
+          mode={stage.mode}
+          slideIndex={stage.slideIndex}
+          panelTab={stage.panelTab}
+          onChange={stage.setDisplay}
+        />
+      )}
 
-      <div className="mx-auto w-full max-w-2xl px-4 pt-6 sm:px-6">
+      <div className={isAdmin ? 'pt-12' : ''}>
+        <NowBar
+          active={activeSession}
+          currentAgenda={currentAgenda}
+          online={online}
+          onTapVote={() => activeSession && navigate(`/vote/${activeSession.id}`)}
+        />
+      </div>
+
+      {/* === Live stage content — everyone sees this === */}
+      <section className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
+        <StageView
+          mode={stage.mode}
+          slideIndex={stage.slideIndex}
+          panelTab={stage.panelTab}
+          bus={stage.bus}
+          isAdmin={isAdmin}
+          onChange={stage.setDisplay}
+          compact
+        />
+      </section>
+
+      {/* Inter-session details (agenda, contributions, QR). Auto-collapses
+          during a live segment so the stage stays the focus. */}
+      <details className="mx-auto w-full max-w-2xl px-4 sm:px-6" open={!inLiveSegment}>
+        <summary className="mt-6 cursor-pointer list-none rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-2 text-sm font-medium text-white/60 hover:bg-white/[0.04]">
+          Agenda · Your contributions · Join links
+        </summary>
+
+        <div className="pt-6">
 
         {/* Conference brand */}
         <div className="mb-6">
@@ -388,6 +428,7 @@ export function ConferenceDayPage() {
           </CardContent>
         </Card>
       </div>
+      </details>
 
       {/* Pending-sync indicator */}
       {pending > 0 && (
