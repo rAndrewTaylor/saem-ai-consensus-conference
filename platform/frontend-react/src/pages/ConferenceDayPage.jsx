@@ -17,7 +17,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { queueSubmit, subscribe as subscribeQueue } from '@/lib/offlineQueue';
 import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
-import { StageView, useStageDisplay } from '@/components/stage/StageView';
+import { useStageDisplay } from '@/components/stage/StageView';
+import { CompactStageView } from '@/components/stage/CompactStageView';
 import { AdminControlStrip } from '@/components/stage/AdminControlStrip';
 import { getAdminToken } from '@/lib/api';
 import QRCode from 'qrcode';
@@ -244,16 +245,12 @@ export function ConferenceDayPage() {
         />
       </div>
 
-      {/* === Live stage content — everyone sees this === */}
-      <section className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
-        <StageView
+      {/* === Live stage preview — phone-friendly card, mode-aware === */}
+      <section className="mx-auto w-full max-w-2xl px-4 pt-4 sm:px-6">
+        <CompactStageView
           mode={stage.mode}
           slideIndex={stage.slideIndex}
-          panelTab={stage.panelTab}
           bus={stage.bus}
-          isAdmin={isAdmin}
-          onChange={stage.setDisplay}
-          compact
         />
       </section>
 
