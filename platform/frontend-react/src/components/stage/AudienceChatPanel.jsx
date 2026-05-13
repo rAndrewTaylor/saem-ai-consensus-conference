@@ -119,7 +119,7 @@ export function AudienceChatPanel() {
   const wgNumber = parseInt(mode.split(':')[1], 10);
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#0C1A2F]/95 backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/[0.02]"

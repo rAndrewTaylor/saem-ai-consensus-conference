@@ -20,7 +20,7 @@ export function StagePage() {
   const { mode, slideIndex, panelTab, bus, setDisplay } = useStageDisplay(isAdmin);
 
   return (
-    <div className="min-h-screen bg-[#08111F] text-white">
+    <div className="min-h-screen bg-[#0A1628] text-white">
       <Helmet>
         <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
       </Helmet>

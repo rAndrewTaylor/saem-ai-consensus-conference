@@ -37,7 +37,7 @@ export function CommandPage() {
 
   if (adminLoading) {
     return (
-      <div className="min-h-screen bg-[#08111F] p-8">
+      <div className="min-h-screen bg-[#0A1628] p-8">
         <Skeleton className="h-10 w-64" />
         <div className="mt-6 grid grid-cols-12 gap-4">
           <Skeleton className="col-span-3 h-[70vh] rounded-2xl" />
@@ -67,13 +67,13 @@ export function CommandPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08111F] text-white">
+    <div className="min-h-screen bg-[#0A1628] text-white">
       <Helmet>
         <meta name="viewport" content="width=1280, initial-scale=1" />
       </Helmet>
 
       {/* Top bar */}
-      <div className="border-b border-white/[0.06] bg-[#0A1626] px-6 py-3">
+      <div className="border-b border-white/[0.06] bg-[#0E1E35] px-6 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-base font-bold text-white">Conference Day Command Center</h1>

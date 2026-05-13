@@ -30,7 +30,7 @@ export function LiveSignal({ mode, bus }) {
   }, [mode]);
 
   return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-white/[0.06] bg-[#0A1626] p-3">
+    <div className="flex h-full flex-col gap-3 rounded-2xl border border-white/[0.06] bg-[#0E1E35] p-3">
       <div className="px-2 pt-1">
         <h2 className="text-sm font-bold text-white">Live audience signal</h2>
       </div>

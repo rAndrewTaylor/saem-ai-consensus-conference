@@ -59,7 +59,7 @@ export function ChatSidebar({ sessionId, resolving, bus, accent, isAdmin }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0A1626] px-5 py-6">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0E1E35] px-5 py-6">
       <div className="mb-4 flex items-center gap-2">
         <MessageSquare className="h-4 w-4" style={{ color: accent }} />
         <h2 className="text-sm font-semibold text-white">Audience</h2>

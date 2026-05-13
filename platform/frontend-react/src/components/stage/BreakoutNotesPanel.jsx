@@ -90,7 +90,7 @@ export function BreakoutNotesPanel() {
   if (mode !== 'table_reactions') return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto border-t border-white/[0.08] bg-[#0C1A2F]/95 backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto border-t border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex w-full items-center justify-between px-4 py-2 hover:bg-white/[0.02]"

@@ -80,7 +80,7 @@ export function AdminControlStrip({ mode, slideIndex, panelTab, onChange }) {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.08] bg-[#0C1A2F]/95 backdrop-blur">
+    <div className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
       <div className="flex items-center gap-2 px-4 py-2">
         <span className="mr-3 text-[10px] font-bold uppercase tracking-wider text-amber-400">Admin · Stage</span>
 

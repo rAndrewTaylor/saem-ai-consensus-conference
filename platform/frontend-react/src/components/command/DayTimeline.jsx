@@ -58,7 +58,7 @@ export function DayTimeline({ activeMode, onPick }) {
   const nowIdx = agenda.findIndex((a) => modeForAgendaItem(a) === activeMode);
 
   return (
-    <div className="h-full overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#0A1626] p-3">
+    <div className="h-full overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#0E1E35] p-3">
       <div className="px-2 pb-3 pt-1">
         <h2 className="text-sm font-bold text-white">Day timeline</h2>
         <p className="text-[11px] text-white/40">Click any segment to drive the stage</p>
