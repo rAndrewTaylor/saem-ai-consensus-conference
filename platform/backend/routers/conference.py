@@ -435,6 +435,7 @@ def submit_ranking(
 
     _upsert_votes(db, session_id, participant.id, vote_type, new_votes)
     db.commit()
+    _publish_day("vote_cast", {"session_id": session_id, "vote_type": vote_type})
     return {"status": "recorded", "count": len(vote.rankings)}
 
 
@@ -469,6 +470,7 @@ def submit_importance(
 
     _upsert_votes(db, session_id, participant.id, "importance", new_votes)
     db.commit()
+    _publish_day("vote_cast", {"session_id": session_id, "vote_type": "importance"})
     return {"status": "recorded", "count": len(vote.ratings)}
 
 
@@ -509,6 +511,7 @@ def submit_allocation(
 
     _upsert_votes(db, session_id, participant.id, "point_allocation", new_votes)
     db.commit()
+    _publish_day("vote_cast", {"session_id": session_id, "vote_type": "point_allocation"})
     return {"status": "recorded", "total_points": total}
 
 

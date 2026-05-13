@@ -16,6 +16,7 @@ import { api, getAnyParticipantToken, getActiveWg } from '@/lib/api';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { queueSubmit, subscribe as subscribeQueue } from '@/lib/offlineQueue';
 import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
+import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
 import QRCode from 'qrcode';
 
 // Poll the day-state endpoint every 12s so the page reacts when admin
@@ -413,6 +414,9 @@ export function ConferenceDayPage() {
 
       {/* Audience chat panel — only renders while the stage is in panel:N mode */}
       <AudienceChatPanel />
+
+      {/* Breakout note submission — only renders while the stage is in table_reactions mode */}
+      <BreakoutNotesPanel />
     </div>
   );
 }
