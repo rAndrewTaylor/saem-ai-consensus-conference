@@ -166,11 +166,16 @@ function ResultsView({ wgNumber, bus, accent }) {
 
 function VoteView({ sessionId, resolving, bus }) {
   const [results, setResults] = useState(null);
+  const [session, setSession] = useState(null);
+
   useEffect(() => {
     if (!sessionId) return;
-    api(`/api/conference/results/${sessionId}`)
-      .then(setResults)
-      .catch(() => setResults(null));
+    Promise.all([
+      api(`/api/conference/results/${sessionId}`),
+      api(`/api/conference/sessions/${sessionId}/questions`),
+    ])
+      .then(([r, s]) => { setResults(r); setSession(s); })
+      .catch(() => { setResults(null); setSession(null); });
   }, [sessionId, bus]);
 
   if (resolving) return <Skeleton className="h-64 w-full rounded-2xl" />;
@@ -184,23 +189,82 @@ function VoteView({ sessionId, resolving, bus }) {
   }
   if (!results) return <Skeleton className="h-64 w-full rounded-2xl" />;
 
-  const rows = (results?.questions || results?.results || []).slice(0, 10);
+  const rows = (results?.questions || results?.results || []);
+  // If we have session questions but no votes yet, show the question list as a preview
+  const preview = rows.length === 0 ? (session?.questions || []) : [];
+  const maxRank = Math.max(1, ...rows.map((r) => r.avg_rank || 0));
+  const maxImp = Math.max(1, ...rows.map((r) => r.importance_mean || 0));
+  const maxPts = Math.max(1, ...rows.map((r) => r.points || 0));
+
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Live vote — session {sessionId}</p>
-      <div className="mt-5 space-y-2">
-        {rows.length === 0 && <p className="text-sm text-white/40">No votes yet.</p>}
-        {rows.map((r) => (
-          <div key={r.question_id || r.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-sm text-white/90">{r.text || r.question_text}</p>
-            <div className="mt-2 flex gap-4 text-xs text-white/50">
-              {r.avg_rank != null && <span>avg rank: <span className="font-mono text-white">{Number(r.avg_rank).toFixed(2)}</span></span>}
-              {r.importance_mean != null && <span>imp: <span className="font-mono text-white">{Number(r.importance_mean).toFixed(1)}</span></span>}
-              {r.points != null && <span>pts: <span className="font-mono text-white">{r.points}</span></span>}
-            </div>
-          </div>
-        ))}
+      <div className="mb-5 flex items-center gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+          Live vote — session {sessionId}
+        </p>
+        {session?.phase && (
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+            session.phase === 'pre_discussion' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'
+          }`}>
+            {session.phase === 'pre_discussion' ? 'Pre-discussion' : 'Post-discussion'}
+          </span>
+        )}
+        {session?.is_active === false && (
+          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">
+            Inactive
+          </span>
+        )}
       </div>
+
+      {preview.length > 0 && (
+        <>
+          <p className="mb-3 text-xs text-white/40">
+            Vote not yet started — these are the questions audience will see:
+          </p>
+          <div className="space-y-2">
+            {preview.slice(0, 10).map((q) => (
+              <div key={q.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <p className="text-sm text-white/85">{q.text}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {rows.length > 0 && (
+        <div className="space-y-2">
+          {rows.slice(0, 12).map((r) => {
+            const inc = r.r2_include_pct || r.r1_include_pct;
+            const denom = r.points != null ? maxPts : r.avg_rank != null ? maxRank : r.importance_mean != null ? maxImp : 1;
+            const val = r.points || r.importance_mean || (maxRank - (r.avg_rank || 0) + 1);
+            return (
+              <div key={r.question_id || r.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <p className="text-sm text-white/90">{r.text || r.question_text}</p>
+                <div className="mt-2 flex items-center gap-3 text-xs text-white/50">
+                  {r.avg_rank != null && (
+                    <span>avg rank <span className="font-mono text-white">{Number(r.avg_rank).toFixed(2)}</span></span>
+                  )}
+                  {r.importance_mean != null && (
+                    <span>importance <span className="font-mono text-white">{Number(r.importance_mean).toFixed(1)}</span></span>
+                  )}
+                  {r.points != null && (
+                    <span>points <span className="font-mono text-white">{r.points}</span></span>
+                  )}
+                  {r.n_votes != null && (
+                    <span>n=<span className="font-mono text-white">{r.n_votes}</span></span>
+                  )}
+                </div>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+                  <div
+                    className="h-full rounded-full bg-[#00B4D8] transition-all"
+                    style={{ width: `${Math.min(100, (val / denom) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

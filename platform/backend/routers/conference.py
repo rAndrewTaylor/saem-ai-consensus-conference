@@ -337,22 +337,56 @@ def day_state(db: Session = Depends(get_db)):
 
 @router.get("/sessions/{session_id}/questions")
 def get_session_questions(session_id: int, db: Session = Depends(get_db)):
-    """Get the questions available for voting in a session."""
+    """Get the questions available for voting in a session.
+
+    Uses R2 include% + importance to surface the top questions for each
+    panel, even before the formal R2-to-CONFIRMED promotion has run.
+    """
     cs = db.query(ConferenceSession).get(session_id)
     if not cs:
         raise HTTPException(404, "Session not found")
 
     if cs.session_type == "cross_wg_prioritization":
-        # All confirmed questions across all WGs
-        questions = db.query(Question).filter(
-            Question.status == QuestionStatus.CONFIRMED
-        ).order_by(Question.wg_id, Question.id).all()
+        # Top 3 R2 questions from each WG (ranked by R2 include%, falling
+        # back to R1 if R2 hasn't been computed yet, then importance).
+        questions = []
+        for wg in db.query(WorkingGroup).order_by(WorkingGroup.number).all():
+            top = (
+                db.query(Question)
+                .filter(
+                    Question.wg_id == wg.id,
+                    Question.status.in_([
+                        QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+                    ]),
+                )
+                .order_by(
+                    Question.r2_include_pct.desc().nullslast(),
+                    Question.r1_include_pct.desc().nullslast(),
+                    Question.r2_importance_mean.desc().nullslast(),
+                    Question.r1_importance_mean.desc().nullslast(),
+                )
+                .limit(3)
+                .all()
+            )
+            questions.extend(top)
     else:
-        # Questions for a specific WG
-        questions = db.query(Question).filter(
-            Question.wg_id == cs.wg_id,
-            Question.status.in_([QuestionStatus.CONFIRMED, QuestionStatus.NEAR_CONSENSUS])
-        ).order_by(Question.id).all()
+        # Top R2 questions for the session's WG (default to all active R2).
+        questions = (
+            db.query(Question)
+            .filter(
+                Question.wg_id == cs.wg_id,
+                Question.status.in_([
+                    QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+                ]),
+            )
+            .order_by(
+                Question.r2_include_pct.desc().nullslast(),
+                Question.r1_include_pct.desc().nullslast(),
+                Question.r2_importance_mean.desc().nullslast(),
+                Question.r1_importance_mean.desc().nullslast(),
+            )
+            .all()
+        )
 
     return {
         "session_id": session_id,
