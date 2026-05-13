@@ -4,6 +4,13 @@ const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
+    // ?theme=light|dark URL override (used by the command page iframe so
+    // the embedded /stage preview matches the parent's theme).
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const override = params.get('theme');
+      if (override === 'light' || override === 'dark') return override;
+    } catch {}
     const stored = localStorage.getItem('saem_theme');
     if (stored) return stored;
     // Default to dark (Railway-style)

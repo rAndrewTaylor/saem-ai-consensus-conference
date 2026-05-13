@@ -17,6 +17,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { useTheme } from '@/hooks/useTheme';
 import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, BarChart3, Vote, Repeat, ArrowRight } from 'lucide-react';
 
 const WG_NAMES = {
@@ -47,12 +48,18 @@ export function CenterStage({ mode, slideIndex, panelTab, onChange }) {
 // ---- Preview frame -------------------------------------------------------
 
 function StagePreview() {
+  // Pass the parent's theme to the iframe so the preview matches the
+  // command page's theme. The src key includes the theme so the iframe
+  // remounts on toggle (cheaper than postMessage for this scale).
+  const { theme } = useTheme();
+  const src = `/stage?theme=${theme}`;
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-black">
       <div className="aspect-video w-full">
         <iframe
+          key={theme}
           title="Stage preview"
-          src="/stage"
+          src={src}
           className="h-full w-full"
           style={{ border: 0 }}
         />

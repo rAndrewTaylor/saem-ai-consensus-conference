@@ -97,7 +97,7 @@ export function DayTimeline({ activeMode, onPick }) {
                       </span>
                     )}
                   </div>
-                  <p className={`mt-0.5 text-xs font-medium leading-snug ${isLive ? 'text-white' : isDone ? 'text-white/40' : 'text-white/75'}`}>
+                  <p className={`mt-0.5 text-xs font-medium leading-snug ${isLive ? 'text-white' : isDone ? 'text-white/40' : 'text-white/80'}`}>
                     {item.title}
                   </p>
                 </div>
