@@ -389,6 +389,54 @@ class BreakoutNote(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ConferenceChatMessage(Base):
+    """Anonymous live-chat message during a conference panel.
+
+    `participant_id` is stored server-side for upvote dedup but never
+    exposed to other clients — the audience view shows messages without
+    any author identifier. Admin can hide messages post-hoc via the
+    `hidden` flag.
+    """
+    __tablename__ = "conference_chat_messages"
+
+    id = Column(Integer, primary_key=True)
+    session_id = Column(Integer, ForeignKey("conference_sessions.id"), nullable=False)
+    participant_id = Column(Integer, ForeignKey("participants.id"), nullable=True)
+    body = Column(Text, nullable=False)
+    upvote_count = Column(Integer, default=0, nullable=False)
+    hidden = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ConferenceChatUpvote(Base):
+    __tablename__ = "conference_chat_upvotes"
+
+    id = Column(Integer, primary_key=True)
+    message_id = Column(Integer, ForeignKey("conference_chat_messages.id", ondelete="CASCADE"), nullable=False)
+    participant_id = Column(Integer, ForeignKey("participants.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("message_id", "participant_id", name="uq_chat_upvote"),
+    )
+
+
+class ConferenceDisplayMode(Base):
+    """Singleton — which mode the projector / audience view is showing.
+
+    There's only ever one row (id=1). Admin updates it; the audience
+    /day page subscribes to SSE and re-renders when this changes.
+    Mode values: 'idle' | 'welcome' | 'panel:<wg_number>' | 'table_reactions:<session_id>' | 'cross_wg'
+    """
+    __tablename__ = "conference_display_mode"
+
+    id = Column(Integer, primary_key=True)
+    mode = Column(String(50), nullable=False, default="idle")
+    slide_index = Column(Integer, nullable=True)  # for welcome deck
+    panel_tab = Column(String(20), nullable=True)  # for panel: results|vote|comparison
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # --- Admin ---
 
 class AdminUser(Base):

@@ -11,6 +11,7 @@ from datetime import datetime
 from ..database import (
     get_db, WorkingGroup, Question, Participant, ConferenceSession,
     ConferenceVote, ConferenceComment, BreakoutNote, QuestionStatus,
+    ConferenceChatMessage, ConferenceChatUpvote, ConferenceDisplayMode,
     AuditLog, write_audit_log,
 )
 from ..auth import require_admin, get_participant_token, verify_participant_token
@@ -642,3 +643,246 @@ def get_deliberation_shift(wg_number: int, db: Session = Depends(get_db)):
 
     shifts.sort(key=lambda x: x["shift"] or 0, reverse=True)
     return {"wg_number": wg_number, "shifts": shifts}
+
+
+# --- Live chat (anonymous, post-hoc moderation) ---------------------------
+
+class ChatMessageSubmit(BaseModel):
+    body: str
+
+
+def _chat_message_to_dict(m: ConferenceChatMessage, has_upvoted: bool = False) -> dict:
+    """Public chat shape — author identity NEVER exposed."""
+    return {
+        "id": m.id,
+        "session_id": m.session_id,
+        "body": m.body,
+        "upvote_count": m.upvote_count,
+        "hidden": m.hidden,
+        "has_upvoted": has_upvoted,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+    }
+
+
+@router.post("/chat/{session_id}")
+def post_chat_message(
+    session_id: int,
+    body: ChatMessageSubmit,
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
+):
+    """Submit an anonymous chat message tied to a conference session."""
+    if not token:
+        raise HTTPException(401, "Authorization header required")
+    participant = verify_participant_token(token, db)
+
+    session = db.query(ConferenceSession).get(session_id)
+    if not session:
+        raise HTTPException(404, "Conference session not found")
+
+    text = sanitize_text(body.body or "", max_length=500).strip()
+    if not text:
+        raise HTTPException(400, "Empty message")
+
+    m = ConferenceChatMessage(
+        session_id=session_id,
+        participant_id=participant.id,
+        body=text,
+    )
+    db.add(m)
+    db.commit()
+    db.refresh(m)
+
+    _publish_day("chat_message_new", {"session_id": session_id, "message": _chat_message_to_dict(m)})
+    return _chat_message_to_dict(m)
+
+
+@router.get("/chat/{session_id}")
+def list_chat_messages(
+    session_id: int,
+    sort: str = "top",
+    include_hidden: bool = False,
+    token: Optional[str] = Depends(get_participant_token),
+    db: Session = Depends(get_db),
+):
+    """List chat messages for a session. Default sort: top (by upvotes, then recency).
+
+    Audience clients pass their token so the response can mark which
+    messages they've already upvoted.
+    """
+    session = db.query(ConferenceSession).get(session_id)
+    if not session:
+        raise HTTPException(404, "Conference session not found")
+
+    q = db.query(ConferenceChatMessage).filter(ConferenceChatMessage.session_id == session_id)
+    if not include_hidden:
+        q = q.filter(ConferenceChatMessage.hidden == False)  # noqa: E712
+    if sort == "new":
+        q = q.order_by(ConferenceChatMessage.created_at.desc())
+    else:
+        q = q.order_by(
+            ConferenceChatMessage.upvote_count.desc(),
+            ConferenceChatMessage.created_at.desc(),
+        )
+    messages = q.limit(500).all()
+
+    # Mark which messages this token has upvoted
+    upvoted_ids: set[int] = set()
+    if token:
+        p = db.query(Participant).filter(Participant.token == token).first()
+        if p:
+            rows = (
+                db.query(ConferenceChatUpvote.message_id)
+                .filter(
+                    ConferenceChatUpvote.participant_id == p.id,
+                    ConferenceChatUpvote.message_id.in_([m.id for m in messages] or [0]),
+                )
+                .all()
+            )
+            upvoted_ids = {r.message_id for r in rows}
+
+    return {
+        "session_id": session_id,
+        "sort": sort,
+        "messages": [_chat_message_to_dict(m, m.id in upvoted_ids) for m in messages],
+    }
+
+
+@router.post("/chat/{message_id}/upvote")
+def toggle_chat_upvote(
+    message_id: int,
+    token: str = Depends(get_participant_token),
+    db: Session = Depends(get_db),
+):
+    """Toggle this participant's upvote on a message. Returns the new count and state."""
+    if not token:
+        raise HTTPException(401, "Authorization header required")
+    participant = verify_participant_token(token, db)
+
+    m = db.query(ConferenceChatMessage).get(message_id)
+    if not m:
+        raise HTTPException(404, "Message not found")
+    if m.hidden:
+        raise HTTPException(410, "Message is hidden")
+
+    existing = (
+        db.query(ConferenceChatUpvote)
+        .filter(
+            ConferenceChatUpvote.message_id == message_id,
+            ConferenceChatUpvote.participant_id == participant.id,
+        )
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        m.upvote_count = max(0, (m.upvote_count or 0) - 1)
+        has_upvoted = False
+    else:
+        try:
+            db.add(ConferenceChatUpvote(message_id=message_id, participant_id=participant.id))
+            db.flush()
+            m.upvote_count = (m.upvote_count or 0) + 1
+            has_upvoted = True
+        except IntegrityError:
+            db.rollback()
+            has_upvoted = True
+
+    db.commit()
+    db.refresh(m)
+
+    _publish_day("chat_upvote_changed", {
+        "session_id": m.session_id,
+        "message_id": message_id,
+        "upvote_count": m.upvote_count,
+    })
+    return {"message_id": message_id, "upvote_count": m.upvote_count, "has_upvoted": has_upvoted}
+
+
+@router.post("/chat/{message_id}/hide")
+def admin_hide_chat_message(
+    message_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Admin: hide a chat message (post-hoc moderation)."""
+    m = db.query(ConferenceChatMessage).get(message_id)
+    if not m:
+        raise HTTPException(404, "Message not found")
+    m.hidden = True
+    db.commit()
+    _publish_day("chat_message_hidden", {"session_id": m.session_id, "message_id": message_id})
+    write_audit_log(db, admin.get("email", "admin"), "chat_message_hidden",
+                    f"Hid message {message_id} on session {m.session_id}: {m.body[:80]}")
+    db.commit()
+    return {"ok": True, "message_id": message_id}
+
+
+@router.post("/chat/{message_id}/unhide")
+def admin_unhide_chat_message(
+    message_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Admin: restore a previously-hidden chat message."""
+    m = db.query(ConferenceChatMessage).get(message_id)
+    if not m:
+        raise HTTPException(404, "Message not found")
+    m.hidden = False
+    db.commit()
+    _publish_day("chat_message_unhidden", {"session_id": m.session_id, "message_id": message_id})
+    return {"ok": True, "message_id": message_id}
+
+
+# --- Display mode (singleton — what the projector view is showing) -------
+
+class DisplayModeUpdate(BaseModel):
+    mode: str
+    slide_index: Optional[int] = None
+    panel_tab: Optional[str] = None
+
+
+@router.get("/display-mode")
+def get_display_mode(db: Session = Depends(get_db)):
+    """Current display mode for the projector view. Public."""
+    row = db.query(ConferenceDisplayMode).get(1)
+    if not row:
+        return {"mode": "idle", "slide_index": None, "panel_tab": None, "updated_at": None}
+    return {
+        "mode": row.mode,
+        "slide_index": row.slide_index,
+        "panel_tab": row.panel_tab,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+@router.post("/display-mode")
+def set_display_mode(
+    body: DisplayModeUpdate,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Admin: set the current projector display mode.
+
+    Mode values:
+      - 'idle' — auto-rotating dashboard carousel
+      - 'welcome' — slide deck (use slide_index 0..N)
+      - 'panel:1' .. 'panel:5' — per-WG panel mode (use panel_tab: results|vote|comparison)
+      - 'table_reactions' — breakout table grid
+      - 'cross_wg' — final cross-WG prioritization
+    """
+    row = db.query(ConferenceDisplayMode).get(1)
+    if not row:
+        row = ConferenceDisplayMode(id=1, mode=body.mode)
+        db.add(row)
+    else:
+        row.mode = body.mode
+    row.slide_index = body.slide_index
+    row.panel_tab = body.panel_tab
+    db.commit()
+
+    _publish_day("display_mode_changed", {
+        "mode": row.mode,
+        "slide_index": row.slide_index,
+        "panel_tab": row.panel_tab,
+    })
+    return {"mode": row.mode, "slide_index": row.slide_index, "panel_tab": row.panel_tab}
