@@ -95,10 +95,9 @@ function WhySlide() {
 function WhatWeveDoneSlide() {
   const [stats, setStats] = useState(null);
   useEffect(() => {
-    api('/api/surveys/working-groups').then((wgs) => {
-      const total = (wgs || []).reduce((s, w) => s + (w.total_questions || 0), 0);
-      setStats({ wgs: (wgs || []).length, total });
-    }).catch(() => {});
+    api('/api/conference/public-stats')
+      .then((s) => setStats({ wgs: s.n_working_groups, total: s.n_active_questions, participants: s.n_participants }))
+      .catch(() => {});
   }, []);
   return (
     <div className="w-full max-w-5xl text-center">
@@ -108,7 +107,7 @@ function WhatWeveDoneSlide() {
         <BigStat value={stats?.wgs ?? '5'} label="Working groups" />
         <BigStat value={stats?.total ?? '—'} label="Questions reviewed" />
         <BigStat value="2" label="Delphi rounds" />
-        <BigStat value="~75" label="Expert reviewers" />
+        <BigStat value={stats?.participants ?? '—'} label="Expert reviewers" />
       </div>
       <p className="mt-16 text-lg text-white/50">
         Today is where we close the loop — together.

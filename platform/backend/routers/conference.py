@@ -260,6 +260,28 @@ def my_contributions(
     }
 
 
+@router.get("/public-stats")
+def public_stats(db: Session = Depends(get_db)):
+    """Lightweight public counts for the stage idle carousel + welcome deck.
+
+    Numbers only — no participant identifiers. Cached implicitly because
+    the underlying tables don't change quickly during conference day.
+    """
+    n_participants = db.query(func.count(Participant.id)).filter(
+        Participant.is_active == True,  # noqa: E712
+        Participant.name.isnot(None),
+    ).scalar() or 0
+    n_questions = db.query(func.count(Question.id)).filter(
+        Question.status.in_([QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED])
+    ).scalar() or 0
+    n_wgs = db.query(func.count(WorkingGroup.id)).scalar() or 0
+    return {
+        "n_participants": int(n_participants),
+        "n_active_questions": int(n_questions),
+        "n_working_groups": int(n_wgs),
+    }
+
+
 @router.get("/day-state")
 def day_state(db: Session = Depends(get_db)):
     """Single endpoint that powers the conference-day landing page.
