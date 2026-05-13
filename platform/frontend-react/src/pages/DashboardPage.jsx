@@ -8,7 +8,6 @@ import {
   Download, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, ExternalLink,
   FlaskConical, RotateCcw, Presentation, Tv,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useToast } from '@/components/ui/toast';
