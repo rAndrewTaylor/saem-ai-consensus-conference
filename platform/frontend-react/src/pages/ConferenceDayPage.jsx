@@ -69,6 +69,13 @@ export function ConferenceDayPage() {
   const toast = useToast();
   const navigate = useNavigate();
 
+  // Stage integration must be at the top of the component (hooks rules):
+  // calling these after conditional returns below would mismatch hook
+  // count across renders and break React.
+  const isAdmin = Boolean(getAdminToken());
+  const stage = useStageDisplay(isAdmin);
+  const inLiveSegment = stage.mode && stage.mode !== 'idle';
+
   const [data, setData] = useState(null);
   const [contrib, setContrib] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -211,13 +218,6 @@ export function ConferenceDayPage() {
   if (isPrint) {
     return <PrintView data={data} agendaWithTimes={agendaWithTimes} />;
   }
-
-  // Stage integration: when a chair drives the display mode (panel:N,
-  // welcome, tables, cross-wg), every audience phone shows that content
-  // in line above the agenda/contributions. Admin sees a control strip.
-  const isAdmin = Boolean(getAdminToken());
-  const stage = useStageDisplay(isAdmin);
-  const inLiveSegment = stage.mode && stage.mode !== 'idle';
 
   return (
     <div className="flex flex-col bg-[#0A1628] min-h-screen pb-24">
