@@ -19,13 +19,21 @@ export function StagePage() {
   const isAdmin = Boolean(getAdminToken());
   const { mode, slideIndex, panelTab, bus, setDisplay } = useStageDisplay(isAdmin);
 
+  // ?minimal=1 hides the admin control strip — used when this page is
+  // embedded in the /command iframe (chair drives from the outer page,
+  // so the inner strip is noise).
+  const minimal = (() => {
+    try { return new URLSearchParams(window.location.search).get('minimal') === '1'; } catch { return false; }
+  })();
+  const showAdminStrip = isAdmin && !minimal;
+
   return (
     <div className="min-h-screen bg-[#0A1628] text-white">
       <Helmet>
         <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
       </Helmet>
 
-      {isAdmin && (
+      {showAdminStrip && (
         <AdminControlStrip
           mode={mode}
           slideIndex={slideIndex}
@@ -34,13 +42,13 @@ export function StagePage() {
         />
       )}
 
-      <div className={isAdmin ? 'pt-16' : ''}>
+      <div className={showAdminStrip ? 'pt-16' : ''}>
         <StageView
           mode={mode}
           slideIndex={slideIndex}
           panelTab={panelTab}
           bus={bus}
-          isAdmin={isAdmin}
+          isAdmin={isAdmin && !minimal}
           onChange={setDisplay}
         />
       </div>

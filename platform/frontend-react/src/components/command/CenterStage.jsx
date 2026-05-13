@@ -52,9 +52,26 @@ function StagePreview() {
   // command page's theme. The src key includes the theme so the iframe
   // remounts on toggle (cheaper than postMessage for this scale).
   const { theme } = useTheme();
-  const src = `/stage?theme=${theme}`;
+  const src = `/stage?theme=${theme}&minimal=1`;
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-black">
+    <div className="rounded-2xl border border-white/[0.08] bg-black overflow-hidden">
+      {/* External toolbar — sits above the iframe so it never covers
+          the admin control strip / tabs that render inside /stage. */}
+      <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] bg-white/[0.02] px-3 py-1.5">
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+          Live on projector
+        </span>
+        <a
+          href="/stage"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-white/60 hover:bg-white/[0.06] hover:text-white"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Open in new window
+        </a>
+      </div>
       <div className="aspect-video w-full">
         <iframe
           key={theme}
@@ -64,19 +81,6 @@ function StagePreview() {
           style={{ border: 0 }}
         />
       </div>
-      <a
-        href="/stage"
-        target="_blank"
-        rel="noreferrer"
-        className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[10px] font-medium text-white/80 hover:bg-black/80 backdrop-blur"
-      >
-        <ExternalLink className="h-3 w-3" />
-        Open projector view
-      </a>
-      <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300 backdrop-blur">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-        Live on projector
-      </span>
     </div>
   );
 }
