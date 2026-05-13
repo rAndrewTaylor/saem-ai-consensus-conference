@@ -6,8 +6,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   FileText, CheckCircle, Users, Brain, BrainCircuit, LogOut, Plus, Play, Square,
   Download, RefreshCw, ChevronDown, ChevronUp, Sparkles, Loader2, ExternalLink,
-  FlaskConical, RotateCcw,
+  FlaskConical, RotateCcw, Presentation, Tv,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useToast } from '@/components/ui/toast';
@@ -564,16 +565,25 @@ export function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Admin Dashboard</h1>
           <p className="mt-1 text-sm text-white/40">
             Manage the SAEM AI Consensus Conference platform
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={logout}>
-          <LogOut className="h-4 w-4" /> Logout
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/stage"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-200 hover:bg-amber-500/20"
+          >
+            <Tv className="h-4 w-4" />
+            Conference Day Stage
+          </Link>
+          <Button variant="ghost" size="sm" onClick={logout}>
+            <LogOut className="h-4 w-4" /> Logout
+          </Button>
+        </div>
       </div>
 
       {/* Overview stats */}
