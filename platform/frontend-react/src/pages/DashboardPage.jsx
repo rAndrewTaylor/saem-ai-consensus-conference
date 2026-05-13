@@ -573,11 +573,11 @@ export function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            to="/stage"
+            to="/command"
             className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-200 hover:bg-amber-500/20"
           >
             <Tv className="h-4 w-4" />
-            Conference Day Stage
+            Conference Day Command Center
           </Link>
           <Button variant="ghost" size="sm" onClick={logout}>
             <LogOut className="h-4 w-4" /> Logout

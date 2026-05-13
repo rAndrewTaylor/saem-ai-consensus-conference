@@ -25,6 +25,7 @@ const JoinPage = lazy(() => import('@/pages/JoinPage').then(m => ({ default: m.J
 const Round1ReportPage = lazy(() => import('@/pages/Round1ReportPage').then(m => ({ default: m.Round1ReportPage })));
 const ConferenceDayPage = lazy(() => import('@/pages/ConferenceDayPage').then(m => ({ default: m.ConferenceDayPage })));
 const StagePage = lazy(() => import('@/pages/StagePage').then(m => ({ default: m.StagePage })));
+const CommandPage = lazy(() => import('@/pages/CommandPage').then(m => ({ default: m.CommandPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function AnimatedRoutes() {
@@ -49,6 +50,7 @@ function AnimatedRoutes() {
           <Route path="/reports/round1" element={<Round1ReportPage />} />
           <Route path="/day" element={<ConferenceDayPage />} />
           <Route path="/stage" element={<StagePage />} />
+          <Route path="/command" element={<CommandPage />} />
           <Route path="/conference-day" element={<Navigate to="/day" replace />} />
           <Route path="/guide" element={<GettingStartedPage />} />
           <Route path="*" element={<NotFoundPage />} />
