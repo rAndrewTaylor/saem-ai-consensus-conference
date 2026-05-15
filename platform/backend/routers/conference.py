@@ -199,13 +199,16 @@ def update_phase(
 def list_sessions(db: Session = Depends(get_db)):
     """List all conference sessions."""
     sessions = db.query(ConferenceSession).order_by(ConferenceSession.id).all()
+    wg_lookup = {w.id: w.number for w in db.query(WorkingGroup).all()}
     return [{
         "id": s.id,
         "wg_id": s.wg_id,
+        "wg_number": wg_lookup.get(s.wg_id) if s.wg_id else None,
         "session_type": s.session_type,
         "phase": s.phase,
         "is_active": s.is_active,
         "started_at": s.started_at.isoformat() if s.started_at else None,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
         "vote_count": db.query(ConferenceVote).filter(ConferenceVote.session_id == s.id).count(),
     } for s in sessions]
 
