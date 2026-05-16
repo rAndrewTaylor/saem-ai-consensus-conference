@@ -68,7 +68,8 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
 
       {/* Discussion prompts — promoted to a prominent full-width strip
           so panelists and audience always know where the conversation
-          is supposed to land. */}
+          is supposed to land. Each card gets a slightly different hue
+          so they read as three distinct angles, not a triplet. */}
       {prompts.length > 0 && (
         <div className="mx-8 mb-3 shrink-0 rounded-xl border p-3"
              style={{ borderColor: `${accent}30`, backgroundColor: `${accent}08` }}>
@@ -76,22 +77,37 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
             Discussion prompts
           </p>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">
-            {prompts.slice(0, 3).map((p, i) => (
-              <div key={i} className="rounded-lg bg-white/[0.04] p-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
-                  {p.label}
-                </p>
-                <p className="mt-1 text-sm leading-snug text-white/95 line-clamp-3">{p.text}</p>
-              </div>
-            ))}
+            {prompts.slice(0, 3).map((p, i) => {
+              // Three palette slots: accent (WG color), warm, cool. Each
+              // card uses its slot for the label + a subtle border accent.
+              const palette = [accent, '#F472B6', '#A78BFA'][i % 3];
+              return (
+                <div
+                  key={i}
+                  className="rounded-lg p-2.5"
+                  style={{
+                    backgroundColor: `${palette}10`,
+                    borderLeft: `3px solid ${palette}80`,
+                  }}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wider"
+                     style={{ color: palette }}>
+                    {p.label}
+                  </p>
+                  <p className="mt-1 text-sm leading-snug text-white/95 line-clamp-3">{p.text}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Body: prior results (left) | chat column (right) */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1.2fr_1fr]">
-        {/* LEFT — prior results, visual */}
-        <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-6 pb-3">
+        {/* LEFT — two stacked cycling panels: cycling results (top) and
+            an insight facet carousel (bottom). During vote/compare tabs
+            the lower panel hides so those tabs take the full column. */}
+        <div className="flex h-full min-h-0 flex-col gap-3 border-r border-white/[0.06] px-6 pb-3">
           <AnimatePresence mode="wait">
             <motion.div
               key={panelTab}
@@ -99,13 +115,19 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
-              className="flex min-h-0 flex-1 flex-col"
+              className="flex min-h-0 flex-[1.6] flex-col"
             >
               {panelTab === 'results' && <ResultsView wgNumber={wgNumber} bus={bus} accent={accent} />}
               {panelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} />}
               {panelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
             </motion.div>
           </AnimatePresence>
+
+          {panelTab === 'results' && (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <FacetCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
+            </div>
+          )}
         </div>
 
         {/* RIGHT — word cloud on top, chat takes the rest */}
@@ -408,6 +430,140 @@ function ComparisonView({ wgNumber, bus }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// --- Facet carousel (bottom of left column) -------------------------------
+// Cycles through different angles on the same R2 data: strongest
+// consensus, biggest deliberation shifts, pairwise winners. Each facet
+// is on screen for ~15s so audience eyes can land on whichever is
+// fresh. The cycling here is slower than the results panel above so the
+// motion in the column staggers nicely.
+
+const FACET_CYCLE_MS = 15_000;
+
+function FacetCarousel({ wgNumber, bus, accent }) {
+  const [data, setData] = useState(null);
+  const [facetIdx, setFacetIdx] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    api(`/api/surveys/results/${wgNumber}/round_2`)
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch(() => { if (!cancelled) setData({ questions: [] }); });
+    return () => { cancelled = true; };
+  }, [wgNumber, bus]);
+
+  const questions = useMemo(
+    () => (data?.questions || []).filter((q) => q.status !== 'removed'),
+    [data]
+  );
+
+  const facets = useMemo(() => {
+    if (!questions.length) return [];
+
+    const byConsensus = [...questions]
+      .filter((q) => q.r2_include_pct != null)
+      .sort((a, b) => (b.r2_include_pct || 0) - (a.r2_include_pct || 0))
+      .slice(0, 3);
+
+    const byShift = [...questions]
+      .filter((q) => q.r1_importance_mean != null && q.r2_importance_mean != null)
+      .map((q) => ({
+        ...q,
+        shift: (q.r2_importance_mean || 0) - (q.r1_importance_mean || 0),
+      }))
+      .sort((a, b) => Math.abs(b.shift) - Math.abs(a.shift))
+      .slice(0, 3);
+
+    const byPairwise = [...questions]
+      .filter((q) => q.pairwise_score != null)
+      .sort((a, b) => (b.pairwise_score || 0) - (a.pairwise_score || 0))
+      .slice(0, 3);
+
+    const result = [
+      { key: 'consensus', label: 'Strongest consensus', items: byConsensus, render: (q) => `${Math.round(q.r2_include_pct || 0)}% include` },
+    ];
+    if (byShift.length) {
+      result.push({
+        key: 'shift',
+        label: 'Biggest R1 → R2 shifts',
+        items: byShift,
+        render: (q) => `${q.shift > 0 ? '+' : ''}${q.shift.toFixed(1)} importance`,
+      });
+    }
+    if (byPairwise.length) {
+      result.push({
+        key: 'pairwise',
+        label: 'Pairwise leaders',
+        items: byPairwise,
+        render: (q) => `${Math.round(q.pairwise_score || 0)} pts`,
+      });
+    }
+    return result;
+  }, [questions]);
+
+  useEffect(() => {
+    if (facets.length <= 1) return;
+    const t = setInterval(() => setFacetIdx((i) => (i + 1) % facets.length), FACET_CYCLE_MS);
+    return () => clearInterval(t);
+  }, [facets.length]);
+
+  useEffect(() => { setFacetIdx(0); }, [wgNumber]);
+
+  if (!data) return <Skeleton className="h-full w-full rounded-2xl" />;
+  if (!facets.length) return null;
+
+  const facet = facets[facetIdx % facets.length];
+
+  return (
+    <div className="flex h-full min-h-0 flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
+      <div className="flex shrink-0 items-baseline justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
+          {facet.label}
+        </p>
+        <div className="flex items-center gap-1">
+          {facets.map((f, i) => (
+            <span
+              key={f.key}
+              className="h-1.5 rounded-full transition-all"
+              style={{
+                width: i === facetIdx ? 16 : 4,
+                backgroundColor: i === facetIdx ? accent : 'rgba(255,255,255,0.18)',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.ol
+          key={facet.key}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="mt-2 flex min-h-0 flex-1 flex-col justify-center gap-1.5"
+        >
+          {facet.items.map((q, i) => (
+            <li key={q.id} className="flex items-start gap-2 rounded-lg bg-white/[0.03] p-2">
+              <span
+                className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold"
+                style={{ backgroundColor: `${accent}25`, color: accent }}
+              >
+                {i + 1}
+              </span>
+              <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/90 line-clamp-2">
+                {q.text}
+              </p>
+              <span className="shrink-0 font-mono text-[11px] font-semibold text-white/75 whitespace-nowrap">
+                {facet.render(q)}
+              </span>
+            </li>
+          ))}
+        </motion.ol>
+      </AnimatePresence>
     </div>
   );
 }
