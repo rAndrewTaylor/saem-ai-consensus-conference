@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { api, getToken } from '@/lib/api';
+import { api, getAnyParticipantToken } from '@/lib/api';
 import { ClipboardList, Send, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function BreakoutNotesPanel() {
@@ -74,7 +74,7 @@ export function BreakoutNotesPanel() {
     };
     setSubmitting(true);
     try {
-      const token = getToken();
+      const token = getAnyParticipantToken();
       await api(`/api/conference/breakout/${activeSession.id}`, {
         method: 'POST', body: payload, token,
       });

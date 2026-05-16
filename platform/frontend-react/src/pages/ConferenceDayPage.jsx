@@ -378,7 +378,7 @@ export function ConferenceDayPage() {
               if (!cross) {
                 return (
                   <p className="text-xs text-white/40">
-                    The 100-point allocation across all WG priorities will open in the late afternoon.
+                    The cross-WG ranking across all panel priorities will open in the late afternoon.
                   </p>
                 );
               }
@@ -533,7 +533,6 @@ function InlineVoteCard({ session, token, onSubmitted }) {
 
   // Type-specific local state
   const [rankOrder, setRankOrder] = useState([]);
-  const [allocValues, setAllocValues] = useState({});
 
   const isCross = session.session_type === 'cross_wg_prioritization';
   const phaseLabel = session.phase === 'pre_discussion'
@@ -543,6 +542,7 @@ function InlineVoteCard({ session, token, onSubmitted }) {
 
   useEffect(() => {
     if (!token) { setQuestions([]); return; }
+    if (isCross) { setQuestions([]); return; }
     let cancelled = false;
     api(`/api/conference/sessions/${session.id}/questions`, { token, silent: true })
       .then((data) => {
@@ -550,7 +550,6 @@ function InlineVoteCard({ session, token, onSubmitted }) {
         const qs = data.questions || [];
         setQuestions(qs);
         setRankOrder(qs.map((q) => q.id));
-        setAllocValues(Object.fromEntries(qs.map((q) => [q.id, isCross ? Math.floor(100 / Math.max(1, qs.length)) : 0])));
       })
       .catch((e) => setError(e.message));
     return () => { cancelled = true; };
@@ -579,33 +578,6 @@ function InlineVoteCard({ session, token, onSubmitted }) {
     }
   };
 
-  const handleSubmitAllocation = async () => {
-    const total = Object.values(allocValues).reduce((s, n) => s + (parseFloat(n) || 0), 0);
-    if (Math.abs(total - 100) > 0.5) {
-      toast({ message: `Must total 100 (currently ${total.toFixed(0)})`, type: 'error' });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await queueSubmit({
-        url: `/api/conference/vote/${session.id}/allocate`,
-        body: { allocations: allocValues, budget: 100 },
-        token,
-        kind: 'allocation',
-      });
-      setSubmitted(true);
-      toast({
-        message: res?.queued ? 'Allocation queued (will sync when online)' : 'Allocation submitted ✓',
-        type: 'success',
-      });
-      onSubmitted && onSubmitted();
-    } catch (e) {
-      toast({ message: e.message || 'Submit failed', type: 'error' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const move = (idx, delta) => {
     setRankOrder((cur) => {
       const next = [...cur];
@@ -615,11 +587,6 @@ function InlineVoteCard({ session, token, onSubmitted }) {
       return next;
     });
   };
-
-  const allocTotal = useMemo(
-    () => Object.values(allocValues).reduce((s, n) => s + (parseFloat(n) || 0), 0),
-    [allocValues],
-  );
 
   return (
     <motion.div
@@ -715,52 +682,26 @@ function InlineVoteCard({ session, token, onSubmitted }) {
           </div>
         )}
 
-        {token && questions && questions.length > 0 && !submitted && isCross && (
+        {token && isCross && !submitted && (
           <div className="mt-4 space-y-2">
-            <p className="text-[11px] text-white/55">
-              Allocate <strong className="text-white/85">100 points</strong> across these
-              priorities — more points = higher priority.
+            <p className="text-sm text-white/70">
+              The closing round across all WGs uses the same drag-to-rank flow.
+              Open the full voting page to rank the advancing questions.
             </p>
-            <div className="flex items-center justify-between rounded-lg border px-3 py-2 text-xs"
-                 style={{
-                   borderColor: Math.abs(allocTotal - 100) < 0.5 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.3)',
-                   background: Math.abs(allocTotal - 100) < 0.5 ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.04)',
-                 }}>
-              <span className="text-white/55">Total allocated</span>
-              <span className={`font-mono font-bold ${
-                Math.abs(allocTotal - 100) < 0.5 ? 'text-emerald-300' : 'text-red-300'
-              }`}>
-                {allocTotal.toFixed(0)} / 100
-              </span>
-            </div>
-            <div className="space-y-1.5 max-h-[420px] overflow-y-auto">
-              {questions.map((q) => (
-                <div key={q.id} className="rounded-lg border border-white/[0.06] p-2">
-                  <p className="mb-1 text-xs text-white/85">
-                    {q.wg_id && <span className="mr-1 rounded bg-white/[0.06] px-1 py-0.5 text-[9px] font-bold text-white/55">WG{q.wg_id}</span>}
-                    {q.text}
-                  </p>
-                  <input
-                    type="number" min="0" max="100" step="1"
-                    value={allocValues[q.id] ?? 0}
-                    onChange={(e) => setAllocValues((v) => ({ ...v, [q.id]: parseFloat(e.target.value) || 0 }))}
-                    className="w-20 rounded border border-white/[0.1] bg-white/[0.04] px-2 py-1 text-sm font-mono text-white"
-                  />
-                </div>
-              ))}
-            </div>
-            <Button size="lg" className="w-full" loading={submitting} onClick={handleSubmitAllocation}>
-              Submit allocation
+            <Button size="lg" className="w-full" onClick={() => navigate(`/vote/${session.id}`)}>
+              Open ranking
             </Button>
           </div>
         )}
 
-        <button
-          onClick={() => navigate(`/vote/${session.id}`)}
-          className="mt-3 block w-full text-center text-[11px] text-white/40 hover:text-white/70"
-        >
-          Open full voting page →
-        </button>
+        {!isCross && (
+          <button
+            onClick={() => navigate(`/vote/${session.id}`)}
+            className="mt-3 block w-full text-center text-[11px] text-white/40 hover:text-white/70"
+          >
+            Open full voting page →
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -1433,7 +1374,7 @@ function PrintView({ data, agendaWithTimes }) {
 
 function sessionLabel(s) {
   if (s.session_type === 'cross_wg_prioritization') {
-    return 'Cross-WG consensus vote (100-point allocation)';
+    return 'Cross-WG consensus vote (drag-to-rank)';
   }
   if (s.wg_number) {
     return `WG${s.wg_number} — ${s.wg_short_name || 'Working group'}`;

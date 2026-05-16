@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { api, getToken } from '@/lib/api';
+import { api, getAnyParticipantToken } from '@/lib/api';
 import { ArrowUp, ChevronDown, ChevronUp, Send, MessageSquare } from 'lucide-react';
 
 const REFRESH_MS = 4_000;
@@ -71,7 +71,7 @@ export function AudienceChatPanel() {
   const refresh = useCallback(async () => {
     if (!sessionId) return;
     try {
-      const token = getToken();
+      const token = getAnyParticipantToken();
       const data = await api(`/api/conference/chat/${sessionId}?sort=${sort}`, { token });
       setMessages(data?.messages || []);
     } catch {}
@@ -89,7 +89,7 @@ export function AudienceChatPanel() {
     if (!body || !sessionId) return;
     setSubmitting(true);
     try {
-      const token = getToken();
+      const token = getAnyParticipantToken();
       await api(`/api/conference/chat/${sessionId}`, {
         method: 'POST', body: { body }, token,
       });
@@ -102,7 +102,7 @@ export function AudienceChatPanel() {
 
   const upvote = async (msg) => {
     try {
-      const token = getToken();
+      const token = getAnyParticipantToken();
       await api(`/api/conference/chat/${msg.id}/upvote`, { method: 'POST', token });
       // Optimistic
       setMessages((prev) => prev.map((m) =>
