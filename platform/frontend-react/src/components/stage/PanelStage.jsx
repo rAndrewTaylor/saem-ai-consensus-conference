@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ScatterChart, Scatter, ReferenceLine,
+  ScatterChart, Scatter, ReferenceLine, Cell,
 } from 'recharts';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -240,27 +240,27 @@ function ResultsView({ wgNumber, bus, accent }) {
             return (
               <li
                 key={q.id}
-                className="flex min-h-0 flex-1 flex-col justify-center rounded-xl p-4"
+                className="flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-xl p-3"
                 style={{ backgroundColor: cardBg }}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex min-w-0 items-start gap-2.5">
                   <span
-                    className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-bold"
+                    className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold"
                     style={{ backgroundColor: `${accent}25`, color: accent }}
                   >
                     {absoluteIdx + 1}
                   </span>
                   <p
-                    className="min-w-0 flex-1 text-base leading-snug sm:text-lg"
+                    className="min-w-0 flex-1 text-[13px] leading-snug line-clamp-4"
                     style={{ color: `rgba(255, 255, 255, ${textOpacity})` }}
                   >
                     {q.text}
                   </p>
-                  <span className="shrink-0 self-center font-mono text-xl font-semibold text-white/90">
+                  <span className="shrink-0 self-start font-mono text-lg font-semibold text-white/90">
                     {imp.toFixed(1)}
                   </span>
                 </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.05]">
+                <div className="mt-2 h-1.5 shrink-0 overflow-hidden rounded-full bg-white/[0.05]">
                   <motion.div
                     className="h-full rounded-full"
                     initial={{ width: 0 }}
@@ -563,14 +563,14 @@ function FacetCarousel({ wgNumber, bus, accent }) {
           className="mt-2 flex min-h-0 flex-1 flex-col justify-center gap-1.5"
         >
           {facet.items.map((q, i) => (
-            <li key={q.id} className="flex items-start gap-2 rounded-lg bg-white/[0.03] p-2">
+            <li key={q.id} className="flex min-w-0 items-start gap-2 overflow-hidden rounded-lg bg-white/[0.03] p-2">
               <span
                 className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold"
                 style={{ backgroundColor: `${accent}25`, color: accent }}
               >
                 {i + 1}
               </span>
-              <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/90 line-clamp-2">
+              <p className="min-w-0 flex-1 text-[12px] leading-snug text-white/90 line-clamp-2">
                 {q.text}
               </p>
               <span className="shrink-0 font-mono text-[11px] font-semibold text-white/75 whitespace-nowrap">
@@ -624,99 +624,138 @@ function FigureCarousel({ wgNumber, bus, accent }) {
     }));
   }, [questions]);
 
+  // Per-question importance bar chart — sorted, with shift colored
+  const rankedRows = useMemo(() => questions
+    .filter((q) => q.r2_importance_mean != null)
+    .map((q) => {
+      const r1 = q.r1_importance_mean;
+      const r2 = q.r2_importance_mean;
+      const shift = r1 != null && r2 != null ? r2 - r1 : null;
+      return {
+        name: q.short_text || `Q${q.id}`,
+        text: q.text,
+        importance: r2,
+        shift,
+        // Bar color encodes shift direction
+        fill: shift == null
+          ? accent
+          : shift > 0.2 ? '#10b981'
+          : shift < -0.2 ? '#f87171'
+          : accent,
+      };
+    })
+    .sort((a, b) => (b.importance || 0) - (a.importance || 0))
+    .slice(0, 10),
+  [questions, accent]);
+
   const shiftScatter = useMemo(() => questions
     .filter((q) => q.r1_importance_mean != null && q.r2_importance_mean != null)
-    .map((q, i) => ({
-      x: q.r1_importance_mean,
-      y: q.r2_importance_mean,
-      label: `Q${i + 1}`,
-    })),
-  [questions]);
-
-  const dispositionRows = useMemo(() => questions
-    .filter((q) => q.r2_include_pct != null || q.r2_exclude_pct != null)
-    .sort((a, b) => (b.r2_include_pct || 0) - (a.r2_include_pct || 0))
-    .slice(0, 8)
-    .map((q, i) => ({
-      name: `Q${i + 1}`,
-      include: q.r2_include_pct || 0,
-      exclude: q.r2_exclude_pct || 0,
-      undecided: Math.max(0, 100 - (q.r2_include_pct || 0) - (q.r2_exclude_pct || 0)),
-      text: q.text,
-    })),
+    .map((q, i) => {
+      const r1 = q.r1_importance_mean;
+      const r2 = q.r2_importance_mean;
+      const diff = r2 - r1;
+      return {
+        x: r1,
+        y: r2,
+        label: q.short_text || `Q${i + 1}`,
+        fill: diff > 0.2 ? '#10b981' : diff < -0.2 ? '#f87171' : 'rgba(255,255,255,0.55)',
+      };
+    }),
   [questions]);
 
   const figures = useMemo(() => {
     const out = [];
-    if (importanceBuckets.some((b) => b.count > 0)) {
-      out.push({ key: 'importance', label: 'Importance distribution', render: () => (
+
+    if (rankedRows.length >= 1) {
+      out.push({ key: 'ranked', label: 'Importance by question', render: () => (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={importanceBuckets} margin={{ top: 8, right: 12, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="bucket" tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+          <BarChart
+            layout="vertical"
+            data={rankedRows}
+            margin={{ top: 4, right: 32, bottom: 4, left: 4 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+            <XAxis
+              type="number" domain={[0, 9]}
+              tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 13 }}
+              axisLine={false} tickLine={false}
+            />
+            <YAxis
+              type="category" dataKey="name" width={90}
+              tick={{ fill: 'rgba(255,255,255,0.75)', fontSize: 13 }}
+              axisLine={false} tickLine={false}
+              interval={0}
+            />
             <Tooltip
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 12 }}
-              labelStyle={{ color: 'rgba(255,255,255,0.65)' }}
+              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 13 }}
+              labelStyle={{ color: 'rgba(255,255,255,0.65)', maxWidth: 320 }}
+              formatter={(v, _name, p) => [`${Number(v).toFixed(1)} importance`, p?.payload?.text || '']}
             />
-            <Bar dataKey="count" fill={accent} radius={[6, 6, 0, 0]} />
+            <Bar dataKey="importance" radius={[0, 6, 6, 0]} label={{ position: 'right', fill: 'rgba(255,255,255,0.85)', fontSize: 13, formatter: (v) => Number(v).toFixed(1) }}>
+              {rankedRows.map((r, i) => (<Cell key={i} fill={r.fill} />))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       )});
     }
+
     if (shiftScatter.length >= 3) {
-      out.push({ key: 'shift', label: 'R1 → R2 movement', render: () => (
+      out.push({ key: 'shift', label: 'R1 → R2 deliberation shift', render: () => (
         <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
+          <ScatterChart margin={{ top: 8, right: 16, bottom: 28, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
             <XAxis
-              type="number" dataKey="x" name="Round 1" domain={[1, 9]}
-              tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }}
+              type="number" dataKey="x" name="R1" domain={[1, 9]}
+              tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 13 }}
               axisLine={false} tickLine={false}
-              label={{ value: 'Round 1 importance', fill: 'rgba(255,255,255,0.4)', fontSize: 11, position: 'insideBottom', offset: -8 }}
+              label={{ value: 'Round 1 importance', fill: 'rgba(255,255,255,0.5)', fontSize: 13, position: 'insideBottom', offset: -8 }}
             />
             <YAxis
-              type="number" dataKey="y" name="Round 2" domain={[1, 9]}
-              tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }}
+              type="number" dataKey="y" name="R2" domain={[1, 9]}
+              tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 13 }}
               axisLine={false} tickLine={false}
+              label={{ value: 'R2', fill: 'rgba(255,255,255,0.5)', fontSize: 13, angle: -90, position: 'insideLeft' }}
             />
             <ReferenceLine
               segment={[{ x: 1, y: 1 }, { x: 9, y: 9 }]}
-              stroke="rgba(255,255,255,0.18)" strokeDasharray="4 4"
+              stroke="rgba(255,255,255,0.2)" strokeDasharray="4 4"
             />
             <Tooltip
               cursor={{ stroke: 'rgba(255,255,255,0.1)' }}
-              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 12 }}
+              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 13 }}
             />
-            <Scatter data={shiftScatter} fill={accent} />
+            <Scatter data={shiftScatter}>
+              {shiftScatter.map((r, i) => (<Cell key={i} fill={r.fill} />))}
+            </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
       )});
     }
-    if (dispositionRows.length >= 1) {
-      out.push({ key: 'disposition', label: 'Include / exclude by question', render: () => (
+
+    if (importanceBuckets.some((b) => b.count > 0)) {
+      out.push({ key: 'distribution', label: 'How importance is distributed', render: () => (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart layout="vertical" data={dispositionRows} margin={{ top: 6, right: 12, bottom: 6, left: 8 }} stackOffset="expand">
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-            <XAxis type="number" domain={[0, 1]} tickFormatter={(v) => `${Math.round(v * 100)}%`}
-                   tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" width={36}
-                   tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }} axisLine={false} tickLine={false} />
+          <BarChart data={importanceBuckets} margin={{ top: 12, right: 16, bottom: 12, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="bucket" tick={{ fill: 'rgba(255,255,255,0.7)', fontSize: 14 }} axisLine={false} tickLine={false}
+                   label={{ value: 'Importance band', fill: 'rgba(255,255,255,0.5)', fontSize: 12, position: 'insideBottom', offset: -2 }} />
+            <YAxis tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 13 }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 12 }}
-              formatter={(v) => `${Number(v).toFixed(0)}%`}
+              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 13 }}
+              labelStyle={{ color: 'rgba(255,255,255,0.65)' }}
+              formatter={(v) => [`${v} question${v === 1 ? '' : 's'}`, '']}
             />
-            <Bar dataKey="include" stackId="d" fill="#10b981" />
-            <Bar dataKey="undecided" stackId="d" fill="rgba(255,255,255,0.18)" />
-            <Bar dataKey="exclude" stackId="d" fill="#f87171" />
+            <Bar dataKey="count" fill={accent} radius={[8, 8, 0, 0]}
+                 label={{ position: 'top', fill: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 600 }} />
           </BarChart>
         </ResponsiveContainer>
       )});
     }
+
     return out;
-  }, [importanceBuckets, shiftScatter, dispositionRows, accent]);
+  }, [rankedRows, shiftScatter, importanceBuckets, accent]);
 
   useEffect(() => {
     if (figures.length <= 1) return;
