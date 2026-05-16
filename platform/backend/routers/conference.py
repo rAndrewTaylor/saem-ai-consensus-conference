@@ -1265,17 +1265,22 @@ def panel_auto_feature(
 
 @router.post("/cross-wg/auto-feature")
 def cross_wg_auto_feature(
+    n: int = 2,
+    wg5_all: bool = True,
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """Convenience: clears featured flags, then features the top 2 per WG
-    from the current candidates set. Chair can fine-tune after — for WG5
-    in particular, chair may want to feature all 5 themed questions, which
-    they can do by checking additional boxes after running this."""
+    """Convenience: clears featured flags, then features the top N per WG.
+
+    WG5 enters with a thematically-categorized question set (Arwen's
+    structure) that we want to surface in full, so `wg5_all=True` (the
+    default) features every WG5 candidate rather than capping at N.
+    Result: 2×4 + 5 = 13 questions in the closing round.
+    """
     candidates = cross_wg_candidates(db)
     ids: list[int] = []
     for grp in candidates["groups"]:
-        # First 2 candidates per WG (already ordered by avg_rank ASC / R2 desc).
-        for c in grp["candidates"][:2]:
+        take = len(grp["candidates"]) if (wg5_all and grp.get("wg_number") == 5) else n
+        for c in grp["candidates"][:take]:
             ids.append(int(c["question_id"]))
     return cross_wg_feature(FeatureRequest(question_ids=ids, replace=True), db, admin)
