@@ -108,19 +108,13 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
           </AnimatePresence>
         </div>
 
-        {/* RIGHT — word cloud, chat, then question list at bottom */}
+        {/* RIGHT — word cloud on top, chat takes the rest */}
         <div className="flex h-full min-h-0 flex-col gap-3 px-4 pb-3">
-          {/* Word cloud — bounded height so it never grows */}
-          <div className="h-[180px] shrink-0">
+          <div className="h-[160px] shrink-0">
             <WordCloud sessionId={sessionId} bus={bus} accent={accent} />
           </div>
-          {/* Chat — flex-1, scrolls internally */}
           <div className="min-h-0 flex-1 overflow-hidden">
             <ChatSidebar sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} isAdmin={isAdmin} />
-          </div>
-          {/* Question list — compact strip at bottom */}
-          <div className="h-[140px] shrink-0">
-            <QuestionStrip wgNumber={wgNumber} bus={bus} accent={accent} />
           </div>
         </div>
       </div>
@@ -128,47 +122,21 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
   );
 }
 
-// --- Compact question-pool strip (bottom of right column) -----------------
-
-function QuestionStrip({ wgNumber, bus, accent }) {
-  const [items, setItems] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    api(`/api/conference/panel/${wgNumber}/candidates`)
-      .then((d) => { if (!cancelled) setItems(d?.questions || []); })
-      .catch(() => { if (!cancelled) setItems([]); });
-    return () => { cancelled = true; };
-  }, [wgNumber, bus]);
-
-  const featured = (items || []).filter((q) => q.is_featured);
-  const showList = featured.length > 0 ? featured : (items || []).slice(0, 5);
-  const hero = featured.length > 0 ? 'On phones' : 'Top R2';
-
-  return (
-    <div className="flex h-full flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
-      <p className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-white/45">
-        Questions in play · <span style={{ color: accent }}>{hero}</span>
-      </p>
-      <ol className="mt-1.5 min-h-0 flex-1 list-decimal overflow-y-auto pl-4 pr-1 marker:text-white/35">
-        {(showList || []).slice(0, 8).map((q) => (
-          <li key={q.id} className="text-[12px] leading-snug text-white/85 line-clamp-2 my-0.5">
-            {q.text}
-          </li>
-        ))}
-        {(items || []).length === 0 && (
-          <li className="text-[12px] text-white/40 list-none">Loading…</li>
-        )}
-      </ol>
-    </div>
-  );
-}
-
 // --- Results tab -----------------------------------------------------------
+
+// Subtle palette derived from the WG accent — each card on a results
+// page gets one of these tones in rotation so the column reads as a
+// stack of distinct moments rather than a monotone list.
+const CARD_OPACITIES = [0.05, 0.08, 0.04, 0.07];
+const TEXT_OPACITIES = [0.95, 0.90, 0.88, 0.92];
+
+const PAGE_SIZE = 3;
+const CYCLE_MS = 10_000;
 
 function ResultsView({ wgNumber, bus, accent }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -180,56 +148,116 @@ function ResultsView({ wgNumber, bus, accent }) {
     return () => { cancelled = true; };
   }, [wgNumber, bus]);
 
-  if (loading) return <Skeleton className="h-64 w-full rounded-2xl" />;
+  // Reset to page 0 whenever the WG changes
+  useEffect(() => { setPage(0); }, [wgNumber]);
 
   const questions = (data?.questions || []).filter((q) => q.status !== 'removed');
-  const sorted = [...questions].sort(
+  const sorted = useMemo(() => [...questions].sort(
     (a, b) => (b.r2_importance_mean || 0) - (a.r2_importance_mean || 0)
               || (b.r2_include_pct || 0) - (a.r2_include_pct || 0)
-  );
+  ), [questions]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+
+  // Auto-rotate through pages
+  useEffect(() => {
+    if (totalPages <= 1) return;
+    const t = setInterval(() => setPage((p) => (p + 1) % totalPages), CYCLE_MS);
+    return () => clearInterval(t);
+  }, [totalPages]);
+
+  if (loading) return <Skeleton className="h-64 w-full rounded-2xl" />;
+
+  const startIdx = page * PAGE_SIZE;
+  const pageItems = sorted.slice(startIdx, startIdx + PAGE_SIZE);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-white/45">
-        Round 2 results · {sorted.length} questions · sorted by importance
-      </p>
-      <ol className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
-        {sorted.map((q, i) => {
-          const imp = q.r2_importance_mean ?? q.r1_importance_mean ?? 0;
-          const inc = q.r2_include_pct ?? q.r1_include_pct ?? 0;
-          const frac = Math.max(0.04, imp / 9);
-          return (
-            <li key={q.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5">
-              <div className="flex items-start gap-2">
-                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold text-white/70"
-                      style={{ backgroundColor: `${accent}25` }}>
-                  {i + 1}
-                </span>
-                <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/90 line-clamp-2">
-                  {q.text}
-                </p>
-                <span className="shrink-0 font-mono text-xs font-semibold text-white/85">
-                  {imp.toFixed(1)}
-                </span>
-              </div>
-              <div className="mt-1.5 flex items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.04]">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${frac * 100}%`, backgroundColor: accent, opacity: 0.85 }}
+      <div className="flex shrink-0 items-baseline justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
+          Round 2 results
+        </p>
+        <p className="font-mono text-[10px] text-white/35">
+          {sorted.length === 0
+            ? '—'
+            : `${startIdx + 1}–${Math.min(startIdx + PAGE_SIZE, sorted.length)} of ${sorted.length}`}
+        </p>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.ol
+          key={page}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="mt-3 flex min-h-0 flex-1 flex-col gap-3"
+        >
+          {pageItems.map((q, i) => {
+            const imp = q.r2_importance_mean ?? q.r1_importance_mean ?? 0;
+            const frac = Math.max(0.05, imp / 9);
+            const cardBg = `rgba(255, 255, 255, ${CARD_OPACITIES[i % CARD_OPACITIES.length]})`;
+            const textOpacity = TEXT_OPACITIES[i % TEXT_OPACITIES.length];
+            const absoluteIdx = startIdx + i;
+            return (
+              <li
+                key={q.id}
+                className="flex min-h-0 flex-1 flex-col justify-center rounded-xl p-4"
+                style={{ backgroundColor: cardBg }}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-bold"
+                    style={{ backgroundColor: `${accent}25`, color: accent }}
+                  >
+                    {absoluteIdx + 1}
+                  </span>
+                  <p
+                    className="min-w-0 flex-1 text-base leading-snug sm:text-lg"
+                    style={{ color: `rgba(255, 255, 255, ${textOpacity})` }}
+                  >
+                    {q.text}
+                  </p>
+                  <span className="shrink-0 self-center font-mono text-xl font-semibold text-white/90">
+                    {imp.toFixed(1)}
+                  </span>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.05]">
+                  <motion.div
+                    className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${frac * 100}%` }}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                    style={{ backgroundColor: accent, opacity: 0.85 }}
                   />
                 </div>
-                <span className="shrink-0 font-mono text-[10px] text-white/40">{Math.round(inc)}%</span>
-              </div>
+              </li>
+            );
+          })}
+          {pageItems.length === 0 && (
+            <li className="rounded-xl bg-white/[0.04] p-8 text-center text-sm text-white/40 list-none">
+              No Round 2 data available yet.
             </li>
-          );
-        })}
-        {sorted.length === 0 && (
-          <li className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-center text-xs text-white/40 list-none">
-            No Round 2 data available yet.
-          </li>
-        )}
-      </ol>
+          )}
+        </motion.ol>
+      </AnimatePresence>
+
+      {totalPages > 1 && (
+        <div className="mt-3 flex shrink-0 justify-center gap-1.5">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              className="h-1.5 rounded-full transition-all"
+              style={{
+                width: i === page ? 24 : 6,
+                backgroundColor: i === page ? accent : 'rgba(255,255,255,0.15)',
+              }}
+              aria-label={`Page ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
