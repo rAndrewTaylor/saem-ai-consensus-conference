@@ -51,7 +51,7 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
     // the bottom of /stage). overflow-hidden prevents the projector
     // from scrolling — anything that doesn't fit gets scrolled within
     // its own bounded section.
-    <div className="grid h-[calc(100vh-3rem)] grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[2fr_1fr]">
+    <div className="grid h-full grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[2fr_1fr]">
       {/* Main stage */}
       <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-8 pb-4 pt-6">
         <div className="mb-4 flex shrink-0 items-start gap-4">

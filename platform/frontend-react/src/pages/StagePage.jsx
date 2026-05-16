@@ -32,24 +32,29 @@ export function StagePage() {
   const showBrandFooter = !minimal;
 
   return (
-    <div className="min-h-screen bg-[#0A1628] text-white">
+    // Flex column owning the full viewport height — admin strip and SAEM
+    // footer take their natural shrink-0 height; the StageView fills the
+    // remainder via flex-1 + min-h-0. No more calc()-based fragile math.
+    <div className="flex h-screen flex-col overflow-hidden bg-[#0A1628] text-white">
       <Helmet>
         <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
       </Helmet>
 
       {showAdminStrip && (
-        <AdminControlStrip
-          mode={mode}
-          slideIndex={slideIndex}
-          panelTab={panelTab}
-          onChange={setDisplay}
-        />
+        <div className="shrink-0">
+          <AdminControlStrip
+            mode={mode}
+            slideIndex={slideIndex}
+            panelTab={panelTab}
+            onChange={setDisplay}
+          />
+        </div>
       )}
 
       {/* Fullscreen button — hidden when embedded as the /command iframe. */}
       {!minimal && <FullscreenToggle />}
 
-      <div className={showAdminStrip ? 'pt-16' : ''}>
+      <div className="min-h-0 flex-1 overflow-hidden">
         <StageView
           mode={mode}
           slideIndex={slideIndex}
@@ -63,7 +68,7 @@ export function StagePage() {
       {/* Persistent ballroom-scale footer: keeps SAEM 2026 branding on
           every projected slide. Hidden when running embedded in /command. */}
       {showBrandFooter && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.04] bg-[#0A1628]/85 px-6 py-2 backdrop-blur">
+        <div className="shrink-0 border-t border-white/[0.04] bg-[#0A1628]/85 px-6 py-2 backdrop-blur">
           <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-white/40">
             <span className="font-semibold text-white/55">SAEM 2026</span>
             <span>AI Consensus Conference · May 21, Atlanta</span>

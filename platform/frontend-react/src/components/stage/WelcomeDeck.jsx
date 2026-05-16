@@ -36,7 +36,7 @@ export function WelcomeDeck({ slideIndex = 0, onAdvance }) {
   }, [idx, onAdvance]);
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="relative h-full overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={idx}

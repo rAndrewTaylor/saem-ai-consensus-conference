@@ -86,31 +86,33 @@ export function CrossWgStage({ bus }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] px-10 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    // Fit-to-viewport projector layout. Header is fixed-height; the
+    // question list scrolls internally if it has too many to fit.
+    <div className="flex h-full flex-col overflow-hidden px-10 py-6">
+      <div className="flex shrink-0 flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">Closing vote</p>
-          <h1 className="mt-3 text-5xl font-bold">Cross-WG prioritization</h1>
+          <h1 className="mt-1 text-4xl font-bold">Cross-WG prioritization</h1>
         </div>
         <div className="text-right">
-          <p className="font-mono text-3xl font-semibold text-white">{totalVoters}</p>
-          <p className="text-xs uppercase tracking-wider text-white/40">
+          <p className="font-mono text-2xl font-semibold text-white">{totalVoters}</p>
+          <p className="text-[11px] uppercase tracking-wider text-white/40">
             {totalVoters === 1 ? 'person ranking' : 'people ranking'}
           </p>
         </div>
       </div>
-      <p className="mt-4 max-w-3xl text-xl text-white/65">{CROSS_WG_PROMPT}</p>
+      <p className="mt-2 shrink-0 max-w-4xl text-base text-white/65">{CROSS_WG_PROMPT}</p>
 
-      {loading && <Skeleton className="mt-10 h-96 w-full rounded-2xl" />}
+      {loading && <Skeleton className="mt-6 h-64 w-full rounded-2xl" />}
 
       {!loading && !session && (
-        <p className="mt-10 text-lg text-white/40">
+        <p className="mt-6 text-lg text-white/40">
           Cross-WG session hasn't been created yet — admin will set it up before the closing block.
         </p>
       )}
 
       {!loading && session && combined.length === 0 && (
-        <div className="mt-10 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-6">
+        <div className="mt-6 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-6">
           <p className="text-base text-amber-200">No questions advanced yet.</p>
           <p className="mt-2 text-sm text-white/60">
             Chairs and co-leads, use the panel "Star" button (or the Cross-WG funnel on /command)
@@ -120,44 +122,43 @@ export function CrossWgStage({ bus }) {
       )}
 
       {combined.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
           {!hasVotes && (
-            <p className="mb-4 text-base text-white/55">
-              {combined.length} questions advancing from the {new Set(combined.map((q) => q.wg_number).filter(Boolean)).size}{' '}
-              working groups. Audience members drag-rank them on their phones — live tally appears here as votes arrive.
+            <p className="mb-2 shrink-0 text-sm text-white/55">
+              {combined.length} questions advancing from {new Set(combined.map((q) => q.wg_number).filter(Boolean)).size}{' '}
+              working groups. Audience drag-ranks on phones; live tally appears here.
             </p>
           )}
-          <div className="space-y-3">
-            {combined.slice(0, 20).map((q, idx) => {
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+            {combined.map((q, idx) => {
               const wgColor = PILLAR_COLORS[q.wg_number] || '#00B4D8';
               const frac = barFraction(q.avg_rank);
               return (
-                <div key={q.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-                  <div className="flex items-start gap-3">
+                <div key={q.id} className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-2.5">
+                  <div className="flex items-start gap-2">
                     {hasVotes && q.avg_rank != null && (
-                      <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded font-mono text-sm font-bold text-white"
+                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold text-white"
                             style={{ backgroundColor: `${wgColor}30` }}>
                         {idx + 1}
                       </span>
                     )}
                     {q.wg_number && (
                       <span
-                        className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-sm font-bold"
+                        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-xs font-bold"
                         style={{ backgroundColor: `${wgColor}25`, color: wgColor }}
                       >
                         {q.wg_number}
                       </span>
                     )}
-                    <p className="min-w-0 flex-1 text-lg leading-snug text-white/95">{q.text}</p>
+                    <p className="min-w-0 flex-1 text-base leading-snug text-white/95">{q.text}</p>
                     {hasVotes && q.avg_rank != null && (
                       <span className="shrink-0 text-right">
-                        <p className="font-mono text-xl font-semibold text-white">{q.avg_rank.toFixed(1)}</p>
-                        <p className="text-[10px] uppercase tracking-wider text-white/40">avg rank</p>
+                        <p className="font-mono text-base font-semibold text-white">{q.avg_rank.toFixed(1)}</p>
                       </span>
                     )}
                   </div>
                   {hasVotes && q.avg_rank != null && (
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.04]">
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${frac * 100}%`, backgroundColor: wgColor }}

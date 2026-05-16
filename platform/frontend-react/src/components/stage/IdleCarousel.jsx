@@ -208,7 +208,7 @@ export function IdleCarousel({ bus }) {
   const slide = slides[slideIdx % slides.length] || slides[0];
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="relative h-full overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={slideIdx}

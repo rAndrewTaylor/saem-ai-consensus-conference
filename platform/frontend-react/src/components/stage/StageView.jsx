@@ -108,7 +108,9 @@ export function StageView({ mode, slideIndex, panelTab, bus, isAdmin, onChange, 
 
   const panelWgMatch = /^panel:(\d+)$/.exec(mode || '');
   const panelWgNumber = panelWgMatch ? parseInt(panelWgMatch[1], 10) : null;
-  const heightClass = compact ? '' : 'min-h-[calc(100vh-4rem)]';
+  // Full-bleed projector mode: fill the parent flex slot. Compact mode
+  // (embedded in /day) shrinks to content.
+  const heightClass = compact ? '' : 'h-full overflow-hidden';
 
   return (
     <div className={heightClass}>
