@@ -1222,7 +1222,7 @@ const CAREER_STAGE_OPTIONS = [
 
 function DemographicsPrompt({ token }) {
   const [dismissed, setDismissed] = useState(
-    () => sessionStorage.getItem('saem_demo_dismissed') === '1'
+    () => localStorage.getItem('saem_demo_dismissed') === '1'
   );
   const [me, setMe] = useState(null);
   const [role, setRole] = useState('');
@@ -1244,7 +1244,7 @@ function DemographicsPrompt({ token }) {
   const submit = async () => {
     if (!role && !stage) {
       setDismissed(true);
-      sessionStorage.setItem('saem_demo_dismissed', '1');
+      localStorage.setItem('saem_demo_dismissed', '1');
       return;
     }
     setSubmitting(true);
@@ -1258,7 +1258,7 @@ function DemographicsPrompt({ token }) {
           career_stage: stage || me.career_stage,
         }),
       });
-      sessionStorage.setItem('saem_demo_dismissed', '1');
+      localStorage.setItem('saem_demo_dismissed', '1');
       setDismissed(true);
     } catch {
       // not fatal — they'll see it again next visit
@@ -1268,7 +1268,7 @@ function DemographicsPrompt({ token }) {
   };
 
   const skip = () => {
-    sessionStorage.setItem('saem_demo_dismissed', '1');
+    localStorage.setItem('saem_demo_dismissed', '1');
     setDismissed(true);
   };
 

@@ -134,7 +134,7 @@ export function ChatSidebar({ sessionId, resolving, bus, accent, isAdmin }) {
                   {m.upvote_count || 0}
                 </span>
               </div>
-              <p className={`min-w-0 flex-1 text-sm leading-snug ${m.hidden ? 'text-white/40 line-through' : 'text-white/85'}`}>
+              <p className={`min-w-0 flex-1 text-base leading-snug ${m.hidden ? 'text-white/40 line-through' : 'text-white/90'}`}>
                 {m.body}
               </p>
               {isAdmin && (

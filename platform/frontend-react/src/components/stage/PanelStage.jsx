@@ -77,17 +77,17 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
           </motion.div>
         </AnimatePresence>
 
-        {/* Discussion prompts strip */}
+        {/* Discussion prompts strip — sized for ballroom legibility */}
         {prompts.length > 0 && (
           <div className="mt-10 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Discussion prompts</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-white/45">Discussion prompts</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {prompts.map((p, i) => (
                 <div key={i} className="rounded-xl border border-white/[0.06] p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: accent }}>
                     {p.label}
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-white/80">{p.text}</p>
+                  <p className="mt-2 text-base leading-relaxed text-white/90">{p.text}</p>
                 </div>
               ))}
             </div>

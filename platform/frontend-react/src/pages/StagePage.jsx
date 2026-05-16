@@ -52,6 +52,17 @@ export function StagePage() {
           onChange={setDisplay}
         />
       </div>
+
+      {/* Persistent ballroom-scale footer: keeps SAEM 2026 branding on
+          every projected slide. Hidden when running embedded in /command. */}
+      {!minimal && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.04] bg-[#0A1628]/85 px-6 py-2 backdrop-blur">
+          <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-white/40">
+            <span className="font-semibold text-white/55">SAEM 2026</span>
+            <span>AI Consensus Conference · May 21, Atlanta</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

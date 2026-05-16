@@ -94,8 +94,8 @@ export function TableReactionsStage({ bus }) {
 function NoteSection({ label, body }) {
   return (
     <div className="mt-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{label}</p>
-      <p className="mt-1 whitespace-pre-line text-sm text-white/80">{body}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-white/50">{label}</p>
+      <p className="mt-1 whitespace-pre-line text-base text-white/85">{body}</p>
     </div>
   );
 }
