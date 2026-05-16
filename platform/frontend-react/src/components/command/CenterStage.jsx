@@ -18,7 +18,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useTheme } from '@/hooks/useTheme';
-import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, BarChart3, Vote, Repeat, ArrowRight } from 'lucide-react';
+import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, BarChart3, Vote, Repeat, ArrowRight, Sparkles, X, Copy } from 'lucide-react';
 
 const WG_NAMES = {
   1: 'Clinical Practice & Operations',
@@ -204,6 +204,8 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
         </ActionRow>
       )}
 
+      {session && <AiPromptSuggester sessionId={session.id} wgNumber={wgNumber} />}
+
       <ActionRow>
         <SecondaryAction onClick={() => transition({ mode: 'table_reactions' })} icon={ArrowRight}>
           Move to breakout
@@ -220,6 +222,142 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
         )}
       </ActionRow>
     </div>
+  );
+}
+
+// --- AI prompt suggester (chair-only) -----------------------------------
+// Asks Claude for 2-3 new discussion prompts based on the live chat.
+// Chair reads them out / uses them to redirect; not pushed to the
+// projector automatically (yet).
+function AiPromptSuggester({ sessionId, wgNumber }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [meta, setMeta] = useState(null);
+
+  const run = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setSuggestions([]);
+    try {
+      const d = await api(`/api/conference/ai/suggest-prompts?session_id=${sessionId}&n=3`, {
+        method: 'POST',
+      });
+      setSuggestions(d?.suggestions || []);
+      setMeta({ n_messages: d?.n_messages_used || 0 });
+    } catch (e) {
+      setError(e?.message || 'AI request failed');
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
+
+  const openModal = () => {
+    setOpen(true);
+    run();
+  };
+
+  const copy = async (text) => {
+    try { await navigator.clipboard.writeText(text); } catch {}
+  };
+
+  return (
+    <>
+      <button
+        onClick={openModal}
+        className="inline-flex items-center gap-1.5 self-start rounded-lg border border-purple-400/30 bg-purple-500/10 px-2.5 py-1.5 text-xs font-semibold text-purple-200 hover:bg-purple-500/15"
+        title="Synthesize the live audience chat into new discussion prompts"
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Suggest prompts from chat
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setOpen(false)}>
+          <div
+            className="w-full max-w-2xl rounded-2xl border border-white/[0.1] bg-[#0E1E35] p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-500/15">
+                <Sparkles className="h-4 w-4 text-purple-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-purple-300">
+                  AI · WG{wgNumber}
+                </p>
+                <h3 className="mt-0.5 text-base font-bold text-white">Discussion prompts from chat</h3>
+                <p className="mt-0.5 text-xs text-white/55">
+                  Synthesized from the audience chat. Vet each one before reading aloud — the chair always has veto.
+                </p>
+              </div>
+              <button onClick={() => setOpen(false)} className="rounded p-1 text-white/40 hover:bg-white/[0.06] hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 min-h-[160px]">
+              {loading && (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-sm text-white/55">Synthesizing… (Claude reads ~30 messages and writes new prompts; takes ~3-5s)</p>
+                </div>
+              )}
+              {error && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/[0.06] p-3 text-sm text-red-200">
+                  {error}
+                </div>
+              )}
+              {!loading && !error && suggestions.length === 0 && (
+                <p className="py-8 text-center text-sm text-white/40">
+                  No suggestions came back. Try again once more messages roll in.
+                </p>
+              )}
+              {!loading && !error && suggestions.length > 0 && (
+                <ul className="space-y-2">
+                  {suggestions.map((s, i) => (
+                    <li key={i} className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple-500/15 text-xs font-bold text-purple-200">
+                        {i + 1}
+                      </span>
+                      <p className="min-w-0 flex-1 text-sm leading-relaxed text-white/90">{s}</p>
+                      <button
+                        onClick={() => copy(s)}
+                        title="Copy to clipboard"
+                        className="rounded p-1 text-white/30 hover:bg-white/[0.06] hover:text-white/70"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="text-[11px] text-white/35">
+                {meta ? `Read ${meta.n_messages} message${meta.n_messages === 1 ? '' : 's'}` : ''}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={run}
+                  disabled={loading}
+                  className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/80 hover:bg-white/[0.08] disabled:opacity-40"
+                >
+                  Regenerate
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg bg-purple-500/20 px-3 py-1.5 text-xs font-semibold text-purple-100 hover:bg-purple-500/30"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

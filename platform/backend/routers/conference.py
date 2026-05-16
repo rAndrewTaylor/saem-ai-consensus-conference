@@ -1386,3 +1386,98 @@ def cross_wg_auto_feature(
         for c in grp["candidates"][:take]:
             ids.append(int(c["question_id"]))
     return cross_wg_feature(FeatureRequest(question_ids=ids, replace=True), db, admin)
+
+
+# --- AI prompt suggestion (chair-triggered) -------------------------------
+
+@router.post("/ai/suggest-prompts")
+async def ai_suggest_prompts(
+    session_id: int,
+    n: int = 3,
+    db: Session = Depends(get_db),
+    actor: dict = Depends(require_chair),
+):
+    """Synthesize the panel's audience chat into N new discussion prompts.
+
+    Chair-triggered (the button on /command). Pulls the last ~30
+    non-hidden chat messages plus the WG's R2 starter questions, sends
+    them to Claude with a moderator-coaching prompt, and returns the
+    raw suggestions. The model is constrained to neutral, dialog-
+    deepening questions — chair previews before reading aloud.
+    """
+    from ..services.ai_synthesis import suggest_discussion_prompts
+
+    cs = db.query(ConferenceSession).get(session_id)
+    if not cs:
+        raise HTTPException(404, "Session not found")
+    if cs.session_type != "wg_presentation":
+        raise HTTPException(400, "AI prompts are only available for WG panel sessions")
+
+    wg = db.query(WorkingGroup).get(cs.wg_id) if cs.wg_id else None
+    if not wg:
+        raise HTTPException(404, "WG not found for this session")
+    if actor["actor"] == "co_lead":
+        _assert_chair_scope(actor, wg.number)
+
+    # Last ~30 visible audience messages, oldest→newest reversed so the
+    # model sees the freshest context first.
+    messages = (
+        db.query(ConferenceChatMessage)
+        .filter(
+            ConferenceChatMessage.session_id == session_id,
+            ConferenceChatMessage.hidden == False,  # noqa: E712
+        )
+        .order_by(ConferenceChatMessage.created_at.desc())
+        .limit(30)
+        .all()
+    )
+    chat_bodies = [m.body for m in messages if m.body]
+
+    # Starter questions: the curated panel pool if set, else top R2
+    pool = (
+        db.query(Question)
+        .filter(
+            Question.wg_id == wg.id,
+            Question.featured_in_panel == True,  # noqa: E712
+        )
+        .all()
+    )
+    if not pool:
+        pool = (
+            db.query(Question)
+            .filter(
+                Question.wg_id == wg.id,
+                Question.status.in_([
+                    QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+                ]),
+            )
+            .order_by(
+                Question.r2_include_pct.desc().nullslast(),
+                Question.r2_importance_mean.desc().nullslast(),
+            )
+            .limit(6)
+            .all()
+        )
+    starter_qs = [q.text for q in pool]
+
+    try:
+        prompts = await suggest_discussion_prompts(
+            wg_name=wg.name or f"Working Group {wg.number}",
+            starter_questions=starter_qs,
+            chat_messages=chat_bodies,
+            n=max(1, min(n, 5)),
+        )
+    except RuntimeError as e:
+        raise HTTPException(503, f"AI suggestion failed: {e}")
+
+    write_audit_log(
+        db, actor.get("email", "chair"), "ai_prompt_suggest",
+        f"WG{wg.number} session={session_id} n_chat={len(chat_bodies)} n_returned={len(prompts)}",
+    )
+
+    return {
+        "session_id": session_id,
+        "wg_number": wg.number,
+        "n_messages_used": len(chat_bodies),
+        "suggestions": prompts,
+    }

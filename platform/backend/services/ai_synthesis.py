@@ -348,3 +348,76 @@ TASK:
 
 Use clear headers and concise language suitable for a conference presentation.""",
 }
+
+
+# --- Conference-day live prompt suggestion --------------------------------
+# Used by /api/conference/ai/suggest-prompts. Synthesizes audience chat
+# into 2-3 new discussion prompts a moderator can use to deepen the
+# conversation. Chair-triggered, not continuous.
+
+import json
+import re
+
+
+_PROMPT_SUGGESTION_TEMPLATE = """You are assisting the moderator of a live consensus conference panel.
+
+WORKING GROUP: {wg_name}
+
+STARTER QUESTIONS BEING DELIBERATED:
+{starter_questions}
+
+AUDIENCE CHAT MESSAGES (anonymous, most recent first):
+{chat_messages}
+
+TASK:
+Based on what the audience is saying, suggest exactly {n} NEW discussion prompts the moderator could surface to deepen the conversation. Each prompt should:
+- Be phrased as a question
+- Build on or synthesize themes the audience is raising (not restate them)
+- Be neutral and non-prescriptive — open up dialog, don't push a position
+- Be specific enough to spark a 5-minute panel exchange
+- Avoid clinical recommendations or medical advice
+
+If the chat is too sparse or off-topic to ground new prompts, return prompts that gently invite the audience to engage with the starter questions.
+
+OUTPUT FORMAT — return ONLY a JSON array of strings, nothing else:
+["Prompt 1?", "Prompt 2?", "Prompt 3?"]
+"""
+
+
+def _parse_prompt_array(raw: str) -> list[str]:
+    """Pull a JSON array of strings out of the model's response."""
+    # Strip markdown code fences if present
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    # Find the outermost JSON array
+    m = re.search(r"\[.*\]", cleaned, re.DOTALL)
+    if not m:
+        return []
+    try:
+        arr = json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return []
+    return [str(s).strip() for s in arr if isinstance(s, str) and s.strip()]
+
+
+async def suggest_discussion_prompts(
+    wg_name: str,
+    starter_questions: list[str],
+    chat_messages: list[str],
+    n: int = 3,
+) -> list[str]:
+    """Return up to `n` chair-facing discussion prompts grounded in audience chat."""
+    safe_chats = [c[:280] for c in (chat_messages or []) if c and c.strip()][:30]
+    if not safe_chats:
+        safe_chats = ["(no audience messages yet)"]
+
+    prompt = _PROMPT_SUGGESTION_TEMPLATE.format(
+        wg_name=wg_name,
+        starter_questions="\n".join(f"- {q}" for q in (starter_questions or [])[:10]) or "(none provided)",
+        chat_messages="\n".join(f"- {c}" for c in safe_chats),
+        n=n,
+    )
+    result = await run_synthesis(prompt, {})
+    return _parse_prompt_array(result.get("output", ""))[:n]
