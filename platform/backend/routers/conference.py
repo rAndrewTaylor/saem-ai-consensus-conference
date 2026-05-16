@@ -411,23 +411,44 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
                 )
                 questions.extend(top)
     else:
-        # Top R2 questions for the session's WG (default to all active R2).
-        questions = (
+        # Panel pool: prefer the chair-curated `featured_in_panel` set when
+        # any are set for this WG, otherwise default to all active R2
+        # questions ordered by include% + importance.
+        curated = (
             db.query(Question)
             .filter(
                 Question.wg_id == cs.wg_id,
+                Question.featured_in_panel == True,  # noqa: E712
                 Question.status.in_([
                     QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
                 ]),
             )
             .order_by(
                 Question.r2_include_pct.desc().nullslast(),
-                Question.r1_include_pct.desc().nullslast(),
                 Question.r2_importance_mean.desc().nullslast(),
-                Question.r1_importance_mean.desc().nullslast(),
+                Question.id,
             )
             .all()
         )
+        if curated:
+            questions = curated
+        else:
+            questions = (
+                db.query(Question)
+                .filter(
+                    Question.wg_id == cs.wg_id,
+                    Question.status.in_([
+                        QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+                    ]),
+                )
+                .order_by(
+                    Question.r2_include_pct.desc().nullslast(),
+                    Question.r1_include_pct.desc().nullslast(),
+                    Question.r2_importance_mean.desc().nullslast(),
+                    Question.r1_importance_mean.desc().nullslast(),
+                )
+                .all()
+            )
 
     return {
         "session_id": session_id,
@@ -1109,6 +1130,137 @@ def cross_wg_feature(
             .scalar() or 0
         ),
     }
+
+
+# --- Per-WG panel pool (the 4-5 questions each panel votes on) -----------
+
+class PanelPoolRequest(BaseModel):
+    wg_number: int
+    question_ids: list[int]
+    replace: bool = True
+
+
+@router.get("/panel/{wg_number}/candidates")
+def panel_candidates(wg_number: int, db: Session = Depends(get_db)):
+    """List the candidate questions a chair can pick for a WG's panel pool.
+
+    Returns every active R2 question for the WG with R1/R2 stats, plus
+    a flag noting whether it's currently featured in the panel. The
+    chair UI uses this to pick ~4-5 questions per WG.
+    """
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+    qs = (
+        db.query(Question)
+        .filter(
+            Question.wg_id == wg.id,
+            Question.status.in_([
+                QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+            ]),
+        )
+        .order_by(
+            Question.r2_include_pct.desc().nullslast(),
+            Question.r2_importance_mean.desc().nullslast(),
+            Question.id,
+        )
+        .all()
+    )
+    return {
+        "wg_number": wg.number,
+        "wg_name": wg.name,
+        "n_featured": sum(1 for q in qs if q.featured_in_panel),
+        "questions": [{
+            "id": q.id,
+            "text": q.text,
+            "status": q.status.value if q.status else None,
+            "r2_include_pct": q.r2_include_pct,
+            "r2_importance_mean": q.r2_importance_mean,
+            "r1_include_pct": q.r1_include_pct,
+            "r1_importance_mean": q.r1_importance_mean,
+            "pairwise_score": q.pairwise_score,
+            "is_featured": bool(q.featured_in_panel),
+        } for q in qs],
+    }
+
+
+@router.post("/panel/feature")
+def panel_feature(
+    body: PanelPoolRequest,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Set the panel pool for a WG.
+
+    When `replace=True` (default), clears every featured_in_panel flag
+    for this WG first, then sets the given question_ids. When False,
+    adds additively.
+    """
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+
+    if body.replace:
+        db.query(Question).filter(
+            Question.wg_id == wg.id,
+            Question.featured_in_panel == True,  # noqa: E712
+        ).update({Question.featured_in_panel: False})
+
+    qs = (
+        db.query(Question)
+        .filter(
+            Question.id.in_(body.question_ids),
+            Question.wg_id == wg.id,
+        )
+        .all()
+    )
+    for q in qs:
+        q.featured_in_panel = True
+    db.commit()
+    write_audit_log(
+        db, admin.get("email", "admin"), "panel_pool_feature",
+        f"WG{body.wg_number} replace={body.replace} ids={[q.id for q in qs]}",
+    )
+    db.commit()
+    _publish_day("panel_pool_changed", {"wg_number": body.wg_number, "ids": [q.id for q in qs]})
+    return {
+        "ok": True,
+        "wg_number": body.wg_number,
+        "featured_ids": [q.id for q in qs],
+    }
+
+
+@router.post("/panel/{wg_number}/auto-feature")
+def panel_auto_feature(
+    wg_number: int,
+    n: int = 5,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """One-click: feature the top N questions (by R2 include% + importance)
+    for the given WG. Chair can fine-tune by hand after."""
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+    top = (
+        db.query(Question)
+        .filter(
+            Question.wg_id == wg.id,
+            Question.status.in_([
+                QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+            ]),
+        )
+        .order_by(
+            Question.r2_include_pct.desc().nullslast(),
+            Question.r2_importance_mean.desc().nullslast(),
+        )
+        .limit(max(1, min(n, 10)))
+        .all()
+    )
+    return panel_feature(
+        PanelPoolRequest(wg_number=wg_number, question_ids=[q.id for q in top], replace=True),
+        db, admin,
+    )
 
 
 @router.post("/cross-wg/auto-feature")

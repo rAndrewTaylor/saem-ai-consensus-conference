@@ -149,6 +149,9 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
   }, [wgNumber]);
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Re-mount the panel pool curator when the WG changes so it re-fetches.
+  // (the wgNumber key forces remount; refresh inside happens on its own).
+
   const start = async () => {
     if (!session) return;
     try { await api(`/api/conference/sessions/${session.id}/start`, { method: 'POST' }); refresh(); } catch (e) { console.error(e); }
@@ -165,6 +168,8 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
 
   return (
     <div className="space-y-2">
+      <PanelPoolCurator key={wgNumber} wgNumber={wgNumber} />
+
       <ActionRow>
         {/* Tab switcher for what's shown on the projector */}
         <TabBtn active={panelTab === 'results'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'results' })} icon={BarChart3}>Results</TabBtn>
@@ -238,6 +243,115 @@ function CrossWgActions({ onChange }) {
 const PILLAR_COLORS = {
   1: '#00B4D8', 2: '#22d3ee', 3: '#8b5cf6', 4: '#10b981', 5: '#f59e0b',
 };
+
+/**
+ * Inline picker so the chair can curate which questions appear in this
+ * panel's vote pool. Shows all R2 questions for the WG with checkboxes;
+ * a count + one-click 'Auto-pick top 5' button up top.
+ */
+function PanelPoolCurator({ wgNumber }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const d = await api(`/api/conference/panel/${wgNumber}/candidates`);
+      setData(d);
+    } catch (e) { console.error(e); }
+  }, [wgNumber]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const autoPick = async () => {
+    setLoading(true);
+    try {
+      await api(`/api/conference/panel/${wgNumber}/auto-feature?n=5`, { method: 'POST' });
+      await refresh();
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  const toggleOne = async (questionId, willBeFeatured) => {
+    if (!data) return;
+    const ids = new Set(data.questions.filter((q) => q.is_featured).map((q) => q.id));
+    if (willBeFeatured) ids.add(questionId);
+    else ids.delete(questionId);
+    setLoading(true);
+    try {
+      await api('/api/conference/panel/feature', {
+        method: 'POST',
+        body: { wg_number: wgNumber, question_ids: [...ids], replace: true },
+      });
+      await refresh();
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  if (!data) {
+    return (
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-xs text-white/40">
+        Loading panel pool…
+      </div>
+    );
+  }
+
+  const n = data.n_featured;
+  const total = data.questions.length;
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Panel pool</p>
+          <p className="mt-0.5 text-sm text-white/85">
+            {n === 0
+              ? `Using fallback (top R2 of ${total} questions). Curate to control what audience ranks.`
+              : `${n} of ${total} R2 questions in the panel pool`}
+          </p>
+        </div>
+        <button
+          onClick={autoPick}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#00B4D8]/20 px-2.5 py-1.5 text-xs font-semibold text-[#48CAE4] hover:bg-[#00B4D8]/30 disabled:opacity-40"
+        >
+          {loading ? '…' : 'Auto-pick top 5'}
+        </button>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-xs font-medium text-white/70 hover:bg-white/[0.04]"
+        >
+          {expanded ? 'Hide' : 'Edit'}
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="max-h-72 overflow-y-auto border-t border-white/[0.04] px-3 py-2">
+          <ul className="space-y-1">
+            {data.questions.map((q) => {
+              const inc = q.r2_include_pct ?? q.r1_include_pct ?? 0;
+              const imp = q.r2_importance_mean ?? q.r1_importance_mean ?? 0;
+              return (
+                <li key={q.id} className="flex items-start gap-2 rounded border border-white/[0.04] p-1.5">
+                  <label className="flex flex-1 cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={q.is_featured}
+                      onChange={(e) => toggleOne(q.id, e.target.checked)}
+                      disabled={loading}
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded accent-[#00B4D8]"
+                    />
+                    <p className="min-w-0 flex-1 text-[11px] leading-snug text-white/85">{q.text}</p>
+                  </label>
+                  <span className="shrink-0 font-mono text-[9px] text-white/40 whitespace-nowrap">
+                    {Math.round(inc)}% · {imp.toFixed(1)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CrossWgFunnel() {
   const [data, setData] = useState(null);
