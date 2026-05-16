@@ -8,13 +8,18 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+from fastapi import Header
+
 from ..database import (
     get_db, WorkingGroup, Question, Participant, ConferenceSession,
     ConferenceVote, ConferenceComment, BreakoutNote, QuestionStatus,
     ConferenceChatMessage, ConferenceChatUpvote, ConferenceDisplayMode,
-    AuditLog, write_audit_log,
+    AuditLog, CoLead, write_audit_log,
 )
-from ..auth import require_admin, get_participant_token, verify_participant_token
+from ..auth import (
+    require_admin, get_participant_token, verify_participant_token,
+    verify_admin_token,
+)
 from ..validators import (
     validate_session_type, validate_importance, sanitize_text,
     validate_comment_type, safe_csv_value, VALID_PHASES,
@@ -31,6 +36,43 @@ def _publish_day(event: str, payload: dict) -> None:
         publish_day_event({"event": event, **payload})
     except Exception:
         pass
+
+
+async def require_chair(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Auth dependency: accept admin token OR any active co-lead invite
+    token. Endpoints that need per-WG scoping should call
+    `_assert_chair_scope(actor, wg_number)` after this dependency runs.
+    Returns `{actor, email, wg_number}` (wg_number is None for admin,
+    set for co-leads to their assigned WG).
+    """
+    if not authorization:
+        raise HTTPException(401, "Authorization header required")
+    token = authorization.replace("Bearer ", "").strip()
+    try:
+        payload = verify_admin_token(token)
+        return {"actor": "admin", "email": payload.get("sub", "admin"), "wg_number": None}
+    except HTTPException:
+        pass
+    cl = db.query(CoLead).filter(CoLead.invite_token == token).first()
+    if not cl or cl.is_active is False:
+        raise HTTPException(401, "Invalid or expired token")
+    wg = db.query(WorkingGroup).get(cl.wg_id) if cl.wg_id else None
+    return {
+        "actor": "co_lead",
+        "email": cl.email or cl.name,
+        "wg_number": wg.number if wg else None,
+    }
+
+
+def _assert_chair_scope(actor: dict, wg_number: int) -> None:
+    """For per-WG chair actions: admin always allowed; co-lead must match WG."""
+    if actor["actor"] == "admin":
+        return
+    if actor["wg_number"] != wg_number:
+        raise HTTPException(403, f"Not authorized for WG{wg_number}")
 
 
 # --- Schemas ---
@@ -374,8 +416,10 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
     if cs.session_type == "cross_wg_prioritization":
         # If the chair has explicitly featured questions for the cross-WG
         # round (via /cross-wg/feature), use only those. Otherwise fall
-        # back to top 3 R2 questions per WG so the session still works
-        # before the funnel has been run.
+        # back to top-N R2 questions per WG so the session still works
+        # before the funnel has been run. WG5 enters with a thematically-
+        # categorized question set and surfaces all 5; other WGs cap at 2
+        # to match the documented "top 2 per WG" advancement rule.
         featured = (
             db.query(Question)
             .filter(
@@ -392,6 +436,7 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
         else:
             questions = []
             for wg in db.query(WorkingGroup).order_by(WorkingGroup.number).all():
+                per_wg_limit = 5 if wg.number == 5 else 2
                 top = (
                     db.query(Question)
                     .filter(
@@ -406,7 +451,7 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
                         Question.r2_importance_mean.desc().nullslast(),
                         Question.r1_importance_mean.desc().nullslast(),
                     )
-                    .limit(3)
+                    .limit(per_wg_limit)
                     .all()
                 )
                 questions.extend(top)
@@ -1020,22 +1065,26 @@ def cross_wg_candidates(db: Session = Depends(get_db)):
         suggested: list[dict] = []
         if session:
             # Average rank per question across all voters in this session.
-            # Lower avg_rank = higher priority.
-            rows = (
-                db.query(
-                    ConferenceVote.question_id,
-                    func.avg(ConferenceVote.value).label("avg_rank"),
-                    func.count(func.distinct(ConferenceVote.participant_id)).label("n"),
+            # Lower avg_rank = higher priority. Prefer post-discussion
+            # rankings (chair's final signal); fall back to pre if no
+            # post votes have arrived yet.
+            def _rank_query(vote_type: str):
+                return (
+                    db.query(
+                        ConferenceVote.question_id,
+                        func.avg(ConferenceVote.value).label("avg_rank"),
+                        func.count(func.distinct(ConferenceVote.participant_id)).label("n"),
+                    )
+                    .filter(
+                        ConferenceVote.session_id == session.id,
+                        ConferenceVote.vote_type == vote_type,
+                    )
+                    .group_by(ConferenceVote.question_id)
+                    .order_by("avg_rank")
+                    .limit(CANDIDATES_PER_WG)
+                    .all()
                 )
-                .filter(
-                    ConferenceVote.session_id == session.id,
-                    ConferenceVote.vote_type == "ranking",
-                )
-                .group_by(ConferenceVote.question_id)
-                .order_by("avg_rank")
-                .limit(CANDIDATES_PER_WG)
-                .all()
-            )
+            rows = _rank_query("ranking_post_discussion") or _rank_query("ranking_pre_discussion")
             for r in rows:
                 q = db.query(Question).get(int(r.question_id))
                 if not q:
@@ -1188,14 +1237,15 @@ def panel_candidates(wg_number: int, db: Session = Depends(get_db)):
 def panel_feature(
     body: PanelPoolRequest,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    actor: dict = Depends(require_chair),
 ):
-    """Set the panel pool for a WG.
+    """Set the panel pool for a WG. Accepts admin OR the WG's co-lead.
 
     When `replace=True` (default), clears every featured_in_panel flag
     for this WG first, then sets the given question_ids. When False,
     adds additively.
     """
+    _assert_chair_scope(actor, body.wg_number)
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
@@ -1218,10 +1268,9 @@ def panel_feature(
         q.featured_in_panel = True
     db.commit()
     write_audit_log(
-        db, admin.get("email", "admin"), "panel_pool_feature",
-        f"WG{body.wg_number} replace={body.replace} ids={[q.id for q in qs]}",
+        db, actor.get("email", "chair"), "panel_pool_feature",
+        f"WG{body.wg_number} replace={body.replace} ids={[q.id for q in qs]} actor={actor['actor']}",
     )
-    db.commit()
     _publish_day("panel_pool_changed", {"wg_number": body.wg_number, "ids": [q.id for q in qs]})
     return {
         "ok": True,
@@ -1235,10 +1284,11 @@ def panel_auto_feature(
     wg_number: int,
     n: int = 5,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    actor: dict = Depends(require_chair),
 ):
     """One-click: feature the top N questions (by R2 include% + importance)
-    for the given WG. Chair can fine-tune by hand after."""
+    for the given WG. Chair OR the WG's co-lead can call this."""
+    _assert_chair_scope(actor, wg_number)
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
         raise HTTPException(404, "Working group not found")
@@ -1259,8 +1309,55 @@ def panel_auto_feature(
     )
     return panel_feature(
         PanelPoolRequest(wg_number=wg_number, question_ids=[q.id for q in top], replace=True),
-        db, admin,
+        db, actor,
     )
+
+
+@router.post("/panel/{wg_number}/reset")
+def panel_reset(
+    wg_number: int,
+    db: Session = Depends(get_db),
+    actor: dict = Depends(require_chair),
+):
+    """Clear all featured_in_panel flags for a given WG."""
+    _assert_chair_scope(actor, wg_number)
+    wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
+    if not wg:
+        raise HTTPException(404, "Working group not found")
+    n = (
+        db.query(Question)
+        .filter(
+            Question.wg_id == wg.id,
+            Question.featured_in_panel == True,  # noqa: E712
+        )
+        .update({Question.featured_in_panel: False})
+    )
+    db.commit()
+    write_audit_log(
+        db, actor.get("email", "chair"), "panel_pool_reset",
+        f"WG{wg_number} cleared={n} actor={actor['actor']}",
+    )
+    _publish_day("panel_pool_changed", {"wg_number": wg_number, "ids": []})
+    return {"ok": True, "wg_number": wg_number, "cleared": n}
+
+
+@router.post("/cross-wg/reset")
+def cross_wg_reset(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Clear all featured_in_cross_wg flags. Admin-only."""
+    n = (
+        db.query(Question)
+        .filter(Question.featured_in_cross_wg == True)  # noqa: E712
+        .update({Question.featured_in_cross_wg: False})
+    )
+    db.commit()
+    write_audit_log(
+        db, admin.get("sub", "admin"), "cross_wg_reset", f"cleared={n}"
+    )
+    _publish_day("cross_wg_changed", {"ids": []})
+    return {"ok": True, "cleared": n}
 
 
 @router.post("/cross-wg/auto-feature")

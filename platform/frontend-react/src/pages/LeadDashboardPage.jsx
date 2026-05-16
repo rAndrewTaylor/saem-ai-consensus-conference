@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -232,6 +232,11 @@ export function LeadDashboardPage() {
             hint={`from ${activity.pairwise_participants} experts`}
             tone="warning"
           />
+        </div>
+
+        {/* ─── Panel-day pool curation ─────────────────────── */}
+        <div className="mt-8">
+          <PanelPoolEditor wgNumber={wg.number} token={token} />
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
@@ -604,5 +609,127 @@ export function LeadDashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Conference-day panel pool: each WG votes on 4-5 starter questions during
+ * their panel. Co-leads pick the set ahead of time from this WG's R2
+ * questions. If left empty, the platform falls back to top-R2 ordering.
+ */
+function PanelPoolEditor({ wgNumber, token }) {
+  const [data, setData] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const d = await api(`/api/conference/panel/${wgNumber}/candidates`);
+      setData(d);
+    } catch (e) { console.error(e); }
+  }, [wgNumber]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const autoPick = async () => {
+    setBusy(true);
+    try {
+      await api(`/api/conference/panel/${wgNumber}/auto-feature?n=5`, { method: 'POST', token });
+      await refresh();
+    } finally { setBusy(false); }
+  };
+
+  const reset = async () => {
+    if (!window.confirm('Clear every featured question for this panel?')) return;
+    setBusy(true);
+    try {
+      await api(`/api/conference/panel/${wgNumber}/reset`, { method: 'POST', token });
+      await refresh();
+    } finally { setBusy(false); }
+  };
+
+  const toggleOne = async (questionId, willBeFeatured) => {
+    if (!data) return;
+    const ids = new Set(data.questions.filter((q) => q.is_featured).map((q) => q.id));
+    if (willBeFeatured) ids.add(questionId);
+    else ids.delete(questionId);
+    setBusy(true);
+    try {
+      await api('/api/conference/panel/feature', {
+        method: 'POST',
+        token,
+        body: { wg_number: wgNumber, question_ids: [...ids], replace: true },
+      });
+      await refresh();
+    } finally { setBusy(false); }
+  };
+
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="py-6 text-sm text-white/40">Loading panel pool…</CardContent>
+      </Card>
+    );
+  }
+  const n = data.n_featured;
+  const total = data.questions.length;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ClipboardList className="h-5 w-5 text-cyan-400" />
+          Conference-day panel pool
+          <Badge variant="primary" className="ml-2">{n} of {total}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-white/55">
+          {n === 0
+            ? 'Pick 4–5 questions your panel audience will rank on May 21. If you leave this empty, the platform falls back to your top R2 questions.'
+            : `${n} question${n === 1 ? '' : 's'} queued for your panel. The audience will drag-to-rank exactly this set.`}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" onClick={autoPick} disabled={busy}>
+            {busy ? '…' : 'Auto-pick top 5 by R2'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setExpanded(!expanded)}>
+            {expanded ? 'Hide list' : 'Hand-pick from list'}
+          </Button>
+          {n > 0 && (
+            <Button size="sm" variant="ghost" onClick={reset} disabled={busy}>
+              Clear all
+            </Button>
+          )}
+        </div>
+
+        {expanded && (
+          <div className="mt-4 max-h-[420px] overflow-y-auto rounded-lg border border-white/[0.06]">
+            <ul className="divide-y divide-white/[0.04]">
+              {data.questions.map((q) => {
+                const inc = q.r2_include_pct ?? q.r1_include_pct ?? 0;
+                const imp = q.r2_importance_mean ?? q.r1_importance_mean ?? 0;
+                return (
+                  <li key={q.id} className="flex items-start gap-3 p-3">
+                    <label className="flex flex-1 cursor-pointer items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={q.is_featured}
+                        onChange={(e) => toggleOne(q.id, e.target.checked)}
+                        disabled={busy}
+                        className="mt-1 h-4 w-4 shrink-0 rounded accent-cyan-500"
+                      />
+                      <p className="min-w-0 flex-1 text-sm text-white/85">{q.text}</p>
+                    </label>
+                    <span className="shrink-0 font-mono text-[11px] text-white/45 whitespace-nowrap">
+                      {Math.round(inc)}% · {imp.toFixed(1)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
