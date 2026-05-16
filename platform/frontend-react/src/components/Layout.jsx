@@ -5,10 +5,35 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { getAdminToken, getLeadToken, getActiveWg } from '@/lib/api';
 
+// Conference-day routes get no global chrome — no nav, no footer.
+// Audience members on /day or /vote/:id only see what the
+// SignedInChip + StageFollowOrchestrator render. Projector /stage
+// already has its own chrome (admin strip + SAEM footer).
+const NO_CHROME_PATTERNS = [
+  /^\/day$/,
+  /^\/vote\//,
+  /^\/stage$/,
+];
+
 export function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { theme, toggle } = useTheme();
+
+  const noChrome = NO_CHROME_PATTERNS.some((re) => re.test(location.pathname));
+  if (noChrome) {
+    return (
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--th-base)' }}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-[#1B5E8A] focus:px-4 focus:py-2 focus:text-white"
+        >
+          Skip to main content
+        </a>
+        <main id="main-content">{children}</main>
+      </div>
+    );
+  }
 
   // Derive auth state from localStorage (re-evaluates on each render,
   // which is fine — nav renders on every route change)
