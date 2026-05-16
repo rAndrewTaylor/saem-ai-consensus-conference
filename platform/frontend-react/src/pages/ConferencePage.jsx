@@ -43,6 +43,8 @@ import { useToast } from '@/components/ui/toast';
 import { useParticipantToken } from '@/hooks/useParticipantToken';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
+import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -349,7 +351,7 @@ export function ConferencePage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col bg-[#0A1628]">
+    <div className="flex flex-col bg-[#0A1628] min-h-screen pb-24">
       {/* Persistent top nav — always available so participants can hop back
           to the conference-day agenda without using the browser back button. */}
       <div className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0A1628]/95 px-4 py-2 backdrop-blur sm:px-6">
@@ -365,20 +367,16 @@ export function ConferencePage() {
         </div>
       </div>
 
-      {/* Hero Header */}
-      <div className="relative overflow-hidden px-4 py-10 sm:px-6 sm:py-12">
-        <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-500/15 to-transparent blur-3xl" />
-        <div className="relative mx-auto max-w-3xl text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+      {/* Compact header — keep the rank list above the fold on phones */}
+      <div className="relative px-4 pb-2 pt-4 sm:px-6">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
             Conference Day Voting
           </h1>
-          <p className="mt-2 text-white/50">
-            Live audience response &mdash; drag to rank, then rate importance
-          </p>
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
+      <div className="mx-auto w-full max-w-4xl px-4 pb-12 sm:px-6">
       {/* Session info + live indicator */}
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-3">
@@ -462,7 +460,7 @@ export function ConferencePage() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-white/50">
-                    Press-and-hold on any row, then drag up or down. #1 is your highest priority.
+                    Press-and-hold the grip handle on a row, then drag up or down. #1 is your highest priority.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-2 p-4">
@@ -612,6 +610,13 @@ export function ConferencePage() {
         </Card>
       </div>
       </div>
+
+      {/* Sticky bottom chat panel — only renders during panel:N mode so
+          audience can keep submitting questions while ranking. */}
+      <AudienceChatPanel />
+
+      {/* Breakout note submission — only renders during table_reactions. */}
+      <BreakoutNotesPanel />
     </div>
   );
 }
@@ -670,27 +675,36 @@ function SortableRankRow({ id, index, text }) {
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  // Only the grip handle owns the drag listeners. The rest of the row
+  // stays scrollable so the user can swipe the page up/down without
+  // accidentally activating a drag.
   return (
     <li
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex touch-none select-none items-center gap-3 rounded-lg border bg-white/[0.03] px-3 py-3 sm:px-4',
+        'flex select-none items-center gap-2 rounded-lg border bg-white/[0.03] px-2.5 py-2 sm:px-3',
         isDragging
           ? 'border-[#48CAE4]/60 bg-white/[0.07] shadow-lg shadow-[#00B4D8]/15'
           : 'border-white/[0.08]'
       )}
       {...attributes}
-      {...listeners}
     >
-      <GripVertical className="h-5 w-5 shrink-0 cursor-grab text-white/30" />
+      <button
+        type="button"
+        aria-label="Drag to reorder"
+        className="-m-1 flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded text-white/40 hover:bg-white/[0.06] hover:text-white/70 active:cursor-grabbing"
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
       <span className={cn(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',
         index === 0 ? 'bg-[#0C2340] text-white' : index < 3 ? 'bg-[#1B5E8A] text-white' : 'bg-white/[0.08] text-white/70'
       )}>
         {index + 1}
       </span>
-      <span className="min-w-0 flex-1 text-sm leading-snug text-white/90">{text}</span>
+      <span className="min-w-0 flex-1 text-xs leading-snug text-white/90 sm:text-sm">{text}</span>
     </li>
   );
 }

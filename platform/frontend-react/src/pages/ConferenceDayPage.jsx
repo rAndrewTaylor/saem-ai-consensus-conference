@@ -19,8 +19,6 @@ import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
 import { useStageDisplay } from '@/components/stage/StageView';
 import { CompactStageView } from '@/components/stage/CompactStageView';
-import { AdminControlStrip } from '@/components/stage/AdminControlStrip';
-import { getAdminToken } from '@/lib/api';
 import QRCode from 'qrcode';
 
 // Poll the day-state endpoint every 12s so the page reacts when admin
@@ -73,8 +71,7 @@ export function ConferenceDayPage() {
   // Stage integration must be at the top of the component (hooks rules):
   // calling these after conditional returns below would mismatch hook
   // count across renders and break React.
-  const isAdmin = Boolean(getAdminToken());
-  const stage = useStageDisplay(isAdmin);
+  const stage = useStageDisplay(false);
   const inLiveSegment = stage.mode && stage.mode !== 'idle';
 
   const [data, setData] = useState(null);
@@ -248,23 +245,12 @@ export function ConferenceDayPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Helmet>
 
-      {isAdmin && (
-        <AdminControlStrip
-          mode={stage.mode}
-          slideIndex={stage.slideIndex}
-          panelTab={stage.panelTab}
-          onChange={stage.setDisplay}
-        />
-      )}
-
-      <div className={isAdmin ? 'pt-12' : ''}>
-        <NowBar
-          active={activeSession}
-          currentAgenda={currentAgenda}
-          online={online}
-          onTapVote={() => activeSession && navigate(`/vote/${activeSession.id}`)}
-        />
-      </div>
+      <NowBar
+        active={activeSession}
+        currentAgenda={currentAgenda}
+        online={online}
+        onTapVote={() => activeSession && navigate(`/vote/${activeSession.id}`)}
+      />
 
       {/* === Live stage preview — phone-friendly card, mode-aware === */}
       <section className="mx-auto w-full max-w-2xl px-4 pt-4 sm:px-6">
