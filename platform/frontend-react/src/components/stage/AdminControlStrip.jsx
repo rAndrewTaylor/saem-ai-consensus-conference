@@ -79,13 +79,32 @@ export function AdminControlStrip({ mode, slideIndex, panelTab, onChange }) {
     } catch (e) { console.error(e); }
   };
 
+  // Guarded mode change — confirm before leaving an active vote session,
+  // and confirm before entering the cross-WG closing round.
+  const guardedChange = (next) => {
+    const sameMode = next?.mode === mode;
+    if (!sameMode && session?.is_active) {
+      const target = next.mode === 'idle' ? 'idle' : next.mode === 'cross_wg' ? 'the closing round' : next.mode?.replace('panel:', 'Panel ') || 'a different mode';
+      if (!window.confirm(`A vote is open right now. Move to ${target} anyway?`)) return;
+    }
+    if (!sameMode && next?.mode === 'cross_wg') {
+      if (!window.confirm('Switch projector to the cross-WG closing round?')) return;
+    }
+    onChange(next);
+  };
+
+  const guardedStop = async () => {
+    if (!window.confirm('Stop the current vote? Audience phones will lock out further submissions.')) return;
+    await stopSession();
+  };
+
   return (
     <div className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
       <div className="flex items-center gap-2 px-4 py-2">
         <span className="mr-3 text-[10px] font-bold uppercase tracking-wider text-amber-400">Admin · Stage</span>
 
-        <ModeButton active={mode === 'idle'} onClick={() => onChange({ mode: 'idle' })} icon={Home} label="Idle" />
-        <ModeButton active={mode === 'welcome'} onClick={() => onChange({ mode: 'welcome', slide_index: 0 })} icon={Presentation} label="Welcome" />
+        <ModeButton active={mode === 'idle'} onClick={() => guardedChange({ mode: 'idle' })} icon={Home} label="Idle" />
+        <ModeButton active={mode === 'welcome'} onClick={() => guardedChange({ mode: 'welcome', slide_index: 0 })} icon={Presentation} label="Welcome" />
 
         <div className="mx-1 h-6 w-px bg-white/[0.08]" />
 
@@ -93,7 +112,7 @@ export function AdminControlStrip({ mode, slideIndex, panelTab, onChange }) {
           <ModeButton
             key={n}
             active={panelWg === n}
-            onClick={() => onChange({ mode: `panel:${n}`, panel_tab: 'results' })}
+            onClick={() => guardedChange({ mode: `panel:${n}`, panel_tab: 'results' })}
             icon={Users2}
             label={`P${n}`}
             title={`Panel ${n} — ${WG_LABELS[n]}`}
@@ -102,8 +121,8 @@ export function AdminControlStrip({ mode, slideIndex, panelTab, onChange }) {
 
         <div className="mx-1 h-6 w-px bg-white/[0.08]" />
 
-        <ModeButton active={mode === 'table_reactions'} onClick={() => onChange({ mode: 'table_reactions' })} icon={MessageSquare} label="Tables" />
-        <ModeButton active={mode === 'cross_wg'} onClick={() => onChange({ mode: 'cross_wg' })} icon={Trophy} label="Cross-WG" />
+        <ModeButton active={mode === 'table_reactions'} onClick={() => guardedChange({ mode: 'table_reactions' })} icon={MessageSquare} label="Tables" />
+        <ModeButton active={mode === 'cross_wg'} onClick={() => guardedChange({ mode: 'cross_wg' })} icon={Trophy} label="Cross-WG" />
 
         <div className="ml-auto flex items-center gap-2">
           {/* Mode-specific sub-controls */}
@@ -171,7 +190,7 @@ export function AdminControlStrip({ mode, slideIndex, panelTab, onChange }) {
                       {session.phase === 'pre_discussion' ? 'Pre' : 'Post'}
                     </button>
                     <button
-                      onClick={stopSession}
+                      onClick={guardedStop}
                       className="inline-flex items-center gap-1.5 rounded-md bg-red-500/15 px-2.5 py-1 text-xs font-medium text-red-300 hover:bg-red-500/25"
                     >
                       <Square className="h-3.5 w-3.5" />

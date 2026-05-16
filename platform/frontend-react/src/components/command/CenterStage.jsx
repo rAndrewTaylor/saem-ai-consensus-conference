@@ -158,12 +158,21 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
   };
   const stop = async () => {
     if (!session) return;
+    if (!window.confirm('Stop the current vote? Audience phones will lock out further submissions.')) return;
     try { await api(`/api/conference/sessions/${session.id}/stop`, { method: 'POST' }); refresh(); } catch (e) { console.error(e); }
   };
   const togglePhase = async () => {
     if (!session) return;
     const next = session.phase === 'pre_discussion' ? 'post_discussion' : 'pre_discussion';
     try { await api(`/api/conference/sessions/${session.id}/phase`, { method: 'POST', body: { phase: next } }); refresh(); } catch (e) { console.error(e); }
+  };
+
+  const transition = (next) => {
+    if (session?.is_active) {
+      const target = next.mode === 'cross_wg' ? 'the cross-WG round' : next.mode === 'table_reactions' ? 'breakout mode' : next.mode?.replace('panel:', 'Panel ');
+      if (!window.confirm(`Vote is still open for WG${wgNumber}. Move to ${target} anyway?`)) return;
+    }
+    onChange?.(next);
   };
 
   return (
@@ -196,16 +205,16 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
       )}
 
       <ActionRow>
-        <SecondaryAction onClick={() => onChange?.({ mode: 'table_reactions' })} icon={ArrowRight}>
+        <SecondaryAction onClick={() => transition({ mode: 'table_reactions' })} icon={ArrowRight}>
           Move to breakout
         </SecondaryAction>
         {wgNumber < 5 && (
-          <PrimaryAction onClick={() => onChange?.({ mode: `panel:${wgNumber + 1}`, panel_tab: 'results' })} icon={ArrowRight}>
+          <PrimaryAction onClick={() => transition({ mode: `panel:${wgNumber + 1}`, panel_tab: 'results' })} icon={ArrowRight}>
             Next: Panel {wgNumber + 1}
           </PrimaryAction>
         )}
         {wgNumber === 5 && (
-          <PrimaryAction onClick={() => onChange?.({ mode: 'cross_wg' })} icon={ArrowRight}>
+          <PrimaryAction onClick={() => transition({ mode: 'cross_wg' })} icon={ArrowRight}>
             Move to Cross-WG vote
           </PrimaryAction>
         )}

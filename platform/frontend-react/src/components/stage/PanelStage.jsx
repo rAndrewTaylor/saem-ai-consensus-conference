@@ -105,14 +105,21 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
 
 function ResultsView({ wgNumber, bus, accent }) {
   const [data, setData] = useState(null);
+  const [pool, setPool] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    api(`/api/surveys/results/${wgNumber}/round_2`)
-      .then((d) => { if (!cancelled) setData(d); })
-      .catch(() => { if (!cancelled) setData({ questions: [] }); })
+    Promise.all([
+      api(`/api/surveys/results/${wgNumber}/round_2`).catch(() => ({ questions: [] })),
+      api(`/api/conference/panel/${wgNumber}/candidates`).catch(() => null),
+    ])
+      .then(([results, panelPool]) => {
+        if (cancelled) return;
+        setData(results);
+        setPool(panelPool);
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [wgNumber, bus]);
@@ -124,38 +131,73 @@ function ResultsView({ wgNumber, bus, accent }) {
     (a, b) => (b.r2_include_pct || 0) - (a.r2_include_pct || 0)
               || (b.r2_importance_mean || 0) - (a.r2_importance_mean || 0)
   );
+  const featuredIds = new Set(
+    (pool?.questions || []).filter((q) => q.is_featured).map((q) => q.id)
+  );
+  const inPool = sorted.filter((q) => featuredIds.has(q.id));
+  const others = sorted.filter((q) => !featuredIds.has(q.id));
+  const hasCuratedPool = inPool.length > 0;
+
+  const renderRow = (q, isFeatured) => {
+    const inc = q.r2_include_pct ?? q.r1_include_pct ?? 0;
+    const imp = q.r2_importance_mean ?? q.r1_importance_mean ?? 0;
+    return (
+      <div
+        key={q.id}
+        className={`flex items-start gap-4 rounded-xl border p-4 ${
+          isFeatured
+            ? 'border-amber-300/30 bg-amber-300/[0.04]'
+            : 'border-white/[0.06] bg-white/[0.02]'
+        }`}
+      >
+        {isFeatured && (
+          <span className="mt-0.5 inline-flex h-6 shrink-0 items-center rounded bg-amber-300/15 px-2 text-[10px] font-semibold uppercase tracking-wider text-amber-200">
+            On phone
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className={`leading-snug ${isFeatured ? 'text-base text-white' : 'text-sm text-white/85'}`}>{q.text}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-4 text-xs text-white/60">
+          <div className="text-right">
+            <p className="font-mono font-semibold text-white" style={{ color: inc >= 80 ? '#10b981' : '#fff' }}>
+              {Math.round(inc)}%
+            </p>
+            <p className="text-[10px] uppercase tracking-wider text-white/30">incl</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono font-semibold text-white">{Number(imp).toFixed(1)}</p>
+            <p className="text-[10px] uppercase tracking-wider text-white/30">imp</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
-        Round 2 results — {sorted.length} questions
-      </p>
-      <div className="mt-5 space-y-2">
-        {sorted.slice(0, 12).map((q) => {
-          const inc = q.r2_include_pct ?? q.r1_include_pct ?? 0;
-          const imp = q.r2_importance_mean ?? q.r1_importance_mean ?? 0;
-          return (
-            <div key={q.id} className="flex items-start gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm leading-snug text-white/90">{q.text}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-4 text-xs text-white/60">
-                <div className="text-right">
-                  <p className="font-mono font-semibold text-white" style={{ color: inc >= 80 ? '#10b981' : '#fff' }}>
-                    {Math.round(inc)}%
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-white/30">incl</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono font-semibold text-white">{Number(imp).toFixed(1)}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-white/30">imp</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {hasCuratedPool && (
+        <>
+          <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">
+            Audience is ranking these {inPool.length} questions
+          </p>
+          <div className="mt-3 space-y-2">
+            {inPool.map((q) => renderRow(q, true))}
+          </div>
+          <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-white/40">
+            Other Round 2 questions for context
+          </p>
+        </>
+      )}
+      {!hasCuratedPool && (
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+          Round 2 results — {sorted.length} questions
+        </p>
+      )}
+      <div className={`${hasCuratedPool ? 'mt-3' : 'mt-5'} space-y-2`}>
+        {(hasCuratedPool ? others : sorted).slice(0, 12).map((q) => renderRow(q, false))}
       </div>
-      {sorted.length > 12 && (
+      {!hasCuratedPool && sorted.length > 12 && (
         <p className="mt-3 text-xs text-white/30">+ {sorted.length - 12} more questions in the platform</p>
       )}
     </div>
