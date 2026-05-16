@@ -15,7 +15,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowUp, EyeOff, Eye, MessageSquare, Vote, FileText } from 'lucide-react';
+import { ArrowUp, EyeOff, Eye, MessageSquare, Vote, FileText, Star } from 'lucide-react';
 
 const POLL_MS = 4000;
 
@@ -150,6 +150,9 @@ function ChatFirehose({ mode, bus }) {
 function VoteTally({ mode, bus }) {
   const [sessionId, setSessionId] = useState(null);
   const [results, setResults] = useState(null);
+  const [featuredIds, setFeaturedIds] = useState(new Set());
+  const [busyId, setBusyId] = useState(null);
+  const isPanel = /^panel:\d+$/.test(mode || '');
 
   useEffect(() => {
     let cancelled = false;
@@ -172,10 +175,32 @@ function VoteTally({ mode, bus }) {
     return () => { cancelled = true; };
   }, [mode]);
 
+  const refreshFeatured = useCallback(async () => {
+    if (!isPanel) return;
+    try {
+      const d = await api('/api/conference/cross-wg/candidates');
+      setFeaturedIds(new Set((d?.questions || []).filter((q) => q.is_featured).map((q) => q.id)));
+    } catch {}
+  }, [isPanel]);
+
   useEffect(() => {
     if (!sessionId) { setResults(null); return; }
     api(`/api/conference/results/${sessionId}`).then(setResults).catch(() => setResults(null));
-  }, [sessionId, bus]);
+    refreshFeatured();
+  }, [sessionId, bus, refreshFeatured]);
+
+  const toggleFeatured = async (qid) => {
+    setBusyId(qid);
+    const next = new Set(featuredIds);
+    if (next.has(qid)) next.delete(qid); else next.add(qid);
+    try {
+      await api('/api/conference/cross-wg/feature', {
+        method: 'POST',
+        body: { question_ids: [...next], replace: true },
+      });
+      setFeaturedIds(next);
+    } catch {} finally { setBusyId(null); }
+  };
 
   if (!sessionId) return <p className="px-1 text-[11px] text-white/40">No active vote.</p>;
   if (!results) return <Skeleton className="h-32 w-full rounded-xl" />;
@@ -189,14 +214,26 @@ function VoteTally({ mode, bus }) {
       {rows.map((r) => {
         const val = r.points || r.importance_mean || r.avg_rank || 0;
         const label = r.points != null ? `${r.points} pts` : r.importance_mean != null ? `${Number(r.importance_mean).toFixed(1)} imp` : `${Number(r.avg_rank || 0).toFixed(2)} rank`;
+        const qid = r.question_id || r.id;
+        const featured = featuredIds.has(qid);
         return (
-          <li key={r.question_id || r.id} className="rounded-lg border border-white/[0.05] bg-white/[0.02] p-2">
+          <li key={qid} className={`rounded-lg border p-2 ${featured ? 'border-amber-400/30 bg-amber-400/[0.04]' : 'border-white/[0.05] bg-white/[0.02]'}`}>
             <div className="flex items-start gap-2">
               <p className="min-w-0 flex-1 text-[11px] leading-snug text-white/80 line-clamp-2">{r.text || r.question_text}</p>
               <span className="shrink-0 font-mono text-[10px] text-white/60">{label}</span>
+              {isPanel && (
+                <button
+                  onClick={() => toggleFeatured(qid)}
+                  disabled={busyId === qid}
+                  title={featured ? 'Remove from closing round' : 'Advance to closing round'}
+                  className={`shrink-0 rounded p-1 ${featured ? 'text-amber-300 hover:bg-amber-400/10' : 'text-white/30 hover:bg-white/[0.06] hover:text-amber-300'}`}
+                >
+                  <Star className={`h-3.5 w-3.5 ${featured ? 'fill-current' : ''}`} />
+                </button>
+              )}
             </div>
             <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.04]">
-              <div className="h-full rounded-full bg-[#00B4D8]" style={{ width: `${(val / max) * 100}%` }} />
+              <div className={`h-full rounded-full ${featured ? 'bg-amber-400' : 'bg-[#00B4D8]'}`} style={{ width: `${(val / max) * 100}%` }} />
             </div>
           </li>
         );

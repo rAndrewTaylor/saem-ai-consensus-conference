@@ -361,6 +361,9 @@ export function ConferenceDayPage() {
           </CardContent>
         </Card>
 
+        {/* Audience preview: which questions advanced from this user's panel */}
+        {wgNumber && <AdvancedFromMyPanel wgNumber={wgNumber} />}
+
         {/* Cross-WG consensus vote */}
         <Card id="cross-wg" className="mb-6 scroll-mt-20">
           <CardHeader>
@@ -1436,4 +1439,57 @@ function sessionLabel(s) {
     return `WG${s.wg_number} — ${s.wg_short_name || 'Working group'}`;
   }
   return s.session_type.replace(/_/g, ' ');
+}
+
+/**
+ * Surfaces, for the signed-in user's WG, the questions the chair has
+ * advanced into the cross-WG closing round. Hidden until at least one
+ * question is featured — gives audience members a clear "your panel's
+ * voice carried through" moment before the final vote.
+ */
+function AdvancedFromMyPanel({ wgNumber }) {
+  const [questions, setQuestions] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      api('/api/conference/cross-wg/candidates')
+        .then((d) => {
+          if (cancelled) return;
+          const group = (d?.groups || []).find((g) => g.wg_number === wgNumber);
+          const featured = (group?.candidates || []).filter((c) => c.is_featured);
+          setQuestions(featured);
+        })
+        .catch(() => !cancelled && setQuestions([]));
+    };
+    load();
+    const t = setInterval(load, 20000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [wgNumber]);
+
+  if (!questions || questions.length === 0) return null;
+
+  return (
+    <Card className="mb-6 border-amber-400/20 bg-amber-400/[0.03]">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Trophy className="h-4 w-4 text-amber-300" />
+          Advanced from your panel
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="mb-3 text-xs text-white/55">
+          {questions.length === 1 ? 'This question' : `These ${questions.length} questions`} from
+          WG{wgNumber} carried through to the cross-WG closing round.
+        </p>
+        <ul className="space-y-2">
+          {questions.map((q) => (
+            <li key={q.question_id} className="rounded-lg border border-amber-400/15 bg-white/[0.02] p-2.5">
+              <p className="text-sm text-white/85">{q.text}</p>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
 }
