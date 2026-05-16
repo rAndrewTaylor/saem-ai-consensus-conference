@@ -157,15 +157,21 @@ function HowToParticipateSlide() {
         </ul>
       </div>
       <div className="flex flex-col items-center">
-        <div className="rounded-3xl bg-white p-6">
-          {/* Inline QR placeholder — generates via Google Charts */}
+        <a href={PLATFORM_URL} target="_blank" rel="noreferrer" className="rounded-3xl bg-white p-6 transition hover:scale-105">
           <img
-            alt="Scan to join"
+            alt="Scan or tap to join"
             src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(PLATFORM_URL)}`}
             className="block h-72 w-72"
           />
-        </div>
-        <p className="mt-4 font-mono text-sm text-white/40">/day</p>
+        </a>
+        <a
+          href={PLATFORM_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 font-mono text-sm text-[#48CAE4] underline decoration-dotted hover:text-white"
+        >
+          /day
+        </a>
       </div>
     </div>
   );

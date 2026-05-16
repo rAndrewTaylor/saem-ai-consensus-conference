@@ -4,13 +4,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import * as Tabs from '@radix-ui/react-tabs';
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Radio,
-  ArrowUp,
-  ArrowDown,
   BarChart3,
   ListOrdered,
   Sliders,
-  Coins,
   Send,
   MessageSquare,
   Home,
@@ -55,10 +69,13 @@ function saveLocal(sessionId, key, value) {
 // Tab definitions
 // ---------------------------------------------------------------------------
 
+// Day-of voting uses two methods only: priority ranking (drag-to-reorder)
+// and importance rating. The 100-point allocation method was removed after
+// the May 15 dry run — too complex on phones, didn't parallel the Delphi
+// process, and the ranking + importance combo carries the same signal.
 const TAB_CONFIG = [
   { value: 'ranking', label: 'Priority Ranking', icon: ListOrdered },
   { value: 'importance', label: 'Importance Rating', icon: Sliders },
-  { value: 'allocation', label: 'Point Allocation', icon: Coins },
 ];
 
 // ---------------------------------------------------------------------------
@@ -97,10 +114,6 @@ export function ConferencePage() {
   const [importanceValues, setImportanceValues] = useState({});
   const [importanceSubmitting, setImportanceSubmitting] = useState(false);
 
-  // ---- Point Allocation state ----
-  const [allocValues, setAllocValues] = useState({});
-  const [allocSubmitting, setAllocSubmitting] = useState(false);
-
   // Comment
   const [commentType, setCommentType] = useState('general');
   const [commentText, setCommentText] = useState('');
@@ -138,15 +151,6 @@ export function ConferencePage() {
           setImportanceValues(defaults);
         }
 
-        const savedAlloc = loadLocal(sessionId, 'alloc');
-        if (savedAlloc) {
-          setAllocValues(savedAlloc);
-        } else {
-          const defaults = {};
-          qs.forEach(q => { defaults[q.id || q.question_id] = 0; });
-          setAllocValues(defaults);
-        }
-
         setVoterCount(data.voter_count ?? 0);
       } catch (err) {
         setPageError(err.message);
@@ -162,7 +166,6 @@ export function ConferencePage() {
 
   useEffect(() => { if (rankOrder.length) saveLocal(sessionId, 'rank', rankOrder); }, [sessionId, rankOrder]);
   useEffect(() => { if (Object.keys(importanceValues).length) saveLocal(sessionId, 'importance', importanceValues); }, [sessionId, importanceValues]);
-  useEffect(() => { if (Object.keys(allocValues).length) saveLocal(sessionId, 'alloc', allocValues); }, [sessionId, allocValues]);
 
   // ---------------------------------------------------------------------------
   // SSE for live updates
@@ -195,18 +198,8 @@ export function ConferencePage() {
   }, [sessionId]);
 
   // ---------------------------------------------------------------------------
-  // Ranking handlers
+  // Ranking handler
   // ---------------------------------------------------------------------------
-
-  const moveItem = useCallback((idx, direction) => {
-    setRankOrder(prev => {
-      const arr = [...prev];
-      const target = idx + direction;
-      if (target < 0 || target >= arr.length) return prev;
-      [arr[idx], arr[target]] = [arr[target], arr[idx]];
-      return arr;
-    });
-  }, []);
 
   const submitRanking = async () => {
     setRankSubmitting(true);
@@ -250,37 +243,6 @@ export function ConferencePage() {
       toast({ message: err.message || 'Submission failed', type: 'error' });
     } finally {
       setImportanceSubmitting(false);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Allocation handlers
-  // ---------------------------------------------------------------------------
-
-  const setAllocation = useCallback((qId, val) => {
-    const num = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
-    setAllocValues(prev => ({ ...prev, [qId]: num }));
-  }, []);
-
-  const allocTotal = useMemo(
-    () => Object.values(allocValues).reduce((s, v) => s + v, 0),
-    [allocValues]
-  );
-
-  const submitAllocation = async () => {
-    setAllocSubmitting(true);
-    try {
-      await api(`/api/conference/vote/${sessionId}/allocate`, {
-        method: 'POST',
-        token,
-        body: { allocations: allocValues },
-      });
-      setSubmittedTabs(prev => ({ ...prev, allocation: true }));
-      toast({ message: 'Point allocation submitted!', type: 'success' });
-    } catch (err) {
-      toast({ message: err.message || 'Submission failed', type: 'error' });
-    } finally {
-      setAllocSubmitting(false);
     }
   };
 
@@ -372,10 +334,10 @@ export function ConferencePage() {
         <p className="mt-2 text-white/50">
           {pageError || 'This voting session is not currently active. Check back when the session is live.'}
         </p>
-        <Link to="/">
+        <Link to="/day">
           <Button variant="secondary" className="mt-6 gap-2">
             <Home className="h-4 w-4" />
-            Back to Home
+            Back to conference
           </Button>
         </Link>
       </div>
@@ -388,15 +350,30 @@ export function ConferencePage() {
 
   return (
     <div className="flex flex-col bg-[#0A1628]">
+      {/* Persistent top nav — always available so participants can hop back
+          to the conference-day agenda without using the browser back button. */}
+      <div className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0A1628]/95 px-4 py-2 backdrop-blur sm:px-6">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
+          <Link
+            to="/day"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white/70 hover:bg-white/[0.06] hover:text-white"
+          >
+            <Home className="h-4 w-4" />
+            Back to agenda
+          </Link>
+          <span className="font-mono text-[11px] text-white/40">Session {sessionId}</span>
+        </div>
+      </div>
+
       {/* Hero Header */}
-      <div className="relative overflow-hidden px-4 py-12 sm:px-6">
+      <div className="relative overflow-hidden px-4 py-10 sm:px-6 sm:py-12">
         <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-500/15 to-transparent blur-3xl" />
         <div className="relative mx-auto max-w-3xl text-center">
           <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Conference Day Voting
           </h1>
           <p className="mt-2 text-white/50">
-            Live audience response &mdash; rank, rate, and allocate
+            Live audience response &mdash; drag to rank, then rate importance
           </p>
         </div>
       </div>
@@ -474,11 +451,19 @@ export function ConferencePage() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            {/* ------- TAB 1: Priority Ranking ------- */}
+            {/* ------- TAB 1: Priority Ranking (drag-to-reorder) ------- */}
             <Tabs.Content value="ranking" forceMount={activeTab === 'ranking' ? true : undefined} className={activeTab !== 'ranking' ? 'hidden' : ''}>
               <Card>
                 <CardHeader>
-                  <CardTitle>Drag to reorder by priority</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Drag to reorder by priority</CardTitle>
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 font-mono text-xs text-white/60">
+                      {rankOrder.length} question{rankOrder.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-white/50">
+                    Press-and-hold on any row, then drag up or down. #1 is your highest priority.
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-2 p-4">
                   {submittedTabs.ranking && (
@@ -492,54 +477,11 @@ export function ConferencePage() {
                     </motion.div>
                   )}
 
-                  <AnimatePresence>
-                    {rankOrder.map((qId, idx) => {
-                      const q = questionsById[qId];
-                      if (!q) return null;
-                      return (
-                        <motion.div
-                          key={qId}
-                          layout
-                          layoutId={`rank-${qId}`}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                          className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-3 sm:gap-3 sm:px-4"
-                        >
-                          <GripVertical className="hidden h-5 w-5 text-white/25 cursor-grab shrink-0 sm:block" />
-                          <span className={cn(
-                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-8 sm:w-8 sm:text-sm',
-                            idx === 0 ? 'bg-[#0C2340] text-white' : 'bg-white/[0.08] text-white/70'
-                          )}>
-                            {idx + 1}
-                          </span>
-                          <span className="min-w-0 flex-1 text-sm leading-snug text-white/90">
-                            {q.text || q.question_text}
-                          </span>
-                          <div className="flex shrink-0 flex-col gap-0.5 sm:flex-row sm:gap-1">
-                            <button
-                              type="button"
-                              onClick={() => moveItem(idx, -1)}
-                              disabled={idx === 0}
-                              className="flex h-9 w-9 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30 sm:h-7 sm:w-7"
-                              aria-label="Move up"
-                            >
-                              <ArrowUp className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => moveItem(idx, 1)}
-                              disabled={idx === rankOrder.length - 1}
-                              className="flex h-9 w-9 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-30 sm:h-7 sm:w-7"
-                              aria-label="Move down"
-                            >
-                              <ArrowDown className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
+                  <DragRanking
+                    ids={rankOrder}
+                    questionsById={questionsById}
+                    onReorder={setRankOrder}
+                  />
 
                   <div className="flex justify-end pt-4">
                     <Button onClick={submitRanking} loading={rankSubmitting} className="gap-1.5">
@@ -610,111 +552,6 @@ export function ConferencePage() {
               </Card>
             </Tabs.Content>
 
-            {/* ------- TAB 3: Point Allocation ------- */}
-            <Tabs.Content value="allocation" forceMount={activeTab === 'allocation' ? true : undefined} className={activeTab !== 'allocation' ? 'hidden' : ''}>
-              <Card>
-                <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <CardTitle>Allocate 100 points across questions</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-white/50">Total:</span>
-                    <span className={cn(
-                      'rounded-lg px-3 py-1 text-lg font-bold tabular-nums transition-colors',
-                      allocTotal === 100
-                        ? 'bg-emerald-500/15 text-emerald-300'
-                        : allocTotal > 100
-                          ? 'bg-red-500/15 text-red-300'
-                          : 'bg-white/[0.08] text-white/50'
-                    )}>
-                      {allocTotal} / 100
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 p-4">
-                  {submittedTabs.allocation && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-300"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Submitted successfully! You can update and resubmit.
-                    </motion.div>
-                  )}
-
-                  {questions.map((q) => {
-                    const qId = q.id || q.question_id;
-                    const val = allocValues[qId] ?? 0;
-                    const maxVal = Math.max(...Object.values(allocValues), 1);
-                    const barPct = (val / maxVal) * 100;
-
-                    return (
-                      <div key={qId} className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-4">
-                        <p className="mb-3 text-sm font-medium text-white/90">
-                          {q.text || q.question_text}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={val}
-                            onChange={(e) => setAllocation(qId, e.target.value)}
-                            className="h-10 w-20 shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 text-center font-mono text-sm font-semibold text-white/90 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                          />
-                          {/* Small absolute bar (out of 100) */}
-                          <div className="h-2 rounded-full bg-white/[0.06] flex-1 max-w-[120px]">
-                            <div
-                              className="h-full rounded-full bg-purple-500 transition-all duration-300"
-                              style={{ width: `${Math.min(100, (val / 100) * 100)}%` }}
-                            />
-                          </div>
-                          {/* Relative bar chart */}
-                          <div className="relative h-6 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                            <motion.div
-                              className={cn(
-                                'h-full rounded-full',
-                                allocTotal > 100 ? 'bg-red-400' : 'bg-purple-500'
-                              )}
-                              initial={false}
-                              animate={{ width: `${barPct}%` }}
-                              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                            />
-                          </div>
-                          <span className="w-10 shrink-0 text-right font-mono text-xs text-white/40">
-                            {val}pt
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  <div className="flex items-center justify-between pt-2">
-                    {allocTotal !== 100 && (
-                      <p className={cn(
-                        'text-sm font-medium',
-                        allocTotal > 100 ? 'text-red-400' : 'text-white/40'
-                      )}>
-                        {allocTotal > 100
-                          ? `${allocTotal - 100} points over budget`
-                          : `${100 - allocTotal} points remaining`
-                        }
-                      </p>
-                    )}
-                    <div className="ml-auto">
-                      <Button
-                        onClick={submitAllocation}
-                        loading={allocSubmitting}
-                        disabled={allocTotal !== 100}
-                        className="gap-1.5"
-                      >
-                        <Send className="h-4 w-4" />
-                        Submit Allocation
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Tabs.Content>
           </motion.div>
         </AnimatePresence>
       </Tabs.Root>
@@ -774,5 +611,84 @@ export function ConferencePage() {
       </div>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Drag-to-reorder ranking (dnd-kit)
+// ---------------------------------------------------------------------------
+
+function DragRanking({ ids, questionsById, onReorder }) {
+  const sensors = useSensors(
+    // Pointer = mouse on desktop. Activation distance prevents accidental drags
+    // when the user is just tapping/clicking.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // Touch = phones/tablets. delay so a brief tap doesn't start a drag (lets
+    // the row scroll naturally), and tolerance so a small wiggle still cancels.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const onDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = ids.indexOf(active.id);
+    const newIndex = ids.indexOf(over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    onReorder(arrayMove(ids, oldIndex, newIndex));
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <ul className="space-y-2">
+          {ids.map((qId, idx) => {
+            const q = questionsById[qId];
+            if (!q) return null;
+            return (
+              <SortableRankRow
+                key={qId}
+                id={qId}
+                index={idx}
+                text={q.text || q.question_text}
+              />
+            );
+          })}
+        </ul>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function SortableRankRow({ id, index, text }) {
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex touch-none select-none items-center gap-3 rounded-lg border bg-white/[0.03] px-3 py-3 sm:px-4',
+        isDragging
+          ? 'border-[#48CAE4]/60 bg-white/[0.07] shadow-lg shadow-[#00B4D8]/15'
+          : 'border-white/[0.08]'
+      )}
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="h-5 w-5 shrink-0 cursor-grab text-white/30" />
+      <span className={cn(
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+        index === 0 ? 'bg-[#0C2340] text-white' : index < 3 ? 'bg-[#1B5E8A] text-white' : 'bg-white/[0.08] text-white/70'
+      )}>
+        {index + 1}
+      </span>
+      <span className="min-w-0 flex-1 text-sm leading-snug text-white/90">{text}</span>
+    </li>
   );
 }

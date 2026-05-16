@@ -1029,8 +1029,15 @@ function QRDisplay({ url, label }) {
       ) : (
         <div className="h-44 w-44 animate-pulse rounded bg-slate-200" />
       )}
-      <p className="mt-2 break-all text-center text-[10px] font-mono text-slate-700">{url}</p>
-      <p className="mt-1 text-[10px] text-slate-500">Scan to open this session on a phone</p>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-2 break-all text-center text-[11px] font-mono text-blue-700 underline decoration-dotted hover:text-blue-900"
+      >
+        {url}
+      </a>
+      <p className="mt-1 text-[10px] text-slate-500">Scan, or tap the link above on this device</p>
     </div>
   );
 }

@@ -247,16 +247,28 @@ function BannerSlide() {
         <h1 className="mt-4 text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">AI Consensus Conference</h1>
         <p className="mt-4 text-lg text-white/60 sm:text-xl">Defining the research agenda for AI in Emergency Medicine</p>
         <div className="mt-8 flex items-center justify-center gap-6">
-          <div className="rounded-2xl bg-white p-3 sm:p-4">
+          <a
+            href="https://saem-ai-consensus-conference-production.up.railway.app/day"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-2xl bg-white p-3 transition hover:scale-105 sm:p-4"
+          >
             <img
-              alt="Scan to join"
+              alt="Scan or tap to join"
               src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent('https://saem-ai-consensus-conference-production.up.railway.app/day')}`}
               className="block h-32 w-32 sm:h-40 sm:w-40"
             />
-          </div>
+          </a>
           <div className="text-left">
             <p className="text-[10px] uppercase tracking-wider text-white/40 sm:text-xs">Join the conversation</p>
-            <p className="mt-1 font-mono text-base text-white sm:text-lg">/day</p>
+            <a
+              href="https://saem-ai-consensus-conference-production.up.railway.app/day"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block font-mono text-base text-[#48CAE4] underline decoration-dotted hover:text-white sm:text-lg"
+            >
+              /day
+            </a>
             <p className="mt-3 text-xs text-white/50 sm:text-sm">May 21, 2026<br/>Atlanta Marriott Marquis</p>
           </div>
         </div>
