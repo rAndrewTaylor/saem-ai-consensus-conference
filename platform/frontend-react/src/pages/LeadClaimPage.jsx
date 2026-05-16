@@ -5,7 +5,7 @@ import { CheckCircle2, AlertCircle, ArrowRight, Loader2, Crown } from 'lucide-re
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api, setLeadToken } from '@/lib/api';
+import { api, setLeadToken, setToken } from '@/lib/api';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 export function LeadClaimPage() {
@@ -27,6 +27,16 @@ export function LeadClaimPage() {
       .then((data) => {
         setInfo(data);
         setLeadToken(data.token || token);
+        // Store the auto-provisioned participant token under the WG-keyed
+        // localStorage slot the rest of the app uses for participant
+        // identity. This lets co-leads vote, chat, and submit breakout
+        // notes from /day without a separate invite — fixes the
+        // permissions disconnect Yohan & Arwen hit in the dry run.
+        if (data.participant_token && data.wg_number) {
+          setToken(data.wg_number, data.participant_token);
+        } else if (data.wg_number) {
+          try { localStorage.setItem('saem_active_wg', String(data.wg_number)); } catch {}
+        }
         setState('ok');
       })
       .catch((err) => {

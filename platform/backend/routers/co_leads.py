@@ -156,7 +156,14 @@ def _get_co_lead_from_token(token: Optional[str], db: Session) -> CoLead:
 
 @router.get("/claim")
 def claim_co_lead(token: str, db: Session = Depends(get_db)):
-    """Public: validate a co-lead invite and mark it claimed on first use."""
+    """Public: validate a co-lead invite and mark it claimed on first use.
+
+    Also ensures the co-lead has a Participant row in their WG so they
+    can vote / chat / submit breakout notes on /day using the same
+    token (returned as `participant_token`). Without this, co-leads
+    who claimed only their lead invite had a co-lead identity but no
+    way to act as an audience member on conference day.
+    """
     cl = db.query(CoLead).filter(CoLead.invite_token == token).first()
     if not cl:
         raise HTTPException(404, "Invalid invite link")
@@ -166,11 +173,53 @@ def claim_co_lead(token: str, db: Session = Depends(get_db)):
         cl.claimed_at = datetime.utcnow()
         db.commit()
     wg = cl.working_group
+
+    # Find or auto-create a Participant for this co-lead so they have an
+    # audience-side identity. Match on email if present, otherwise on
+    # (wg_id, name).
+    participant = None
+    if wg:
+        if cl.email:
+            participant = (
+                db.query(Participant)
+                .filter(
+                    Participant.wg_id == wg.id,
+                    func.lower(Participant.email) == cl.email.lower(),
+                    Participant.is_active == True,  # noqa: E712
+                )
+                .first()
+            )
+        if not participant and cl.name:
+            participant = (
+                db.query(Participant)
+                .filter(
+                    Participant.wg_id == wg.id,
+                    Participant.name == cl.name,
+                    Participant.is_active == True,  # noqa: E712
+                )
+                .first()
+            )
+        if not participant:
+            import secrets
+            participant = Participant(
+                token=secrets.token_urlsafe(32),
+                wg_id=wg.id,
+                name=cl.name,
+                email=cl.email,
+                role="co_lead",
+                is_active=True,
+                claimed_at=datetime.utcnow(),
+            )
+            db.add(participant)
+            db.commit()
+            db.refresh(participant)
+
     return {
         "name": cl.name,
         "email": cl.email,
         "institution": cl.institution,
         "token": cl.invite_token,
+        "participant_token": participant.token if participant else None,
         "wg_number": wg.number if wg else None,
         "wg_name": wg.name if wg else None,
         "wg_short_name": wg.short_name if wg else None,

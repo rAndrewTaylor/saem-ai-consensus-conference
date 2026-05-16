@@ -12,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
-import { api, getAnyParticipantToken, getActiveWg } from '@/lib/api';
+import { api, getAnyParticipantToken, getActiveWg, getLeadToken, setToken } from '@/lib/api';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { queueSubmit, subscribe as subscribeQueue } from '@/lib/offlineQueue';
 import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
@@ -87,7 +87,28 @@ export function ConferenceDayPage() {
   const [commentOpen, setCommentOpen] = useState(false);
 
   const participantToken = getAnyParticipantToken();
-  const wgNumber = getActiveWg();
+  // wgNumber: prefer the saem_active_wg localStorage (set on participant
+  // claim). Fall back to /api/co-leads/claim with the lead token, which is
+  // idempotent and back-fills a Participant row for co-leads who claimed
+  // only their lead invite. Fixes the dry-run blocker where Yohan and Arwen
+  // had no participant identity and couldn't vote or chat from /day.
+  const [wgNumber, setWgNumber] = useState(getActiveWg());
+  useEffect(() => {
+    if (wgNumber) return;
+    const leadToken = getLeadToken();
+    if (!leadToken) return;
+    api('/api/co-leads/claim', { params: { token: leadToken } })
+      .then((d) => {
+        if (d?.participant_token && d?.wg_number) {
+          setToken(d.wg_number, d.participant_token);
+          setWgNumber(d.wg_number);
+        } else if (d?.wg_number) {
+          setWgNumber(d.wg_number);
+          try { localStorage.setItem('saem_active_wg', String(d.wg_number)); } catch {}
+        }
+      })
+      .catch(() => {});
+  }, [wgNumber]);
 
   const refresh = useCallback(async () => {
     try {
