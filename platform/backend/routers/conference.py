@@ -372,28 +372,44 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Session not found")
 
     if cs.session_type == "cross_wg_prioritization":
-        # Top 3 R2 questions from each WG (ranked by R2 include%, falling
-        # back to R1 if R2 hasn't been computed yet, then importance).
-        questions = []
-        for wg in db.query(WorkingGroup).order_by(WorkingGroup.number).all():
-            top = (
-                db.query(Question)
-                .filter(
-                    Question.wg_id == wg.id,
-                    Question.status.in_([
-                        QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
-                    ]),
-                )
-                .order_by(
-                    Question.r2_include_pct.desc().nullslast(),
-                    Question.r1_include_pct.desc().nullslast(),
-                    Question.r2_importance_mean.desc().nullslast(),
-                    Question.r1_importance_mean.desc().nullslast(),
-                )
-                .limit(3)
-                .all()
+        # If the chair has explicitly featured questions for the cross-WG
+        # round (via /cross-wg/feature), use only those. Otherwise fall
+        # back to top 3 R2 questions per WG so the session still works
+        # before the funnel has been run.
+        featured = (
+            db.query(Question)
+            .filter(
+                Question.featured_in_cross_wg == True,  # noqa: E712
+                Question.status.in_([
+                    QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+                ]),
             )
-            questions.extend(top)
+            .order_by(Question.wg_id, Question.id)
+            .all()
+        )
+        if featured:
+            questions = featured
+        else:
+            questions = []
+            for wg in db.query(WorkingGroup).order_by(WorkingGroup.number).all():
+                top = (
+                    db.query(Question)
+                    .filter(
+                        Question.wg_id == wg.id,
+                        Question.status.in_([
+                            QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+                        ]),
+                    )
+                    .order_by(
+                        Question.r2_include_pct.desc().nullslast(),
+                        Question.r1_include_pct.desc().nullslast(),
+                        Question.r2_importance_mean.desc().nullslast(),
+                        Question.r1_importance_mean.desc().nullslast(),
+                    )
+                    .limit(3)
+                    .all()
+                )
+                questions.extend(top)
     else:
         # Top R2 questions for the session's WG (default to all active R2).
         questions = (
@@ -948,3 +964,161 @@ def set_display_mode(
         "panel_tab": row.panel_tab,
     })
     return {"mode": row.mode, "slide_index": row.slide_index, "panel_tab": row.panel_tab}
+
+
+# --- Cross-WG funnel (which questions advance to the closing round) ------
+
+class FeatureRequest(BaseModel):
+    question_ids: list[int]
+    replace: bool = True  # If true, clears all existing featured flags first.
+
+
+@router.get("/cross-wg/candidates")
+def cross_wg_candidates(db: Session = Depends(get_db)):
+    """For each WG, return its top 2 questions by panel-vote average rank.
+
+    Pulls from ConferenceVote rows on wg_presentation sessions. If a WG's
+    panel hasn't been voted on yet, falls back to its top R2 questions.
+    Returned together with the currently-featured set so the chair can
+    one-click "auto-advance" or fine-tune by hand.
+    """
+    wgs = db.query(WorkingGroup).order_by(WorkingGroup.number).all()
+    out_groups: list[dict] = []
+    for wg in wgs:
+        session = (
+            db.query(ConferenceSession)
+            .filter(
+                ConferenceSession.wg_id == wg.id,
+                ConferenceSession.session_type == "wg_presentation",
+            )
+            .order_by(ConferenceSession.id.desc())
+            .first()
+        )
+        suggested: list[dict] = []
+        if session:
+            # Average rank per question across all voters in this session.
+            # Lower avg_rank = higher priority.
+            rows = (
+                db.query(
+                    ConferenceVote.question_id,
+                    func.avg(ConferenceVote.value).label("avg_rank"),
+                    func.count(func.distinct(ConferenceVote.participant_id)).label("n"),
+                )
+                .filter(
+                    ConferenceVote.session_id == session.id,
+                    ConferenceVote.vote_type == "ranking",
+                )
+                .group_by(ConferenceVote.question_id)
+                .order_by("avg_rank")
+                .limit(2)
+                .all()
+            )
+            for r in rows:
+                q = db.query(Question).get(int(r.question_id))
+                if not q:
+                    continue
+                suggested.append({
+                    "question_id": q.id,
+                    "text": q.text,
+                    "avg_rank": float(r.avg_rank) if r.avg_rank is not None else None,
+                    "n_voters": int(r.n or 0),
+                    "is_featured": bool(q.featured_in_cross_wg),
+                })
+        # Fallback: top 2 R2 questions if no panel votes yet
+        if not suggested:
+            fallback = (
+                db.query(Question)
+                .filter(
+                    Question.wg_id == wg.id,
+                    Question.status.in_([
+                        QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
+                    ]),
+                )
+                .order_by(
+                    Question.r2_include_pct.desc().nullslast(),
+                    Question.r2_importance_mean.desc().nullslast(),
+                )
+                .limit(2)
+                .all()
+            )
+            suggested = [
+                {
+                    "question_id": q.id,
+                    "text": q.text,
+                    "avg_rank": None,
+                    "n_voters": 0,
+                    "is_featured": bool(q.featured_in_cross_wg),
+                    "fallback": True,
+                }
+                for q in fallback
+            ]
+        out_groups.append({
+            "wg_number": wg.number,
+            "wg_name": wg.name,
+            "panel_session_id": session.id if session else None,
+            "candidates": suggested,
+        })
+
+    featured_total = (
+        db.query(func.count(Question.id))
+        .filter(Question.featured_in_cross_wg == True)  # noqa: E712
+        .scalar() or 0
+    )
+    return {"groups": out_groups, "featured_total": int(featured_total)}
+
+
+@router.post("/cross-wg/feature")
+def cross_wg_feature(
+    body: FeatureRequest,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Mark the given question_ids as featured for the cross-WG round.
+
+    When `replace=True` (default), clears the featured flag from all
+    questions first — single source of truth for the closing-round pool.
+    When `replace=False`, additively adds to the existing featured set.
+    """
+    if body.replace:
+        db.query(Question).filter(
+            Question.featured_in_cross_wg == True  # noqa: E712
+        ).update({Question.featured_in_cross_wg: False})
+    qs = (
+        db.query(Question)
+        .filter(Question.id.in_(body.question_ids))
+        .all()
+    )
+    for q in qs:
+        q.featured_in_cross_wg = True
+    db.commit()
+    write_audit_log(
+        db, admin.get("email", "admin"), "cross_wg_feature",
+        f"replace={body.replace} ids={body.question_ids}",
+    )
+    db.commit()
+
+    _publish_day("cross_wg_features_changed", {"question_ids": body.question_ids})
+    return {
+        "ok": True,
+        "featured": [q.id for q in qs],
+        "total_featured": int(
+            db.query(func.count(Question.id))
+            .filter(Question.featured_in_cross_wg == True)  # noqa: E712
+            .scalar() or 0
+        ),
+    }
+
+
+@router.post("/cross-wg/auto-feature")
+def cross_wg_auto_feature(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Convenience: clears featured flags, then features the top 2 per WG
+    from the current candidates set. Chair can fine-tune after."""
+    candidates = cross_wg_candidates(db)
+    ids: list[int] = []
+    for grp in candidates["groups"]:
+        for c in grp["candidates"]:
+            ids.append(int(c["question_id"]))
+    return cross_wg_feature(FeatureRequest(question_ids=ids, replace=True), db, admin)

@@ -198,6 +198,9 @@ class Question(Base):
     pairwise_wins = Column(Integer, default=0)
     pairwise_losses = Column(Integer, default=0)
     pairwise_score = Column(Float, nullable=True)  # Bayesian score 0-100
+    # Conference-day funnel: chair marks each panel's top advancing
+    # questions, and the cross-WG closing session pulls from these.
+    featured_in_cross_wg = Column(Boolean, default=False, nullable=False)
 
     working_group = relationship("WorkingGroup", back_populates="questions")
     parent = relationship("Question", remote_side=[id])

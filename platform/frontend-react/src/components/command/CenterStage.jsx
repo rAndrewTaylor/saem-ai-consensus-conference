@@ -224,11 +224,125 @@ function TableActions({ onChange }) {
 
 function CrossWgActions({ onChange }) {
   return (
-    <ActionRow>
-      <PrimaryAction onClick={() => onChange?.({ mode: 'idle' })} icon={ArrowRight}>
-        Close conference → Idle
-      </PrimaryAction>
-    </ActionRow>
+    <div className="space-y-2">
+      <CrossWgFunnel />
+      <ActionRow>
+        <PrimaryAction onClick={() => onChange?.({ mode: 'idle' })} icon={ArrowRight}>
+          Close conference → Idle
+        </PrimaryAction>
+      </ActionRow>
+    </div>
+  );
+}
+
+const PILLAR_COLORS = {
+  1: '#00B4D8', 2: '#22d3ee', 3: '#8b5cf6', 4: '#10b981', 5: '#f59e0b',
+};
+
+function CrossWgFunnel() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const refresh = useCallback(async () => {
+    try {
+      const d = await api('/api/conference/cross-wg/candidates');
+      setData(d);
+    } catch (e) { console.error(e); }
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const autoFeature = async () => {
+    setLoading(true);
+    try {
+      await api('/api/conference/cross-wg/auto-feature', { method: 'POST' });
+      await refresh();
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  const toggleOne = async (questionId, willBeFeatured) => {
+    setLoading(true);
+    try {
+      // Compute new full set: collect every currently-featured id, then add/remove the toggled one.
+      const featuredIds = new Set();
+      (data?.groups || []).forEach((g) =>
+        g.candidates.forEach((c) => { if (c.is_featured) featuredIds.add(c.question_id); })
+      );
+      if (willBeFeatured) featuredIds.add(questionId);
+      else featuredIds.delete(questionId);
+      await api('/api/conference/cross-wg/feature', {
+        method: 'POST',
+        body: { question_ids: [...featuredIds], replace: true },
+      });
+      await refresh();
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  if (!data) {
+    return (
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs text-white/40">
+        Loading cross-WG candidates…
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+            Cross-WG funnel
+          </p>
+          <p className="mt-0.5 text-sm text-white/80">
+            {data.featured_total} question{data.featured_total === 1 ? '' : 's'} featured for the closing round
+          </p>
+        </div>
+        <button
+          onClick={autoFeature}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#00B4D8]/20 px-3 py-1.5 text-xs font-semibold text-[#48CAE4] hover:bg-[#00B4D8]/30 disabled:opacity-40"
+        >
+          {loading ? 'Working…' : 'Auto-feature top 2 / WG'}
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {(data.groups || []).map((g) => {
+          const c = PILLAR_COLORS[g.wg_number] || '#48CAE4';
+          return (
+            <div key={g.wg_number} className="rounded-lg border border-white/[0.05] bg-white/[0.02] p-2.5">
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold" style={{ backgroundColor: `${c}25`, color: c }}>
+                  {g.wg_number}
+                </span>
+                <span className="text-xs font-medium text-white/80">{g.wg_name}</span>
+              </div>
+              {g.candidates.length === 0 ? (
+                <p className="text-[11px] text-white/40">No vote data yet for this panel.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {g.candidates.map((cd) => (
+                    <li key={cd.question_id} className="flex items-start gap-2 rounded border border-white/[0.04] p-1.5">
+                      <label className="flex flex-1 cursor-pointer items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={cd.is_featured}
+                          onChange={(e) => toggleOne(cd.question_id, e.target.checked)}
+                          disabled={loading}
+                          className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded accent-[#00B4D8]"
+                        />
+                        <p className="min-w-0 flex-1 text-[11px] leading-snug text-white/85">{cd.text}</p>
+                      </label>
+                      <span className="shrink-0 font-mono text-[9px] text-white/40">
+                        {cd.avg_rank != null ? `rk ${cd.avg_rank.toFixed(2)}` : cd.fallback ? 'fallback' : '—'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
