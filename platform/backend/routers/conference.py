@@ -495,6 +495,8 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
                 .all()
             )
 
+    # Resolve wg_number per question so projector/audience can colour-code by WG
+    wg_id_to_number = {wg.id: wg.number for wg in db.query(WorkingGroup).all()}
     return {
         "session_id": session_id,
         "session_type": cs.session_type,
@@ -505,6 +507,7 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
             "text": q.text,
             "short_text": q.short_text,
             "wg_id": q.wg_id,
+            "wg_number": wg_id_to_number.get(q.wg_id),
             "r2_include_pct": q.r2_include_pct,
             "r2_importance_mean": q.r2_importance_mean,
             "pairwise_score": q.pairwise_score,
@@ -691,6 +694,7 @@ def get_session_results(session_id: int, db: Session = Depends(get_db)):
             results[key] = {"question_id": v.question_id, "vote_type": v.vote_type, "values": []}
         results[key]["values"].append(v.value)
 
+    wg_id_to_number = {wg.id: wg.number for wg in db.query(WorkingGroup).all()}
     aggregated = []
     for key, data in results.items():
         values = data["values"]
@@ -699,6 +703,7 @@ def get_session_results(session_id: int, db: Session = Depends(get_db)):
             "question_id": data["question_id"],
             "question_text": q.text if q else None,
             "wg_id": q.wg_id if q else None,
+            "wg_number": wg_id_to_number.get(q.wg_id) if q else None,
             "vote_type": data["vote_type"],
             "n_votes": len(values),
             "mean": round(sum(values) / len(values), 2),
