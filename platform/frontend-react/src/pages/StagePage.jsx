@@ -13,6 +13,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { getAdminToken } from '@/lib/api';
 import { StageView, useStageDisplay } from '@/components/stage/StageView';
 import { AdminControlStrip } from '@/components/stage/AdminControlStrip';
+import { FullscreenToggle } from '@/components/stage/FullscreenToggle';
 
 export function StagePage() {
   usePageTitle('SAEM 2026 — Stage');
@@ -44,6 +45,9 @@ export function StagePage() {
           onChange={setDisplay}
         />
       )}
+
+      {/* Fullscreen button — hidden when embedded as the /command iframe. */}
+      {!minimal && <FullscreenToggle />}
 
       <div className={showAdminStrip ? 'pt-16' : ''}>
         <StageView
