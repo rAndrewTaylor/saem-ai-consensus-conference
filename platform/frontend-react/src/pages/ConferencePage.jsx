@@ -45,6 +45,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
+import { SignedInChip } from '@/components/conference/SignedInChip';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -363,7 +364,7 @@ export function ConferencePage() {
             <Home className="h-4 w-4" />
             Back to agenda
           </Link>
-          <span className="font-mono text-[11px] text-white/40">Session {sessionId}</span>
+          <SignedInChip compact />
         </div>
       </div>
 

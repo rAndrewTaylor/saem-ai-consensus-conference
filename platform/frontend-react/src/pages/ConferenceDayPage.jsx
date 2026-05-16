@@ -19,6 +19,8 @@ import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
 import { useStageDisplay } from '@/components/stage/StageView';
 import { CompactStageView } from '@/components/stage/CompactStageView';
+import { SignedInChip } from '@/components/conference/SignedInChip';
+import { useFollowStage } from '@/hooks/useFollowStage';
 import QRCode from 'qrcode';
 
 // Poll the day-state endpoint every 12s so the page reacts when admin
@@ -181,6 +183,10 @@ export function ConferenceDayPage() {
     if (!data?.sessions) return null;
     return data.sessions.find((s) => s.id === data.active_session_id) || null;
   }, [data]);
+
+  // Follow-the-stage mode: when a new vote opens, auto-navigate the user
+  // to the voting page after a short grace period. Opt-out via the chip.
+  useFollowStage(activeSession, toast);
 
   const currentStepIndex = useMemo(() => {
     if (!agendaWithTimes.length) return -1;
@@ -473,10 +479,10 @@ export function ConferenceDayPage() {
 // ─── Components ──────────────────────────────────────────────────────────
 
 function NowBar({ active, currentAgenda, online, onTapVote }) {
-  // Sticky banner at the top — different content depending on state.
+  // Sticky banner at the top — current state + persistent identity chip.
   return (
     <div className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
-      <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-2.5 sm:px-6">
+      <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-2 sm:px-6">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
           {active ? (
             <Radio className="h-3.5 w-3.5 text-emerald-300 animate-pulse" />
@@ -501,6 +507,9 @@ function NowBar({ active, currentAgenda, online, onTapVote }) {
         )}
         <span className={`hidden sm:inline-flex h-2.5 w-2.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-amber-400'}`}
                title={online ? 'Online' : 'Offline'} />
+      </div>
+      <div className="mx-auto flex max-w-2xl items-center justify-end gap-2 px-4 pb-2 sm:px-6">
+        <SignedInChip />
       </div>
     </div>
   );
