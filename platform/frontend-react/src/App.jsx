@@ -8,6 +8,7 @@ import { Layout } from '@/components/Layout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { PageLoader } from '@/components/ui/page-loader';
+import { StageFollowOrchestrator } from '@/components/conference/StageFollowOrchestrator';
 
 const HomePage = lazy(() => import('@/pages/HomePage').then(m => ({ default: m.HomePage })));
 const SurveyPage = lazy(() => import('@/pages/SurveyPage').then(m => ({ default: m.SurveyPage })));
@@ -68,6 +69,7 @@ export default function App() {
           <ToastProvider>
             <ErrorBoundary>
               <ScrollToTop />
+              <StageFollowOrchestrator />
               <Layout>
                 <AnimatedRoutes />
               </Layout>

@@ -20,7 +20,6 @@ import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
 import { useStageDisplay } from '@/components/stage/StageView';
 import { CompactStageView } from '@/components/stage/CompactStageView';
 import { SignedInChip } from '@/components/conference/SignedInChip';
-import { useFollowStage } from '@/hooks/useFollowStage';
 import QRCode from 'qrcode';
 
 // Poll the day-state endpoint every 12s so the page reacts when admin
@@ -183,10 +182,7 @@ export function ConferenceDayPage() {
     if (!data?.sessions) return null;
     return data.sessions.find((s) => s.id === data.active_session_id) || null;
   }, [data]);
-
-  // Follow-the-stage mode: when a new vote opens, auto-navigate the user
-  // to the voting page after a short grace period. Opt-out via the chip.
-  useFollowStage(activeSession, toast);
+  // Follow-the-stage navigation is handled globally by StageFollowOrchestrator.
 
   const currentStepIndex = useMemo(() => {
     if (!agendaWithTimes.length) return -1;
