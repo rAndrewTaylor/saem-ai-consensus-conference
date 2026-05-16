@@ -570,15 +570,17 @@ export function ConferencePage() {
               <label htmlFor="comment-type" className="mb-1 block text-sm font-medium text-white/70">
                 Comment type
               </label>
+              {/* Per dry-run direction (May 15): modifications happen post-
+                  conference for papers, not day-of. Comment-type narrowed
+                  to general feedback + 'new question' suggestion. */}
               <select
                 id="comment-type"
                 value={commentType}
                 onChange={(e) => setCommentType(e.target.value)}
                 className="h-10 w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 text-sm text-white/90 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
               >
-                <option value="general">General</option>
-                <option value="modification">Modification</option>
-                <option value="new_question">New Question</option>
+                <option value="general">General comment</option>
+                <option value="new_question">Suggest a new question</option>
               </select>
             </div>
             <div>
@@ -590,7 +592,7 @@ export function ConferencePage() {
                 rows={3}
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Share your thoughts, suggest modifications, or propose new questions..."
+                placeholder="Share your thoughts or propose a new question…"
                 className="w-full resize-none rounded-lg border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-sm text-white/90 placeholder-white/30 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
               />
             </div>

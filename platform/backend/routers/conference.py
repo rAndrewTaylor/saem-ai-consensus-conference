@@ -343,8 +343,8 @@ def day_state(db: Session = Depends(get_db)):
         {"time": "12:30 PM", "title": "Networking lunch",                        "kind": "break"},
         {"time": "1:30 PM",  "title": "World Café — three rotations",            "kind": "world_cafe"},
         {"time": "2:30 PM",  "title": "Break",                                   "kind": "break"},
-        {"time": "2:50 PM",  "title": "Priority presentations (top 5 per WG)",   "kind": "presentation"},
-        {"time": "3:20 PM",  "title": "Cross-WG consensus vote (100-point allocation)", "kind": "vote", "session_type": "cross_wg_prioritization"},
+        {"time": "2:50 PM",  "title": "Priority presentations (top 2 per WG)",   "kind": "presentation"},
+        {"time": "3:35 PM",  "title": "Cross-WG consensus vote (drag to rank)",  "kind": "vote", "session_type": "cross_wg_prioritization"},
         {"time": "4:05 PM",  "title": "Final results & synthesis",               "kind": "results"},
         {"time": "4:35 PM",  "title": "Summary & next steps",                    "kind": "wrap"},
         {"time": "5:00 PM",  "title": "Adjourn",                                 "kind": "end"},
@@ -975,15 +975,17 @@ class FeatureRequest(BaseModel):
 
 @router.get("/cross-wg/candidates")
 def cross_wg_candidates(db: Session = Depends(get_db)):
-    """For each WG, return its top 2 questions by panel-vote average rank.
+    """For each WG, return its top 5 questions by panel-vote average rank.
 
     Pulls from ConferenceVote rows on wg_presentation sessions. If a WG's
     panel hasn't been voted on yet, falls back to its top R2 questions.
     Returned together with the currently-featured set so the chair can
-    one-click "auto-advance" or fine-tune by hand.
+    one-click "auto-advance top 2" or fine-tune by hand (e.g., WG5's
+    5-themed structure may want all 5 surfaced).
     """
     wgs = db.query(WorkingGroup).order_by(WorkingGroup.number).all()
     out_groups: list[dict] = []
+    CANDIDATES_PER_WG = 5
     for wg in wgs:
         session = (
             db.query(ConferenceSession)
@@ -1010,7 +1012,7 @@ def cross_wg_candidates(db: Session = Depends(get_db)):
                 )
                 .group_by(ConferenceVote.question_id)
                 .order_by("avg_rank")
-                .limit(2)
+                .limit(CANDIDATES_PER_WG)
                 .all()
             )
             for r in rows:
@@ -1024,7 +1026,7 @@ def cross_wg_candidates(db: Session = Depends(get_db)):
                     "n_voters": int(r.n or 0),
                     "is_featured": bool(q.featured_in_cross_wg),
                 })
-        # Fallback: top 2 R2 questions if no panel votes yet
+        # Fallback: top N R2 questions if no panel votes yet
         if not suggested:
             fallback = (
                 db.query(Question)
@@ -1038,7 +1040,7 @@ def cross_wg_candidates(db: Session = Depends(get_db)):
                     Question.r2_include_pct.desc().nullslast(),
                     Question.r2_importance_mean.desc().nullslast(),
                 )
-                .limit(2)
+                .limit(CANDIDATES_PER_WG)
                 .all()
             )
             suggested = [
@@ -1115,10 +1117,13 @@ def cross_wg_auto_feature(
     admin: dict = Depends(require_admin),
 ):
     """Convenience: clears featured flags, then features the top 2 per WG
-    from the current candidates set. Chair can fine-tune after."""
+    from the current candidates set. Chair can fine-tune after — for WG5
+    in particular, chair may want to feature all 5 themed questions, which
+    they can do by checking additional boxes after running this."""
     candidates = cross_wg_candidates(db)
     ids: list[int] = []
     for grp in candidates["groups"]:
-        for c in grp["candidates"]:
+        # First 2 candidates per WG (already ordered by avg_rank ASC / R2 desc).
+        for c in grp["candidates"][:2]:
             ids.append(int(c["question_id"]))
     return cross_wg_feature(FeatureRequest(question_ids=ids, replace=True), db, admin)
