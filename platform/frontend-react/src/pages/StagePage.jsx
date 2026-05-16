@@ -19,13 +19,16 @@ export function StagePage() {
   const isAdmin = Boolean(getAdminToken());
   const { mode, slideIndex, panelTab, bus, setDisplay } = useStageDisplay(isAdmin);
 
-  // ?minimal=1 hides the admin control strip — used when this page is
-  // embedded in the /command iframe (chair drives from the outer page,
-  // so the inner strip is noise).
-  const minimal = (() => {
-    try { return new URLSearchParams(window.location.search).get('minimal') === '1'; } catch { return false; }
+  // Default /stage is the clean projector view — no admin chrome, no
+  // footer, just the slide. Chair drives from /command. If the chair
+  // wants to drive directly from the projector PC, pass ?chair=1.
+  const params = (() => {
+    try { return new URLSearchParams(window.location.search); } catch { return new URLSearchParams(); }
   })();
-  const showAdminStrip = isAdmin && !minimal;
+  const minimal = params.get('minimal') === '1';
+  const chairMode = params.get('chair') === '1';
+  const showAdminStrip = isAdmin && chairMode && !minimal;
+  const showBrandFooter = !minimal;
 
   return (
     <div className="min-h-screen bg-[#0A1628] text-white">
@@ -55,7 +58,7 @@ export function StagePage() {
 
       {/* Persistent ballroom-scale footer: keeps SAEM 2026 branding on
           every projected slide. Hidden when running embedded in /command. */}
-      {!minimal && (
+      {showBrandFooter && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.04] bg-[#0A1628]/85 px-6 py-2 backdrop-blur">
           <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-white/40">
             <span className="font-semibold text-white/55">SAEM 2026</span>

@@ -59,8 +59,8 @@ export function ChatSidebar({ sessionId, resolving, bus, accent, isAdmin }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0E1E35] px-5 py-6">
-      <div className="mb-4 flex items-center gap-2">
+    <div className="flex h-full min-h-0 flex-col bg-[#0E1E35] px-4 py-4">
+      <div className="mb-3 flex shrink-0 items-center gap-2">
         <MessageSquare className="h-4 w-4" style={{ color: accent }} />
         <h2 className="text-sm font-semibold text-white">Audience</h2>
         <span className="ml-2 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-white/50">
@@ -109,7 +109,7 @@ export function ChatSidebar({ sessionId, resolving, bus, accent, isAdmin }) {
         </p>
       )}
 
-      <ul className="space-y-2">
+      <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {messages.map((m, idx) => (
           <li
             key={m.id}

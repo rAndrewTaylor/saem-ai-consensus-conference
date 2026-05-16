@@ -47,47 +47,55 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
   const prompts = PANEL_PROMPTS[wgNumber] || [];
 
   return (
-    <div className="grid grid-cols-1 gap-0 lg:grid-cols-[2fr_1fr]">
+    // Whole panel fits inside one viewport (minus the SAEM footer at
+    // the bottom of /stage). overflow-hidden prevents the projector
+    // from scrolling — anything that doesn't fit gets scrolled within
+    // its own bounded section.
+    <div className="grid h-[calc(100vh-3rem)] grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[2fr_1fr]">
       {/* Main stage */}
-      <div className="min-h-[calc(100vh-4rem)] border-r border-white/[0.06] px-10 py-10">
-        <div className="mb-8 flex items-start gap-5">
+      <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-8 pb-4 pt-6">
+        <div className="mb-4 flex shrink-0 items-start gap-4">
           <div
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl font-bold"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl font-bold"
             style={{ backgroundColor: `${accent}25`, color: accent }}
           >
             {wgNumber}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Panel {wgNumber}</p>
-            <h1 className="mt-1 text-3xl font-bold sm:text-4xl">{wgName}</h1>
+            <h1 className="mt-0.5 text-2xl font-bold sm:text-3xl">{wgName}</h1>
           </div>
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={panelTab}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.3 }}
-          >
-            {panelTab === 'results' && <ResultsView wgNumber={wgNumber} bus={bus} accent={accent} />}
-            {panelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} />}
-            {panelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
-          </motion.div>
-        </AnimatePresence>
+        {/* Active tab — flex-1 + min-h-0 so it scrolls internally instead
+            of pushing the prompts off-screen. */}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={panelTab}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3 }}
+            >
+              {panelTab === 'results' && <ResultsView wgNumber={wgNumber} bus={bus} accent={accent} />}
+              {panelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} />}
+              {panelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-        {/* Discussion prompts strip — sized for ballroom legibility */}
+        {/* Discussion prompts strip — fixed-height footer of the column. */}
         {prompts.length > 0 && (
-          <div className="mt-10 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
-            <p className="text-sm font-semibold uppercase tracking-wider text-white/45">Discussion prompts</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {prompts.map((p, i) => (
-                <div key={i} className="rounded-xl border border-white/[0.06] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: accent }}>
+          <div className="mt-3 shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Discussion prompts</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              {prompts.slice(0, 3).map((p, i) => (
+                <div key={i} className="rounded-lg border border-white/[0.06] p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
                     {p.label}
                   </p>
-                  <p className="mt-2 text-base leading-relaxed text-white/90">{p.text}</p>
+                  <p className="mt-1 text-sm leading-snug text-white/85 line-clamp-3">{p.text}</p>
                 </div>
               ))}
             </div>
@@ -95,8 +103,10 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
         )}
       </div>
 
-      {/* Chat sidebar */}
-      <ChatSidebar sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} isAdmin={isAdmin} />
+      {/* Chat sidebar — fixed height column, scrolls internally */}
+      <div className="h-full min-h-0 overflow-hidden">
+        <ChatSidebar sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} isAdmin={isAdmin} />
+      </div>
     </div>
   );
 }
