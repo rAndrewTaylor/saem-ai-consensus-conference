@@ -12,6 +12,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ScatterChart, Scatter, ReferenceLine,
+} from 'recharts';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChatSidebar } from '@/components/stage/ChatSidebar';
@@ -102,33 +106,45 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
         </div>
       )}
 
-      {/* Body: prior results (left) | chat column (right) */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1.2fr_1fr]">
-        {/* LEFT — two stacked cycling panels: cycling results (top) and
-            an insight facet carousel (bottom). During vote/compare tabs
-            the lower panel hides so those tabs take the full column. */}
-        <div className="flex h-full min-h-0 flex-col gap-3 border-r border-white/[0.06] px-6 pb-3">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={panelTab}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-              className="flex min-h-0 flex-[1.6] flex-col"
-            >
-              {panelTab === 'results' && <ResultsView wgNumber={wgNumber} bus={bus} accent={accent} />}
-              {panelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} />}
-              {panelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
-            </motion.div>
-          </AnimatePresence>
-
-          {panelTab === 'results' && (
+      {/* Body: three columns — text/questions (L), figures (M), chat (R).
+          On the Vote and Comparison tabs the left+middle merge so the
+          live tally / shift comparison gets the full visual width. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1fr_1.1fr_1fr]">
+        {/* LEFT — questions + text insights, two stacked cycling panels */}
+        {panelTab === 'results' ? (
+          <div className="flex h-full min-h-0 flex-col gap-3 border-r border-white/[0.06] px-5 pb-3">
+            <div className="flex min-h-0 flex-[1.6] flex-col">
+              <ResultsView wgNumber={wgNumber} bus={bus} accent={accent} />
+            </div>
             <div className="flex min-h-0 flex-1 flex-col">
               <FacetCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          // Vote / Comparison: take the full left+middle width
+          <div className="col-span-2 flex h-full min-h-0 flex-col border-r border-white/[0.06] px-6 pb-3">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={panelTab}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                {panelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} />}
+                {panelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* MIDDLE — figures (only on results tab; vote/compare take this col) */}
+        {panelTab === 'results' && (
+          <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-5 pb-3">
+            <FigureCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
+          </div>
+        )}
 
         {/* RIGHT — word cloud on top, chat takes the rest */}
         <div className="flex h-full min-h-0 flex-col gap-3 px-4 pb-3">
@@ -563,6 +579,197 @@ function FacetCarousel({ wgNumber, bus, accent }) {
             </li>
           ))}
         </motion.ol>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// --- Middle column: figures carousel --------------------------------------
+// Three rotating charts that summarize R2 visually — meant to draw the
+// audience's eye after they've read the question list on the left.
+
+const FIGURE_CYCLE_MS = 12_000;
+const IMPORTANCE_BUCKETS = [
+  { label: '1–3', min: 1, max: 3 },
+  { label: '3–5', min: 3, max: 5 },
+  { label: '5–7', min: 5, max: 7 },
+  { label: '7–9', min: 7, max: 9.01 },
+];
+
+function FigureCarousel({ wgNumber, bus, accent }) {
+  const [data, setData] = useState(null);
+  const [figIdx, setFigIdx] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    api(`/api/surveys/results/${wgNumber}/round_2`)
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch(() => { if (!cancelled) setData({ questions: [] }); });
+    return () => { cancelled = true; };
+  }, [wgNumber, bus]);
+
+  const questions = useMemo(
+    () => (data?.questions || []).filter((q) => q.status !== 'removed'),
+    [data]
+  );
+
+  // Build per-figure datasets
+  const importanceBuckets = useMemo(() => {
+    return IMPORTANCE_BUCKETS.map((b) => ({
+      bucket: b.label,
+      count: questions.filter((q) => {
+        const v = q.r2_importance_mean ?? q.r1_importance_mean ?? null;
+        return v != null && v >= b.min && v < b.max;
+      }).length,
+    }));
+  }, [questions]);
+
+  const shiftScatter = useMemo(() => questions
+    .filter((q) => q.r1_importance_mean != null && q.r2_importance_mean != null)
+    .map((q, i) => ({
+      x: q.r1_importance_mean,
+      y: q.r2_importance_mean,
+      label: `Q${i + 1}`,
+    })),
+  [questions]);
+
+  const dispositionRows = useMemo(() => questions
+    .filter((q) => q.r2_include_pct != null || q.r2_exclude_pct != null)
+    .sort((a, b) => (b.r2_include_pct || 0) - (a.r2_include_pct || 0))
+    .slice(0, 8)
+    .map((q, i) => ({
+      name: `Q${i + 1}`,
+      include: q.r2_include_pct || 0,
+      exclude: q.r2_exclude_pct || 0,
+      undecided: Math.max(0, 100 - (q.r2_include_pct || 0) - (q.r2_exclude_pct || 0)),
+      text: q.text,
+    })),
+  [questions]);
+
+  const figures = useMemo(() => {
+    const out = [];
+    if (importanceBuckets.some((b) => b.count > 0)) {
+      out.push({ key: 'importance', label: 'Importance distribution', render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={importanceBuckets} margin={{ top: 8, right: 12, bottom: 8, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="bucket" tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip
+              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: 'rgba(255,255,255,0.65)' }}
+            />
+            <Bar dataKey="count" fill={accent} radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )});
+    }
+    if (shiftScatter.length >= 3) {
+      out.push({ key: 'shift', label: 'R1 → R2 movement', render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis
+              type="number" dataKey="x" name="Round 1" domain={[1, 9]}
+              tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }}
+              axisLine={false} tickLine={false}
+              label={{ value: 'Round 1 importance', fill: 'rgba(255,255,255,0.4)', fontSize: 11, position: 'insideBottom', offset: -8 }}
+            />
+            <YAxis
+              type="number" dataKey="y" name="Round 2" domain={[1, 9]}
+              tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }}
+              axisLine={false} tickLine={false}
+            />
+            <ReferenceLine
+              segment={[{ x: 1, y: 1 }, { x: 9, y: 9 }]}
+              stroke="rgba(255,255,255,0.18)" strokeDasharray="4 4"
+            />
+            <Tooltip
+              cursor={{ stroke: 'rgba(255,255,255,0.1)' }}
+              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 12 }}
+            />
+            <Scatter data={shiftScatter} fill={accent} />
+          </ScatterChart>
+        </ResponsiveContainer>
+      )});
+    }
+    if (dispositionRows.length >= 1) {
+      out.push({ key: 'disposition', label: 'Include / exclude by question', render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart layout="vertical" data={dispositionRows} margin={{ top: 6, right: 12, bottom: 6, left: 8 }} stackOffset="expand">
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+            <XAxis type="number" domain={[0, 1]} tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                   tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" width={36}
+                   tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <Tooltip
+              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+              contentStyle={{ background: '#0E1E35', border: `1px solid ${accent}55`, borderRadius: 8, fontSize: 12 }}
+              formatter={(v) => `${Number(v).toFixed(0)}%`}
+            />
+            <Bar dataKey="include" stackId="d" fill="#10b981" />
+            <Bar dataKey="undecided" stackId="d" fill="rgba(255,255,255,0.18)" />
+            <Bar dataKey="exclude" stackId="d" fill="#f87171" />
+          </BarChart>
+        </ResponsiveContainer>
+      )});
+    }
+    return out;
+  }, [importanceBuckets, shiftScatter, dispositionRows, accent]);
+
+  useEffect(() => {
+    if (figures.length <= 1) return;
+    const t = setInterval(() => setFigIdx((i) => (i + 1) % figures.length), FIGURE_CYCLE_MS);
+    return () => clearInterval(t);
+  }, [figures.length]);
+
+  useEffect(() => { setFigIdx(0); }, [wgNumber]);
+
+  if (!data) return <Skeleton className="h-full w-full rounded-2xl" />;
+  if (!figures.length) {
+    return (
+      <div className="flex h-full flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Figures</p>
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-xs text-white/40">Charts appear once R1/R2 data is in.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const fig = figures[figIdx % figures.length];
+
+  return (
+    <div className="flex h-full flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
+      <div className="flex shrink-0 items-baseline justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
+          {fig.label}
+        </p>
+        <div className="flex items-center gap-1">
+          {figures.map((f, i) => (
+            <span
+              key={f.key}
+              className="h-1.5 rounded-full transition-all"
+              style={{
+                width: i === figIdx ? 16 : 4,
+                backgroundColor: i === figIdx ? accent : 'rgba(255,255,255,0.18)',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={fig.key}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="mt-2 min-h-0 flex-1"
+        >
+          {fig.render()}
+        </motion.div>
       </AnimatePresence>
     </div>
   );
