@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AnimatePresence } from 'framer-motion';
@@ -9,6 +9,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { PageLoader } from '@/components/ui/page-loader';
 import { StageFollowOrchestrator } from '@/components/conference/StageFollowOrchestrator';
+import { lazyWithReload, clearChunkReloadFlag } from '@/lib/lazyWithReload';
+
+// Alias `lazy` to our reload-on-stale-chunk wrapper so a Railway deploy
+// doesn't crash already-open tabs.
+const lazy = lazyWithReload;
 
 const HomePage = lazy(() => import('@/pages/HomePage').then(m => ({ default: m.HomePage })));
 const SurveyPage = lazy(() => import('@/pages/SurveyPage').then(m => ({ default: m.SurveyPage })));
@@ -64,6 +69,9 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  // First successful mount means the current bundle is intact; clear
+  // the chunk-reload flag so a future stale-chunk error can recover.
+  useEffect(() => { clearChunkReloadFlag(); }, []);
   return (
     <HelmetProvider>
       <BrowserRouter>
