@@ -591,7 +591,7 @@ export function HomePage() {
       </section>
 
       {/* ─── Process Section ───────────────────────────────────────── */}
-      <section id="process" className="bg-[#0A1628] px-4 py-20 sm:px-6 lg:py-28">
+      <section id="process" className="scroll-mt-20 bg-[#0A1628] px-4 py-20 sm:px-6 lg:py-28">
         <div className="mx-auto max-w-6xl">
           <motion.div
             initial="hidden"
