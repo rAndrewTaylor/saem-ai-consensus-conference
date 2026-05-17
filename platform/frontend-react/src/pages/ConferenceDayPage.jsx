@@ -6,7 +6,7 @@ import {
   Radio, Coffee, Mic, Users, Globe, Award, Trophy, Sparkles,
   ChevronRight, MessageSquare, Send, CheckCircle2, Loader2,
   Wifi, WifiOff, Clock, MapPin, ArrowRight, Lock, ChevronUp, ChevronDown,
-  ArrowUp, ArrowDown, X, Cloud, CloudOff,
+  ArrowUp, ArrowDown, X, Cloud, CloudOff, LayoutGrid,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -504,7 +504,14 @@ function NowBar({ active, currentAgenda, online, onTapVote }) {
         <span className={`hidden sm:inline-flex h-2.5 w-2.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-amber-400'}`}
                title={online ? 'Online' : 'Offline'} />
       </div>
-      <div className="mx-auto flex max-w-2xl items-center justify-end gap-2 px-4 pb-2 sm:px-6">
+      <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-4 pb-2 sm:px-6">
+        <Link
+          to="/welcome"
+          className="inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/65 hover:bg-white/[0.08] hover:text-white"
+        >
+          <LayoutGrid className="h-3 w-3" />
+          Landing
+        </Link>
         <SignedInChip />
       </div>
     </div>

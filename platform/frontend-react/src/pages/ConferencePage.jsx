@@ -27,7 +27,7 @@ import {
   Sliders,
   Send,
   MessageSquare,
-  Home,
+  Home, LayoutGrid,
   CheckCircle2,
   CheckCircle,
   Users,
@@ -357,13 +357,24 @@ export function ConferencePage() {
           to the conference-day agenda without using the browser back button. */}
       <div className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0A1628]/95 px-4 py-2 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-          <Link
-            to="/day"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white/70 hover:bg-white/[0.06] hover:text-white"
-          >
-            <Home className="h-4 w-4" />
-            Back to agenda
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/day"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white/70 hover:bg-white/[0.06] hover:text-white"
+            >
+              <Home className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to agenda</span>
+              <span className="sm:hidden">Agenda</span>
+            </Link>
+            <Link
+              to="/welcome"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
+              title="Back to the welcome landing"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="hidden sm:inline">Landing</span>
+            </Link>
+          </div>
           <SignedInChip compact />
         </div>
       </div>
