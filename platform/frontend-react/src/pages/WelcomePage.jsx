@@ -65,6 +65,23 @@ export function WelcomePage() {
   const ms = CONFERENCE_START.getTime() - now;
   const t = fmtUntil(ms);
 
+  // Render the conference start in the viewer's local time zone so
+  // non-Eastern participants don't have to convert in their head.
+  const localTime = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }).format(CONFERENCE_START);
+    } catch {
+      return CONFERENCE_START.toLocaleString();
+    }
+  }, []);
+
   const tiles = [
     {
       icon: BookOpen,
@@ -176,7 +193,10 @@ export function WelcomePage() {
             <span className="hidden text-2xl font-bold text-white/20 sm:inline">:</span>
             <CountdownNumber value={t.secs} label="sec" className="hidden sm:flex" />
           </div>
-          <p className="mt-3 text-xs text-white/35">
+          <p className="mt-3 text-xs text-white/45">
+            Your local time: <span className="font-medium text-white/70">{localTime}</span>
+          </p>
+          <p className="mt-1 text-xs text-white/35">
             <Clock className="mr-1 inline h-3 w-3" />
             Live conference day view opens automatically 20 minutes before start
           </p>
