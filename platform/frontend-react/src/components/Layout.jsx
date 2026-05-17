@@ -10,6 +10,7 @@ import { getAdminToken, getLeadToken, getActiveWg } from '@/lib/api';
 // SignedInChip + StageFollowOrchestrator render. Projector /stage
 // already has its own chrome (admin strip + SAEM footer).
 const NO_CHROME_PATTERNS = [
+  /^\/welcome$/,
   /^\/day$/,
   /^\/vote\//,
   /^\/stage$/,
