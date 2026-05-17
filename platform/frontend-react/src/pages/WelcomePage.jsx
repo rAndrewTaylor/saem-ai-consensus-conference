@@ -87,7 +87,7 @@ export function WelcomePage() {
       icon: BookOpen,
       title: 'Background',
       desc: 'How a modified-Delphi consensus works and why we built this for EM AI.',
-      to: '/#about',
+      to: '/#process',
       tone: 'cyan',
     },
     {

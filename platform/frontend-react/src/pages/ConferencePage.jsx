@@ -357,22 +357,20 @@ export function ConferencePage() {
           to the conference-day agenda without using the browser back button. */}
       <div className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0A1628]/95 px-4 py-2 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-          <div className="flex items-center gap-1">
-            <Link
-              to="/day"
-              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white/70 hover:bg-white/[0.06] hover:text-white"
-            >
-              <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to agenda</span>
-              <span className="sm:hidden">Agenda</span>
-            </Link>
+          <div className="flex items-center gap-2">
             <Link
               to="/welcome"
-              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white/55 hover:bg-white/[0.06] hover:text-white"
-              title="Back to the welcome landing"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-500/[0.12] px-3 py-1.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/60 hover:bg-cyan-500/20"
             >
               <LayoutGrid className="h-4 w-4" />
-              <span className="hidden sm:inline">Landing</span>
+              Landing
+            </Link>
+            <Link
+              to="/day"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white/80 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <Home className="h-4 w-4" />
+              <span className="hidden sm:inline">Agenda</span>
             </Link>
           </div>
           <SignedInChip compact />

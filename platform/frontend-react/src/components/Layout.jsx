@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Menu, X, Sun, Moon, UserPlus, LogIn, FileBarChart } from 'lucide-react';
+import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Menu, X, Sun, Moon, UserPlus, LogIn, FileBarChart, LayoutGrid } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -65,6 +65,11 @@ export function Layout({ children }) {
       links.push({ to: '/reports/round1', label: 'Round 1 Report',
                    icon: FileBarChart, section: 'wg' });
     }
+
+    // Welcome — the pre-conf landing with tile grid. Always reachable
+    // from any chrome'd page so participants can hop back from a
+    // background read.
+    links.push({ to: '/welcome', label: 'Welcome', icon: LayoutGrid, section: 'conf', highlight: true });
 
     // Conference Day — dedicated mobile-first landing for May 21
     links.push({ to: '/day', label: 'Conference Day', icon: Radio, section: 'conf' });

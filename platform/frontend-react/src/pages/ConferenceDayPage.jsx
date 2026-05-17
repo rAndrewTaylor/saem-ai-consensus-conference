@@ -475,9 +475,22 @@ export function ConferenceDayPage() {
 // ─── Components ──────────────────────────────────────────────────────────
 
 function NowBar({ active, currentAgenda, online, onTapVote }) {
-  // Sticky banner at the top — current state + persistent identity chip.
+  // Sticky banner — keeps the Landing back-button visible at all times so
+  // audience members can always return to the tile grid without hunting.
   return (
     <div className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
+      {/* Row 1: navigation — Landing button is bold and obvious */}
+      <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-4 pt-2 sm:px-6">
+        <Link
+          to="/welcome"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-500/[0.12] px-3 py-1.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/60 hover:bg-cyan-500/20"
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Landing
+        </Link>
+        <SignedInChip compact />
+      </div>
+      {/* Row 2: current state + (optional) Vote CTA */}
       <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-2 sm:px-6">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
           {active ? (
@@ -503,16 +516,6 @@ function NowBar({ active, currentAgenda, online, onTapVote }) {
         )}
         <span className={`hidden sm:inline-flex h-2.5 w-2.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-amber-400'}`}
                title={online ? 'Online' : 'Offline'} />
-      </div>
-      <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-4 pb-2 sm:px-6">
-        <Link
-          to="/welcome"
-          className="inline-flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/65 hover:bg-white/[0.08] hover:text-white"
-        >
-          <LayoutGrid className="h-3 w-3" />
-          Landing
-        </Link>
-        <SignedInChip />
       </div>
     </div>
   );
