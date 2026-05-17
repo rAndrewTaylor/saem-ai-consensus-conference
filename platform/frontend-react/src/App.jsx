@@ -45,6 +45,9 @@ function AnimatedRoutes() {
           <Route path="/wg" element={<Navigate to="/#working-groups" replace />} />
           <Route path="/wg/:wgNumber" element={<WorkingGroupPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
+          {/* Alias for emails that used /join/<token> as a path (older
+              templates). Same component as /invite/:token. */}
+          <Route path="/join/:token" element={<InvitePage />} />
           <Route path="/try" element={<TryPage />} />
           <Route path="/lead/claim/:token" element={<LeadClaimPage />} />
           <Route path="/lead" element={<LeadDashboardPage />} />
