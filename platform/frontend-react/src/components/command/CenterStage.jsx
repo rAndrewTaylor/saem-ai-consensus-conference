@@ -18,7 +18,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useTheme } from '@/hooks/useTheme';
-import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, BarChart3, Vote, Repeat, ArrowRight, Sparkles, X, Copy } from 'lucide-react';
+import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, BarChart3, Vote, Repeat, ArrowRight, Sparkles, X, Copy, Monitor, CheckCircle2, Trash2 } from 'lucide-react';
 
 const WG_NAMES = {
   1: 'Clinical Practice & Operations',
@@ -234,7 +234,18 @@ function AiPromptSuggester({ sessionId, wgNumber }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
+  const [promoted, setPromoted] = useState([]);
+  const [busyPromote, setBusyPromote] = useState(null);
   const [meta, setMeta] = useState(null);
+
+  const refreshPromoted = useCallback(async () => {
+    try {
+      const d = await api(`/api/conference/ai/prompts/${sessionId}`);
+      setPromoted(d?.prompts || []);
+    } catch {}
+  }, [sessionId]);
+
+  useEffect(() => { refreshPromoted(); }, [refreshPromoted]);
 
   const run = useCallback(async () => {
     setLoading(true);
@@ -255,12 +266,41 @@ function AiPromptSuggester({ sessionId, wgNumber }) {
 
   const openModal = () => {
     setOpen(true);
+    refreshPromoted();
     run();
   };
 
   const copy = async (text) => {
     try { await navigator.clipboard.writeText(text); } catch {}
   };
+
+  const promote = async (text) => {
+    setBusyPromote(text);
+    try {
+      const d = await api('/api/conference/ai/promote-prompt', {
+        method: 'POST',
+        body: { session_id: sessionId, prompt: text },
+      });
+      setPromoted(d?.prompts || []);
+    } catch (e) {
+      setError(e?.message || 'Failed to push to projector');
+    } finally {
+      setBusyPromote(null);
+    }
+  };
+
+  const clearPromoted = async () => {
+    if (!window.confirm('Remove all AI prompts from the projector?')) return;
+    try {
+      await api('/api/conference/ai/clear-prompts', {
+        method: 'POST',
+        body: { session_id: sessionId },
+      });
+      setPromoted([]);
+    } catch {}
+  };
+
+  const isPromoted = (text) => promoted.includes(text);
 
   return (
     <>
@@ -315,22 +355,62 @@ function AiPromptSuggester({ sessionId, wgNumber }) {
               )}
               {!loading && !error && suggestions.length > 0 && (
                 <ul className="space-y-2">
-                  {suggestions.map((s, i) => (
-                    <li key={i} className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple-500/15 text-xs font-bold text-purple-200">
-                        {i + 1}
-                      </span>
-                      <p className="min-w-0 flex-1 text-sm leading-relaxed text-white/90">{s}</p>
-                      <button
-                        onClick={() => copy(s)}
-                        title="Copy to clipboard"
-                        className="rounded p-1 text-white/30 hover:bg-white/[0.06] hover:text-white/70"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  ))}
+                  {suggestions.map((s, i) => {
+                    const pushed = isPromoted(s);
+                    return (
+                      <li key={i} className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple-500/15 text-xs font-bold text-purple-200">
+                          {i + 1}
+                        </span>
+                        <p className="min-w-0 flex-1 text-sm leading-relaxed text-white/90">{s}</p>
+                        <button
+                          onClick={() => copy(s)}
+                          title="Copy to clipboard"
+                          className="rounded p-1 text-white/30 hover:bg-white/[0.06] hover:text-white/70"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => promote(s)}
+                          disabled={pushed || busyPromote === s}
+                          title={pushed ? 'Already on projector' : 'Push to projector'}
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition ${
+                            pushed
+                              ? 'bg-emerald-500/15 text-emerald-300'
+                              : 'bg-purple-500/20 text-purple-100 hover:bg-purple-500/30'
+                          } disabled:opacity-70`}
+                        >
+                          {pushed
+                            ? <><CheckCircle2 className="h-3.5 w-3.5" /> On stage</>
+                            : <><Monitor className="h-3.5 w-3.5" /> Push to stage</>}
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
+              )}
+
+              {promoted.length > 0 && (
+                <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.05] p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                      On projector now ({promoted.length})
+                    </p>
+                    <button
+                      onClick={clearPromoted}
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white/45 hover:bg-white/[0.06] hover:text-white/70"
+                    >
+                      <Trash2 className="h-3 w-3" /> Clear
+                    </button>
+                  </div>
+                  <ul className="mt-1.5 space-y-1">
+                    {promoted.map((p, i) => (
+                      <li key={i} className="text-[12px] leading-snug text-white/80">
+                        {i + 1}. {p}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 

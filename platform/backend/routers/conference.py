@@ -1481,3 +1481,94 @@ async def ai_suggest_prompts(
         "n_messages_used": len(chat_bodies),
         "suggestions": prompts,
     }
+
+
+# --- Push AI prompts to projector ---------------------------------------
+
+import json as _json
+
+
+def _load_session_ai_prompts(cs) -> list[str]:
+    if not getattr(cs, "ai_prompts", None):
+        return []
+    try:
+        arr = _json.loads(cs.ai_prompts)
+        return [str(s) for s in arr if isinstance(s, str)] if isinstance(arr, list) else []
+    except Exception:
+        return []
+
+
+class AiPromoteBody(BaseModel):
+    session_id: int
+    prompt: str
+
+
+class AiClearBody(BaseModel):
+    session_id: int
+
+
+@router.get("/ai/prompts/{session_id}")
+def ai_get_promoted_prompts(session_id: int, db: Session = Depends(get_db)):
+    """Public: return the AI prompts the chair has promoted onto the
+    projector for this session. Used by /stage's PanelStage to render
+    them alongside the static discussion prompts."""
+    cs = db.query(ConferenceSession).get(session_id)
+    if not cs:
+        raise HTTPException(404, "Session not found")
+    return {"session_id": session_id, "prompts": _load_session_ai_prompts(cs)}
+
+
+@router.post("/ai/promote-prompt")
+def ai_promote_prompt(
+    body: AiPromoteBody,
+    db: Session = Depends(get_db),
+    actor: dict = Depends(require_chair),
+):
+    """Append an AI-suggested prompt to the session's promoted list."""
+    cs = db.query(ConferenceSession).get(body.session_id)
+    if not cs:
+        raise HTTPException(404, "Session not found")
+    wg = db.query(WorkingGroup).get(cs.wg_id) if cs.wg_id else None
+    if wg and actor["actor"] == "co_lead":
+        _assert_chair_scope(actor, wg.number)
+    text = (body.prompt or "").strip()
+    if not text:
+        raise HTTPException(400, "Empty prompt")
+    if len(text) > 500:
+        text = text[:500]
+    current = _load_session_ai_prompts(cs)
+    # Cap at 3 promoted prompts; FIFO out the oldest if needed
+    current.append(text)
+    if len(current) > 3:
+        current = current[-3:]
+    cs.ai_prompts = _json.dumps(current)
+    db.commit()
+    write_audit_log(
+        db, actor.get("email", "chair"), "ai_prompt_promote",
+        f"session={body.session_id} prompt={text[:80]!r}",
+    )
+    _publish_day("ai_prompts_changed", {"session_id": body.session_id, "prompts": current})
+    return {"session_id": body.session_id, "prompts": current}
+
+
+@router.post("/ai/clear-prompts")
+def ai_clear_prompts(
+    body: AiClearBody,
+    db: Session = Depends(get_db),
+    actor: dict = Depends(require_chair),
+):
+    """Clear all promoted AI prompts for a session."""
+    cs = db.query(ConferenceSession).get(body.session_id)
+    if not cs:
+        raise HTTPException(404, "Session not found")
+    wg = db.query(WorkingGroup).get(cs.wg_id) if cs.wg_id else None
+    if wg and actor["actor"] == "co_lead":
+        _assert_chair_scope(actor, wg.number)
+    cs.ai_prompts = None
+    db.commit()
+    write_audit_log(
+        db, actor.get("email", "chair"), "ai_prompt_clear",
+        f"session={body.session_id}",
+    )
+    _publish_day("ai_prompts_changed", {"session_id": body.session_id, "prompts": []})
+    return {"session_id": body.session_id, "prompts": []}

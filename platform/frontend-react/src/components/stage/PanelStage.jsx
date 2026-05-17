@@ -25,6 +25,7 @@ import { PANEL_PROMPTS, WG_LABELS, PILLAR_COLORS } from '@/components/stage/pane
 export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
   const [sessionId, setSessionId] = useState(null);
   const [resolving, setResolving] = useState(true);
+  const [aiPrompts, setAiPrompts] = useState([]);
 
   // Find the active wg_presentation session for this WG.
   useEffect(() => {
@@ -46,6 +47,17 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
     })();
     return () => { cancelled = true; };
   }, [wgNumber, bus]);
+
+  // Fetch AI-promoted prompts for this session. Refreshes when the bus
+  // ticks (StageView increments it on ai_prompts_changed via SSE).
+  useEffect(() => {
+    if (!sessionId) { setAiPrompts([]); return; }
+    let cancelled = false;
+    api(`/api/conference/ai/prompts/${sessionId}`)
+      .then((d) => { if (!cancelled) setAiPrompts(d?.prompts || []); })
+      .catch(() => { if (!cancelled) setAiPrompts([]); });
+    return () => { cancelled = true; };
+  }, [sessionId, bus]);
 
   const accent = PILLAR_COLORS[wgNumber] || '#00B4D8';
   const wgName = WG_LABELS[wgNumber] || `Working Group ${wgNumber}`;
@@ -73,8 +85,10 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
       {/* Discussion prompts — promoted to a prominent full-width strip
           so panelists and audience always know where the conversation
           is supposed to land. Each card gets a slightly different hue
-          so they read as three distinct angles, not a triplet. */}
-      {prompts.length > 0 && (
+          so they read as three distinct angles, not a triplet.
+          AI-promoted prompts from chat appear as a second row below
+          the static ones with a glowing "Live from chat" badge. */}
+      {(prompts.length > 0 || aiPrompts.length > 0) && (
         <div className="mx-8 mb-3 shrink-0 rounded-xl border p-3"
              style={{ borderColor: `${accent}30`, backgroundColor: `${accent}08` }}>
           <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
@@ -103,6 +117,37 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
               );
             })}
           </div>
+
+          {aiPrompts.length > 0 && (
+            <AnimatePresence>
+              <motion.div
+                key={aiPrompts.length}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="mt-2 grid gap-2 sm:grid-cols-3"
+              >
+                {aiPrompts.slice(0, 3).map((text, i) => (
+                  <div
+                    key={`ai-${i}`}
+                    className="relative overflow-hidden rounded-lg p-2.5"
+                    style={{
+                      backgroundColor: 'rgba(139, 92, 246, 0.10)',
+                      borderLeft: '3px solid rgba(167, 139, 250, 0.7)',
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex h-1.5 w-1.5 rounded-full bg-purple-300 animate-pulse" />
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-300">
+                        Live from chat
+                      </p>
+                    </div>
+                    <p className="mt-1 text-sm leading-snug text-white/95 line-clamp-3">{text}</p>
+                  </div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </div>
       )}
 

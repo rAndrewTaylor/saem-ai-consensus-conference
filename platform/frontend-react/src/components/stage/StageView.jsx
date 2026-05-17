@@ -69,7 +69,8 @@ export function useStageDisplay(isAdmin) {
           data?.event === 'vote_cast' ||
           data?.event === 'session_started' ||
           data?.event === 'session_stopped' ||
-          data?.event === 'phase_changed'
+          data?.event === 'phase_changed' ||
+          data?.event === 'ai_prompts_changed'
         ) {
           setBus((b) => b + 1);
         }

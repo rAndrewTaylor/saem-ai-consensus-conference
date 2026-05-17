@@ -347,6 +347,10 @@ class ConferenceSession(Base):
     started_at = Column(DateTime)
     ended_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # AI-suggested discussion prompts the chair has promoted onto the
+    # projector. JSON-encoded list of strings; null/empty = nothing
+    # promoted. Cleared between panels.
+    ai_prompts = Column(Text, nullable=True)
 
 
 class ConferenceVote(Base):
@@ -554,6 +558,25 @@ def _apply_additive_migrations():
                         raise
         if added:
             log.info("Added missing co_leads columns: %s", added)
+
+    # Conference-session columns (newer additions)
+    desired_session_cols = {
+        "ai_prompts": "TEXT",
+    }
+    if "conference_sessions" in inspector.get_table_names():
+        existing = {c["name"] for c in inspector.get_columns("conference_sessions")}
+        added = []
+        with engine.begin() as conn:
+            for col, col_type in desired_session_cols.items():
+                if col not in existing:
+                    try:
+                        conn.execute(sa_text(f"ALTER TABLE conference_sessions ADD COLUMN {col} {col_type}"))
+                        added.append(col)
+                    except Exception:
+                        log.exception("Failed to add column %s to conference_sessions", col)
+                        raise
+        if added:
+            log.info("Added missing conference_sessions columns: %s", added)
 
     # Partial unique index on participants.(wg_id, lower(trim(email))) for
     # active rows with non-empty email. Prevents two active participants
