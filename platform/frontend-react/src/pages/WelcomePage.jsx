@@ -104,6 +104,7 @@ export function WelcomePage() {
       to: '/day',
       tone: 'amber',
       highlight: ms <= AUTO_SHIFT_LEAD_MS,
+      layoutClass: 'sm:col-span-2 lg:col-span-3',
     },
     {
       icon: Users,
@@ -122,8 +123,8 @@ export function WelcomePage() {
     {
       icon: BookOpen,
       title: 'Background',
-      desc: 'How a modified-Delphi consensus works and why we built this for EM AI.',
-      to: '/#process',
+      desc: 'How the consensus was built — Delphi rounds, pairwise math, AI synthesis, conference-day output.',
+      to: '/background',
       tone: 'cyan',
     },
   ];
@@ -256,10 +257,10 @@ const TONE_STYLES = {
   pink:    { bg: 'rgba(236, 72, 153, 0.08)', border: 'rgba(244, 114, 182, 0.25)', iconColor: '#F472B6' },
 };
 
-function TileCard({ icon: Icon, title, desc, to, tone = 'cyan', highlight = false }) {
+function TileCard({ icon: Icon, title, desc, to, tone = 'cyan', highlight = false, layoutClass = '' }) {
   const s = TONE_STYLES[tone] || TONE_STYLES.cyan;
   return (
-    <Link to={to} className="group block">
+    <Link to={to} className={`group block ${layoutClass}`}>
       <Card
         className={`relative h-full transition-all hover:scale-[1.02] hover:shadow-lg ${
           highlight ? 'ring-2 ring-amber-400/40' : ''
