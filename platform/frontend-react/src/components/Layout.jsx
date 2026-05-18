@@ -28,19 +28,19 @@ export function Layout({ children }) {
   const wgNumber = useMemo(() => getActiveWg(), [location.pathname]);
   const isSignedIn = wgNumber !== null;
 
-  // Day-of nav: just the three destinations a visitor needs from the
-  // landing page — Welcome, Admin, and Log in. Conference-day and Guide
-  // are reached from /welcome itself; report pages stay reachable by
-  // direct URL.
+  // Day-of nav: visitors hit the landing page first. The primary slot
+  // is the entry point — when signed out it reads "Sign in" (→ /join,
+  // which lands them on /welcome after sign-in); once signed in it
+  // becomes "Consensus Day" (→ /welcome) so they can navigate back to
+  // the tile grid from anywhere. Admin lives next to it and gates
+  // itself.
   const navLinks = useMemo(() => {
-    const links = [
-      { to: '/welcome', label: 'Welcome', icon: LayoutGrid, highlight: true },
+    return [
+      isSignedIn
+        ? { to: '/welcome', label: 'Consensus Day', icon: LayoutGrid, highlight: true }
+        : { to: '/join', label: 'Sign in', icon: LogIn, highlight: true },
       { to: '/dashboard', label: 'Admin', icon: LayoutDashboard },
     ];
-    if (!isSignedIn) {
-      links.push({ to: '/join', label: 'Log in', icon: LogIn, highlight: true });
-    }
-    return links;
   }, [isSignedIn]);
 
   const isActiveLink = (link) => {
