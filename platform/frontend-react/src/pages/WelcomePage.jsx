@@ -13,7 +13,7 @@
  * "Conference Day View" tile to jump in any time.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { createElement, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -107,11 +107,11 @@ export function WelcomePage() {
       layoutClass: 'sm:col-span-2 lg:col-span-3',
     },
     {
-      icon: Users,
-      title: 'Working Group Summaries',
-      desc: 'Browse the five WGs, their pillars, members, and current question sets.',
-      to: '/#working-groups',
-      tone: 'emerald',
+      icon: BookOpen,
+      title: 'Background',
+      desc: 'How the consensus was built — Delphi rounds, pairwise math, AI synthesis, conference-day output.',
+      to: '/background',
+      tone: 'cyan',
     },
     {
       icon: FileBarChart,
@@ -121,11 +121,11 @@ export function WelcomePage() {
       tone: 'purple',
     },
     {
-      icon: BookOpen,
-      title: 'Background',
-      desc: 'How the consensus was built — Delphi rounds, pairwise math, AI synthesis, conference-day output.',
-      to: '/background',
-      tone: 'cyan',
+      icon: Users,
+      title: 'Working Group Summaries',
+      desc: 'Browse the five WGs, their pillars, members, and current question sets.',
+      to: '/working-groups',
+      tone: 'emerald',
     },
   ];
 
@@ -257,7 +257,7 @@ const TONE_STYLES = {
   pink:    { bg: 'rgba(236, 72, 153, 0.08)', border: 'rgba(244, 114, 182, 0.25)', iconColor: '#F472B6' },
 };
 
-function TileCard({ icon: Icon, title, desc, to, tone = 'cyan', highlight = false, layoutClass = '' }) {
+function TileCard({ icon, title, desc, to, tone = 'cyan', highlight = false, layoutClass = '' }) {
   const s = TONE_STYLES[tone] || TONE_STYLES.cyan;
   return (
     <Link to={to} className={`group block ${layoutClass}`}>
@@ -273,7 +273,7 @@ function TileCard({ icon: Icon, title, desc, to, tone = 'cyan', highlight = fals
               className="flex h-10 w-10 items-center justify-center rounded-xl"
               style={{ backgroundColor: `${s.iconColor}1F`, color: s.iconColor }}
             >
-              <Icon className="h-5 w-5" />
+              {createElement(icon, { className: 'h-5 w-5' })}
             </div>
             {highlight && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
