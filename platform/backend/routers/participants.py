@@ -388,24 +388,27 @@ def login_participant(
 ):
     """Public: email-based login for returning participants.
 
-    Looks up the most recent active participant with this email.
-    No password — appropriate for a closed academic conference.
+    Returns the matching participant if exactly one exists. When the
+    same email is associated with multiple active rows (e.g. a co-lead
+    who registered as both lead and member, or duplicates produced
+    during Delphi onboarding), returns `{"multiple": true, "matches":
+    [...]}` so the UI can render a chooser instead of silently picking
+    the most recent.
 
     On miss, suggests the closest known email (handles typos like
-    `umassmeorial.org` vs `umassmemorial.org` that produced duplicate
-    accounts in production).
+    `umassmeorial.org` vs `umassmemorial.org`).
     """
     email = body.email.strip().lower()
-    p = (
+    matches = (
         db.query(Participant)
         .filter(
             func.lower(func.trim(Participant.email)) == email,
             Participant.is_active == True,  # noqa: E712
         )
         .order_by(Participant.claimed_at.desc().nullslast())
-        .first()
+        .all()
     )
-    if not p:
+    if not matches:
         suggestion = _suggest_similar_email(db, email)
         if suggestion:
             raise HTTPException(
@@ -419,16 +422,25 @@ def login_participant(
             "register using your invite link.",
         )
 
-    wg = p.working_group
-    return {
-        "token": p.token,
-        "name": p.name,
-        "email": p.email,
-        "role": p.role,
-        "wg_number": wg.number if wg else None,
-        "wg_name": wg.name if wg else None,
-        "wg_short_name": wg.short_name if wg else None,
-    }
+    def _serialize(p: Participant) -> dict:
+        wg = p.working_group
+        return {
+            "token": p.token,
+            "name": p.name,
+            "email": p.email,
+            "role": p.role,
+            "wg_number": wg.number if wg else None,
+            "wg_name": wg.name if wg else None,
+            "wg_short_name": wg.short_name if wg else None,
+        }
+
+    if len(matches) > 1:
+        return {
+            "multiple": True,
+            "matches": [_serialize(p) for p in matches],
+        }
+
+    return _serialize(matches[0])
 
 
 def _suggest_similar_email(db: Session, typed: str) -> Optional[str]:

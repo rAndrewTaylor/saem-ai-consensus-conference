@@ -120,6 +120,19 @@ export const getAnyParticipantToken = () => {
   }
   return null;
 };
+// Clear all participant tokens — used by the "Switch user" flow on
+// shared/kiosk devices (one phone, multiple people signing in across
+// the day) and by the email-login chooser when the user picks a row
+// that differs from whatever is currently cached.
+export const clearAllParticipantTokens = () => {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('saem_token_wg')) keys.push(key);
+  }
+  keys.forEach((k) => localStorage.removeItem(k));
+  localStorage.removeItem('saem_active_wg');
+};
 export const getAdminToken = () => localStorage.getItem('saem_admin_token');
 export const setAdminToken = (token) => localStorage.setItem('saem_admin_token', token);
 export const clearAdminToken = () => localStorage.removeItem('saem_admin_token');

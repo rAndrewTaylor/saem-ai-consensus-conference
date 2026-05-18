@@ -18,12 +18,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   BookOpen, FileBarChart, Users, Radio, MapPin, ArrowRight, Sparkles, Clock,
-  CalendarDays, Compass,
+  CalendarDays, Compass, Mail, KeyRound, Link2, LogOut, AlertCircle, ChevronLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { SignedInChip } from '@/components/conference/SignedInChip';
-import { getAnyParticipantToken, getActiveWg } from '@/lib/api';
+import {
+  api,
+  getAnyParticipantToken,
+  getActiveWg,
+  setToken,
+  clearAllParticipantTokens,
+} from '@/lib/api';
 import { usePageTitle } from '@/hooks/usePageTitle';
+
+const CONFERENCE_ACCESS_CODE = 'ai26';
 
 // Hard-coded for the SAEM 2026 conference. ISO with -04:00 (EDT).
 const CONFERENCE_START_ISO = '2026-05-21T09:00:00-04:00';
@@ -54,13 +63,17 @@ export function WelcomePage() {
     return () => clearInterval(t);
   }, []);
 
-  // Auto-shift to /day at T-20m
+  // Auto-shift to /day at T-20m — but only if the user is already signed in.
+  // Unauthenticated visitors should stay on /welcome so they can see the
+  // sign-in options; pushing them into /day with no token lands them in a
+  // dead screen.
   useEffect(() => {
+    if (!hasToken) return;
     const msUntilStart = CONFERENCE_START.getTime() - now;
     if (msUntilStart <= AUTO_SHIFT_LEAD_MS) {
       navigate('/day', { replace: true });
     }
-  }, [now, navigate]);
+  }, [now, navigate, hasToken]);
 
   const ms = CONFERENCE_START.getTime() - now;
   const t = fmtUntil(ms);
@@ -82,34 +95,19 @@ export function WelcomePage() {
     }
   }, []);
 
+  // Day-of tiles in row 1 (Conference Day View, Day-of Agenda, Your Group);
+  // pre-conference reference material in row 2 (WG Summaries, Round reports,
+  // Background).
   const tiles = [
     {
-      icon: BookOpen,
-      title: 'Background',
-      desc: 'How a modified-Delphi consensus works and why we built this for EM AI.',
-      to: '/#process',
-      tone: 'cyan',
-    },
-    {
-      icon: FileBarChart,
-      title: 'Round 1 Report',
-      desc: 'Survey results, themes, and overlap pairs across all five working groups.',
-      to: '/reports/round1',
-      tone: 'purple',
-    },
-    {
-      icon: FileBarChart,
-      title: 'Round 2 Report',
-      desc: 'Deliberation shifts, pairwise leaderboard, and what survived the revise pass.',
-      to: '/reports/round2',
-      tone: 'purple',
-    },
-    {
-      icon: Users,
-      title: 'Working Group Summaries',
-      desc: 'Browse the five WGs, their pillars, members, and current question sets.',
-      to: '/#working-groups',
-      tone: 'emerald',
+      icon: Radio,
+      title: 'Conference Day View',
+      desc: ms > AUTO_SHIFT_LEAD_MS
+        ? 'Preview the live agenda interface — opens for real on May 21.'
+        : 'Live now. Tap to enter the conference experience.',
+      to: '/day',
+      tone: 'amber',
+      highlight: ms <= AUTO_SHIFT_LEAD_MS,
     },
     {
       icon: CalendarDays,
@@ -134,14 +132,25 @@ export function WelcomePage() {
           tone: 'pink',
         },
     {
-      icon: Radio,
-      title: 'Conference Day View',
-      desc: ms > AUTO_SHIFT_LEAD_MS
-        ? 'Preview the live agenda interface — opens for real on May 21.'
-        : 'Live now. Tap to enter the conference experience.',
-      to: '/day',
-      tone: 'amber',
-      highlight: ms <= AUTO_SHIFT_LEAD_MS,
+      icon: Users,
+      title: 'Working Group Summaries',
+      desc: 'Browse the five WGs, their pillars, members, and current question sets.',
+      to: '/#working-groups',
+      tone: 'emerald',
+    },
+    {
+      icon: FileBarChart,
+      title: 'Round Reports',
+      desc: 'Round 1 results and Round 2 deliberation shifts — what fed the conference-day slate.',
+      to: '/reports',
+      tone: 'purple',
+    },
+    {
+      icon: BookOpen,
+      title: 'Background',
+      desc: 'How a modified-Delphi consensus works and why we built this for EM AI.',
+      to: '/#process',
+      tone: 'cyan',
     },
   ];
 
@@ -179,14 +188,25 @@ export function WelcomePage() {
           </p>
           {hasToken
             ? (
-              <p className="mt-2 text-sm text-white/45">
-                You're signed in — your votes from earlier rounds are saved. Browse below or jump straight to the day-of view.
-              </p>
+              <div className="mt-2">
+                <p className="text-sm text-white/45">
+                  You're signed in — your votes from earlier rounds are saved. Browse below or jump straight to the day-of view.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearAllParticipantTokens();
+                    navigate(0); // hard refresh so SignedInChip + tiles reflect new state
+                  }}
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-white/35 hover:text-white/70"
+                >
+                  <LogOut className="h-3 w-3" />
+                  Switch user / sign out
+                </button>
+              </div>
             )
             : (
-              <p className="mt-2 text-sm text-white/45">
-                Use your personal invite link to sign in so your votes count toward consensus.
-              </p>
+              <DayOfSignInBlock />
             )
           }
 
@@ -286,6 +306,264 @@ function TileCard({ icon: Icon, title, desc, to, tone = 'cyan', highlight = fals
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+/**
+ * Inline sign-in block for /welcome. Three options — email, paste link,
+ * conference code — so that a participant in a hotel ballroom on the
+ * morning of May 21 has at least one path that works for them:
+ *   - email login (returning Delphi participants)
+ *   - paste invite link (someone with the email on a different device)
+ *   - conference code (audience members / day-of arrivals with no invite)
+ * If the email login matches multiple active rows, a chooser is rendered
+ * so the user picks the right account (rather than us silently picking
+ * the most recent).
+ */
+function DayOfSignInBlock() {
+  const navigate = useNavigate();
+  const [mode, setMode] = useState(null); // null | 'email' | 'link'
+  const [emailValue, setEmailValue] = useState('');
+  const [linkValue, setLinkValue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [matches, setMatches] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleEmailSignIn = async () => {
+    const v = emailValue.trim();
+    if (!v.includes('@')) {
+      setError('Enter a valid email address.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const data = await api('/api/participants/login', {
+        method: 'POST',
+        body: { email: v },
+      });
+      if (data?.multiple && Array.isArray(data.matches)) {
+        setMatches(data.matches);
+        return;
+      }
+      if (data?.token && data?.wg_number) {
+        clearAllParticipantTokens();
+        setToken(data.wg_number, data.token);
+        navigate(`/wg/${data.wg_number}`);
+      } else {
+        setError('Sign-in failed unexpectedly. Try the conference code or ask the help desk.');
+      }
+    } catch (err) {
+      setError(err.message || 'Could not find that email.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePickMatch = (p) => {
+    clearAllParticipantTokens();
+    if (p?.wg_number && p?.token) {
+      setToken(p.wg_number, p.token);
+      navigate(`/wg/${p.wg_number}`);
+    } else {
+      navigate('/welcome');
+    }
+  };
+
+  const handlePasteLink = () => {
+    const raw = (linkValue || '').trim();
+    if (!raw) {
+      setError('Paste your invite link or token.');
+      return;
+    }
+    let token = raw;
+    try {
+      const u = new URL(raw);
+      const pathMatch = u.pathname.match(/\/(?:invite|join)\/([A-Za-z0-9_-]+)/);
+      if (pathMatch) {
+        token = pathMatch[1];
+      } else {
+        const q = u.searchParams.get('token');
+        if (q) token = q;
+      }
+    } catch {
+      // not a URL — treat the whole value as a token
+    }
+    token = token.replace(/\s+/g, '');
+    if (!token) {
+      setError("Couldn't read a token out of that link.");
+      return;
+    }
+    navigate(`/invite/${encodeURIComponent(token)}`);
+  };
+
+  // Multi-match chooser
+  if (matches) {
+    return (
+      <div className="mx-auto mt-5 max-w-md text-left">
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-sm font-medium text-white">
+              Multiple accounts found for that email
+            </p>
+            <p className="mt-1 text-xs text-white/55">
+              Pick the one to sign in with.
+            </p>
+            <div className="mt-3 space-y-2">
+              {matches.map((m) => (
+                <button
+                  key={m.token}
+                  type="button"
+                  onClick={() => handlePickMatch(m)}
+                  className="flex w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-left transition hover:border-cyan-400/40 hover:bg-cyan-500/[0.05]"
+                >
+                  <span>
+                    <span className="block text-sm font-medium text-white/90">{m.name || '(unnamed)'}</span>
+                    <span className="block text-[11px] text-white/45">
+                      WG {m.wg_number ?? '?'} · {m.wg_short_name || m.wg_name || ''} · {m.role || 'participant'}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-white/30" />
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setMatches(null)}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              Back
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Default — three big buttons
+  if (mode === null) {
+    return (
+      <div className="mt-5">
+        <p className="mb-3 text-sm text-white/55">Sign in to participate.</p>
+        <div className="mx-auto flex max-w-md flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => { setError(null); setMode('email'); }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-500/[0.08] px-4 py-3 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/[0.14]"
+          >
+            <Mail className="h-4 w-4" />
+            Email
+          </button>
+          <button
+            type="button"
+            onClick={() => { setError(null); setMode('link'); }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-sm font-medium text-white/80 transition hover:bg-white/[0.08]"
+          >
+            <Link2 className="h-4 w-4" />
+            Paste link
+          </button>
+          <Link
+            to={`/join?access=${CONFERENCE_ACCESS_CODE}`}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-amber-400/30 bg-amber-500/[0.08] px-4 py-3 text-sm font-medium text-amber-200 transition hover:bg-amber-500/[0.14]"
+          >
+            <KeyRound className="h-4 w-4" />
+            Conference code
+          </Link>
+        </div>
+        <p className="mt-3 text-[11px] text-white/35">
+          No invite? Use code <span className="font-mono text-amber-200/80">{CONFERENCE_ACCESS_CODE}</span> on the day.
+        </p>
+      </div>
+    );
+  }
+
+  // Email mode
+  if (mode === 'email') {
+    return (
+      <div className="mx-auto mt-5 max-w-md text-left">
+        <Card>
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <Mail className="h-4 w-4 text-cyan-300" />
+              <p className="text-sm font-medium text-white">Sign in with your email</p>
+            </div>
+            <input
+              type="email"
+              value={emailValue}
+              onChange={(e) => setEmailValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !busy && handleEmailSignIn()}
+              placeholder="you@institution.edu"
+              autoFocus
+              className="w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-500/20"
+            />
+            {error && (
+              <p className="mt-2 flex items-start gap-1 text-xs text-rose-300">
+                <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                <span>{error}</span>
+              </p>
+            )}
+            <div className="mt-3 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => { setMode(null); setError(null); }}
+                className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
+              >
+                <ChevronLeft className="h-3 w-3" />
+                Back
+              </button>
+              <Button onClick={handleEmailSignIn} loading={busy} size="sm">
+                Sign in
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Paste-link mode
+  return (
+    <div className="mx-auto mt-5 max-w-md text-left">
+      <Card>
+        <CardContent className="p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <Link2 className="h-4 w-4 text-cyan-300" />
+            <p className="text-sm font-medium text-white">Paste your invite link</p>
+          </div>
+          <p className="mb-2 text-xs text-white/45">
+            From the email we sent — the full URL or just the token works.
+          </p>
+          <textarea
+            rows={3}
+            value={linkValue}
+            onChange={(e) => setLinkValue(e.target.value)}
+            placeholder="https://saem-ai-consensus-conference-production.up.railway.app/invite/..."
+            autoFocus
+            className="w-full resize-none rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 font-mono text-xs text-white placeholder-white/25 outline-none transition focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-500/20"
+          />
+          {error && (
+            <p className="mt-2 flex items-start gap-1 text-xs text-rose-300">
+              <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+              <span>{error}</span>
+            </p>
+          )}
+          <div className="mt-3 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => { setMode(null); setError(null); }}
+              className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              Back
+            </button>
+            <Button onClick={handlePasteLink} size="sm">
+              Continue
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

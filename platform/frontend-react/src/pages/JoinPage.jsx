@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
-import { api, setToken } from '@/lib/api';
+import { api, setToken, clearAllParticipantTokens } from '@/lib/api';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 const WG_OPTIONS = [
@@ -59,6 +59,7 @@ export function JoinPage() {
   const [email, setEmail] = useState('');
   const [signinEmail, setSigninEmail] = useState('');
   const [signingIn, setSigningIn] = useState(false);
+  const [signinMatches, setSigninMatches] = useState(null);
   const [wg, setWg] = useState(null);
   const [role, setRole] = useState('participant');
   const [submitting, setSubmitting] = useState(false);
@@ -120,6 +121,11 @@ export function JoinPage() {
         method: 'POST',
         body: { email: signinEmail.trim() },
       });
+      if (data?.multiple && Array.isArray(data.matches)) {
+        setSigninMatches(data.matches);
+        return;
+      }
+      clearAllParticipantTokens();
       setToken(data.wg_number, data.token);
       toast({ message: `Welcome back, ${data.name}!`, type: 'success' });
       navigate(safeRedirect || `/wg/${data.wg_number}`);
@@ -128,6 +134,13 @@ export function JoinPage() {
     } finally {
       setSigningIn(false);
     }
+  };
+
+  const handlePickSigninMatch = (p) => {
+    clearAllParticipantTokens();
+    setToken(p.wg_number, p.token);
+    toast({ message: `Welcome back, ${p.name}!`, type: 'success' });
+    navigate(safeRedirect || `/wg/${p.wg_number}`);
   };
   const canSubmit = (isInviteMode ? wg !== null : wg !== null) && role;
 
@@ -200,6 +213,9 @@ export function JoinPage() {
             setSigninEmail={setSigninEmail}
             signingIn={signingIn}
             handleSignIn={handleSignIn}
+            matches={signinMatches}
+            onPickMatch={handlePickSigninMatch}
+            onResetMatches={() => setSigninMatches(null)}
           />
         </div>
       </div>
@@ -242,6 +258,9 @@ export function JoinPage() {
             setSigninEmail={setSigninEmail}
             signingIn={signingIn}
             handleSignIn={handleSignIn}
+            matches={signinMatches}
+            onPickMatch={handlePickSigninMatch}
+            onResetMatches={() => setSigninMatches(null)}
           />
         ) : (
         <>
@@ -468,7 +487,62 @@ export function JoinPage() {
   );
 }
 
-function SignInCard({ signinEmail, setSigninEmail, signingIn, handleSignIn }) {
+function SignInCard({
+  signinEmail,
+  setSigninEmail,
+  signingIn,
+  handleSignIn,
+  matches,
+  onPickMatch,
+  onResetMatches,
+}) {
+  // Multi-match chooser — same email is bound to several active rows.
+  if (matches && matches.length > 0) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
+              <LogIn className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-white">Multiple accounts</h2>
+              <p className="text-xs text-white/50">Pick the account you want to sign in with</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {matches.map((m) => (
+              <button
+                key={m.token}
+                type="button"
+                onClick={() => onPickMatch && onPickMatch(m)}
+                className="flex w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-left transition hover:border-[#00B4D8]/40 hover:bg-[#00B4D8]/[0.06]"
+              >
+                <span>
+                  <span className="block text-sm font-medium text-white/90">{m.name || '(unnamed)'}</span>
+                  <span className="block text-[11px] text-white/45">
+                    WG {m.wg_number ?? '?'} · {m.wg_short_name || m.wg_name || ''} · {m.role || 'participant'}
+                  </span>
+                </span>
+                <ArrowRight className="h-4 w-4 text-white/30" />
+              </button>
+            ))}
+          </div>
+          {onResetMatches && (
+            <button
+              type="button"
+              onClick={onResetMatches}
+              className="mt-3 inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              Back
+            </button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent className="p-6">

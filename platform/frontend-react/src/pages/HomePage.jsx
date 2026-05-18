@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, useInView } from 'framer-motion';
@@ -344,6 +344,15 @@ export function HomePage() {
     document.getElementById('working-groups')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Conference-day banner window: from T-24h through T+12h (covers Wed
+  // evening setup through Thursday late evening). Computed once on render
+  // — the banner is a binary visibility, no need to tick.
+  const showDayOfBanner = useMemo(() => {
+    const start = new Date('2026-05-21T09:00:00-04:00').getTime();
+    const now = Date.now();
+    return now >= start - 24 * 60 * 60 * 1000 && now <= start + 12 * 60 * 60 * 1000;
+  }, []);
+
   return (
     <div className="flex flex-col">
       <Helmet>
@@ -351,6 +360,25 @@ export function HomePage() {
         <meta property="og:title" content="SAEM 2026 AI Consensus Conference" />
         <meta property="og:description" content="AI-Enhanced Consensus Building for Emergency Medicine Research" />
       </Helmet>
+
+      {showDayOfBanner && (
+        <div className="sticky top-0 z-40 border-b border-amber-400/30 bg-gradient-to-r from-amber-500/20 via-amber-500/15 to-cyan-500/20 backdrop-blur">
+          <Link
+            to="/welcome"
+            className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6"
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-amber-300" />
+              <span className="font-semibold text-white">
+                Conference is live today — sign in to participate.
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/[0.12] px-3 py-1 text-xs font-semibold text-white">
+              Sign in <ArrowRight className="h-3.5 w-3.5" />
+            </span>
+          </Link>
+        </div>
+      )}
 
       {/* ─── Hero Section ──────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#0A1628] px-4 py-20 text-white sm:px-6 sm:py-28 lg:py-36">
@@ -448,7 +476,7 @@ export function HomePage() {
               transition={{ delay: 0.5 }}
               className="mt-6 inline-flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.04] px-6 py-3 backdrop-blur-sm"
             >
-              <CountdownTimer targetDate="2026-05-21T08:00:00" />
+              <CountdownTimer targetDate="2026-05-21T09:00:00-04:00" />
             </motion.div>
 
             <motion.div

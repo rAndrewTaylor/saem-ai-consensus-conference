@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Menu, X, Sun, Moon, UserPlus, LogIn, FileBarChart, LayoutGrid } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { BrainCircuit, Home, Users, Radio, BookOpen, LayoutDashboard, Crown, Menu, X, Sun, Moon, UserPlus, LogIn, FileBarChart, LayoutGrid, ChevronDown, History } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { getAdminToken, getLeadToken, getActiveWg } from '@/lib/api';
@@ -30,11 +30,23 @@ export function Layout({ children }) {
   const isLead = useMemo(() => !!getLeadToken(), [location.pathname]);
   const isSignedIn = wgNumber !== null;
 
-  // Build nav links dynamically based on auth state
+  // Build nav links dynamically based on auth state.
+  //
+  // Day-of nav order: the conference-day surfaces come first (Welcome,
+  // Conference Day, My Group). Pre-conference artifacts — Round 1/2
+  // reports — live under a "Pre-conference" disclosure to reduce
+  // cognitive load on Thursday.
   const navLinks = useMemo(() => {
     const links = [];
 
-    // Primary: My Group (if signed in) or Home
+    // Welcome — the canonical landing for participants on conference day.
+    // First so the most important destination is left-most.
+    links.push({ to: '/welcome', label: 'Welcome', icon: LayoutGrid, section: 'conf', highlight: true });
+
+    // Conference Day — live mobile-first experience for May 21
+    links.push({ to: '/day', label: 'Conference Day', icon: Radio, section: 'conf' });
+
+    // My Group (if signed in) — destination for participant-bound work
     if (isSignedIn) {
       links.push({ to: `/wg/${wgNumber}`, label: 'My Group', icon: Users, section: 'wg' });
     } else {
@@ -45,23 +57,6 @@ export function Layout({ children }) {
     if (isLead) {
       links.push({ to: '/lead', label: 'Lead View', icon: Crown, section: 'wg' });
     }
-
-    // Round 1 + Round 2 reports — visible to anyone who's signed in
-    // (admin or participant); the pages themselves enforce auth.
-    if (isSignedIn || isAdmin) {
-      links.push({ to: '/reports/round1', label: 'Round 1 Report',
-                   icon: FileBarChart, section: 'wg' });
-      links.push({ to: '/reports/round2', label: 'Round 2 Report',
-                   icon: FileBarChart, section: 'wg' });
-    }
-
-    // Welcome — the pre-conf landing with tile grid. Always reachable
-    // from any chrome'd page so participants can hop back from a
-    // background read.
-    links.push({ to: '/welcome', label: 'Welcome', icon: LayoutGrid, section: 'conf', highlight: true });
-
-    // Conference Day — dedicated mobile-first landing for May 21
-    links.push({ to: '/day', label: 'Conference Day', icon: Radio, section: 'conf' });
 
     // Guide
     links.push({ to: '/guide', label: 'Guide', icon: BookOpen, section: 'util' });
@@ -76,6 +71,30 @@ export function Layout({ children }) {
 
     return links;
   }, [isSignedIn, isAdmin, isLead, wgNumber]);
+
+  // Round reports go under a "Pre-conference" disclosure — they were the
+  // primary nav during Delphi but are reference material on conference day.
+  const preconfLinks = useMemo(() => {
+    if (!(isSignedIn || isAdmin)) return [];
+    return [
+      { to: '/reports/round1', label: 'Round 1 Report', icon: FileBarChart },
+      { to: '/reports/round2', label: 'Round 2 Report', icon: FileBarChart },
+    ];
+  }, [isSignedIn, isAdmin]);
+
+  // Disclosure menu state for the desktop "Pre-conference" dropdown.
+  const [preconfOpen, setPreconfOpen] = useState(false);
+  const preconfRef = useRef(null);
+  useEffect(() => {
+    if (!preconfOpen) return undefined;
+    const handler = (e) => {
+      if (preconfRef.current && !preconfRef.current.contains(e.target)) {
+        setPreconfOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [preconfOpen]);
 
   const isActiveLink = (link) => {
     if (link.hash) return false; // hash links don't get active state
@@ -125,28 +144,64 @@ export function Layout({ children }) {
             {navLinks.map((link) => {
               const Icon = link.icon;
               const active = isActiveLink(link);
-              // Visual separator before Conference Day section
-              const showSep = link.section === 'conf';
               return (
-                <div key={link.to + (link.hash || '')} className="flex items-center">
-                  {showSep && <div className="mx-1.5 h-5 w-px bg-white/[0.08]" />}
-                  <Link
-                    to={link.to + (link.hash || '')}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition",
-                      active
-                        ? "bg-white/[0.1] text-white"
-                        : link.highlight
-                          ? "border border-[#00B4D8]/30 bg-[#00B4D8]/10 text-[#48CAE4] hover:bg-[#00B4D8]/15 hover:text-[#48CAE4]"
-                          : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {link.label}
-                  </Link>
-                </div>
+                <Link
+                  key={link.to + (link.hash || '')}
+                  to={link.to + (link.hash || '')}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+                    active
+                      ? "bg-white/[0.1] text-white"
+                      : link.highlight
+                        ? "border border-[#00B4D8]/30 bg-[#00B4D8]/10 text-[#48CAE4] hover:bg-[#00B4D8]/15 hover:text-[#48CAE4]"
+                        : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
               );
             })}
+
+            {/* Pre-conference disclosure (Round 1/2 reports) */}
+            {preconfLinks.length > 0 && (
+              <div className="relative" ref={preconfRef}>
+                <button
+                  type="button"
+                  onClick={() => setPreconfOpen((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+                    preconfOpen
+                      ? "bg-white/[0.08] text-white/80"
+                      : "text-white/40 hover:bg-white/[0.06] hover:text-white/70"
+                  )}
+                  aria-haspopup="true"
+                  aria-expanded={preconfOpen}
+                >
+                  <History className="h-4 w-4" />
+                  Pre-conference
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", preconfOpen && "rotate-180")} />
+                </button>
+                {preconfOpen && (
+                  <div className="absolute right-0 top-full z-10 mt-1 min-w-[180px] overflow-hidden rounded-lg border border-white/[0.08] bg-[#0A1628] py-1 shadow-xl">
+                    {preconfLinks.map((link) => {
+                      const Icon = link.icon;
+                      return (
+                        <Link
+                          key={link.to}
+                          to={link.to}
+                          onClick={() => setPreconfOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {link.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Theme toggle */}
             <div className="mx-1.5 h-5 w-px bg-white/[0.08]" />
@@ -200,6 +255,28 @@ export function Layout({ children }) {
                 </Link>
               );
             })}
+
+            {preconfLinks.length > 0 && (
+              <div className="mt-2 border-t border-white/[0.04] pt-2">
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/30">
+                  Pre-conference
+                </p>
+                {preconfLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-white/40"
+                    >
+                      <Icon className="h-4 w-4" />
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </nav>
