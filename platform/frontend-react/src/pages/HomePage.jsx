@@ -783,79 +783,67 @@ export function HomePage() {
                     <motion.div
                       key={wg.wg_number}
                       variants={staggerItem}
-                      whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                      className="will-change-transform"
                     >
-                      <Link to={`/wg/${wg.wg_number}`} className="block h-full">
-                        <Card className={`group relative h-full overflow-hidden border-t-4 ${pillarColor} transition hover:border-white/20`}>
-                          {/* Large watermark WG number */}
-                          <span className="pointer-events-none absolute -bottom-4 -right-2 select-none text-[8rem] font-black leading-none text-white opacity-[0.03]">
-                            {wg.wg_number}
-                          </span>
+                      <Card className={`relative h-full overflow-hidden border-t-4 ${pillarColor}`}>
+                        {/* Large watermark WG number */}
+                        <span className="pointer-events-none absolute -bottom-4 -right-2 select-none text-[8rem] font-black leading-none text-white opacity-[0.03]">
+                          {wg.wg_number}
+                        </span>
 
-                          <CardContent className="relative flex h-full flex-col p-6">
-                            <div className="flex items-start justify-between">
-                              <Badge variant={badgeVariant} className="text-xs font-bold">
-                                WG {wg.wg_number}
-                              </Badge>
-                              {wg.pillar && (
-                                <span className="text-xs font-medium text-white/30">{wg.pillar}</span>
-                              )}
-                            </div>
-
-                            <h3 className="mt-4 text-base font-semibold leading-snug text-white">
-                              {wg.name}
-                            </h3>
-
-                            {wg.scope && (
-                              <p className="mt-2 text-sm leading-relaxed text-white/40 line-clamp-2">
-                                {wg.scope}
-                              </p>
+                        <CardContent className="relative flex h-full flex-col p-6">
+                          <div className="flex items-start justify-between">
+                            <Badge variant={badgeVariant} className="text-xs font-bold">
+                              WG {wg.wg_number}
+                            </Badge>
+                            {wg.pillar && (
+                              <span className="text-xs font-medium text-white/30">{wg.pillar}</span>
                             )}
+                          </div>
 
-                            {wg.co_leads && wg.co_leads.length > 0 && (
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {wg.co_leads.map((cl, i) => (
-                                  <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-white/50">
-                                    <Users className="h-3 w-3" />
-                                    {cl.name}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                          <h3 className="mt-4 text-base font-semibold leading-snug text-white">
+                            {wg.name}
+                          </h3>
 
-                            {/* Stats row */}
-                            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/40">
-                              {wg.total_questions != null && (
-                                <span className="flex items-center gap-1.5">
-                                  <ClipboardList className="h-4 w-4 text-white/20" />
-                                  <span className="font-semibold text-white/70">
-                                    <AnimatedNumber value={wg.total_questions} />
-                                  </span>{' '}
-                                  questions
+                          {wg.scope && (
+                            <p className="mt-2 text-sm leading-relaxed text-white/40 line-clamp-2">
+                              {wg.scope}
+                            </p>
+                          )}
+
+                          {wg.co_leads && wg.co_leads.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {wg.co_leads.map((cl, i) => (
+                                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-white/50">
+                                  <Users className="h-3 w-3" />
+                                  {cl.name}
                                 </span>
-                              )}
-                              {wg.confirmed != null && (
-                                <span className="flex items-center gap-1.5">
-                                  <UserCheck className="h-4 w-4 text-white/20" />
-                                  <span className="font-semibold text-white/70">
-                                    <AnimatedNumber value={wg.confirmed} />
-                                  </span>{' '}
-                                  confirmed
-                                </span>
-                              )}
+                              ))}
                             </div>
+                          )}
 
-                            {/* Primary CTA */}
-                            <div className="mt-auto flex items-center justify-between pt-6">
-                              <span className="text-sm font-semibold text-white/70 transition group-hover:text-white">
-                                View group
+                          {/* Stats row */}
+                          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/40">
+                            {wg.total_questions != null && (
+                              <span className="flex items-center gap-1.5">
+                                <ClipboardList className="h-4 w-4 text-white/20" />
+                                <span className="font-semibold text-white/70">
+                                  <AnimatedNumber value={wg.total_questions} />
+                                </span>{' '}
+                                questions
                               </span>
-                              <ArrowRight className="h-4 w-4 text-white/30 transition group-hover:translate-x-0.5 group-hover:text-white/70" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
+                            )}
+                            {wg.confirmed != null && (
+                              <span className="flex items-center gap-1.5">
+                                <UserCheck className="h-4 w-4 text-white/20" />
+                                <span className="font-semibold text-white/70">
+                                  <AnimatedNumber value={wg.confirmed} />
+                                </span>{' '}
+                                confirmed
+                              </span>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
                     </motion.div>
                   );
                 })}
@@ -865,103 +853,9 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ─── Active Sessions / Conference Day ──────────────────────── */}
-      <section className="bg-[#0E1E35] px-4 py-20 sm:px-6 lg:py-28">
-        <div className="mx-auto max-w-4xl">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-60px' }}
-            variants={fadeUp}
-            className="text-center"
-          >
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Conference Day Voting
-            </h2>
-            <p className="mx-auto mt-3 max-w-lg text-white/40">
-              Live voting sessions will open on conference day for real-time audience response
-            </p>
-          </motion.div>
+      {/* ─── Public "Live Now" panel — only renders when something is live ─ */}
+      <LiveNowPanel />
 
-          <div className="mt-12">
-            {loadingSessions ? (
-              <div className="flex flex-col items-center gap-3">
-                <Skeleton className="h-28 w-full max-w-md rounded-xl" />
-              </div>
-            ) : errorSessions ? (
-              <Card>
-                <CardContent className="py-12 text-center text-white/40">
-                  <EmptyStateIllustration type="error" className="mx-auto mb-4 w-28" />
-                  <p className="text-sm">Unable to load sessions.</p>
-                </CardContent>
-              </Card>
-            ) : sessions.length > 0 ? (
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={staggerContainer}
-                className="grid gap-5 sm:grid-cols-2"
-              >
-                {sessions.map((session) => (
-                  <motion.div key={session.id} variants={staggerItem}>
-                    <Link to={`/vote/${session.id}`}>
-                      <Card className="group cursor-pointer border-emerald-500/20 transition-all duration-200 hover:border-emerald-500/40 hover:shadow-emerald-500/5">
-                        <CardContent className="flex items-center gap-4 p-5">
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 transition-colors group-hover:bg-emerald-500/15">
-                            <Radio className="h-7 w-7" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="truncate text-base font-semibold text-white">
-                                {session.title || `Session ${session.id}`}
-                              </h3>
-                              <Badge variant="live">
-                                <span className="relative mr-1.5 flex h-3 w-3">
-                                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                                  <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
-                                </span>
-                                LIVE
-                              </Badge>
-                            </div>
-                            {session.description && (
-                              <p className="mt-1 truncate text-sm text-white/40">
-                                {session.description}
-                              </p>
-                            )}
-                          </div>
-                          <ChevronRight className="h-5 w-5 shrink-0 text-white/20 transition group-hover:translate-x-0.5 group-hover:text-white/40" />
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  </motion.div>
-                ))}
-              </motion.div>
-            ) : (
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={scaleUp}
-              >
-                <Card className="overflow-hidden">
-                  <CardContent className="flex flex-col items-center py-16 text-center">
-                    <EmptyStateIllustration type="no-sessions" className="mb-6 w-40" />
-                    <h3 className="text-lg font-semibold text-white/70">
-                      No active voting sessions
-                    </h3>
-                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/30">
-                      Live voting sessions will appear here on conference day,{' '}
-                      <strong className="text-white/50">May 21, 2026</strong>. Check back during the
-                      SAEM Annual Meeting.
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* ─── Sponsors / Credibility ────────────────────────────────── */}
       <section className="bg-[#0A1628] px-4 py-16 sm:px-6">
@@ -989,6 +883,174 @@ export function HomePage() {
           </motion.div>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Public "Live Now" panel
+//
+// Polls /api/conference/day-state + /api/conference/display-mode and
+// subscribes to /api/events/day SSE. Renders nothing when the conference
+// isn't live (no active session and display mode is idle/welcome) so it
+// stays out of the way pre-conference. On conference day it appears
+// loud and bold with vote/comment tallies that tick in real time, and
+// routes anyone who wants to participate through /welcome.
+// ─────────────────────────────────────────────────────────────────────
+
+const PANEL_WG_NAMES = {
+  1: 'Clinical Practice & Operations',
+  2: 'Infrastructure & Data',
+  3: 'Education & Training',
+  4: 'Human-AI Interaction',
+  5: 'Ethics & Legal',
+};
+
+function LiveNowPanel() {
+  const [dayState, setDayState] = useState(null);
+  const [displayMode, setDisplayMode] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const d = await api('/api/conference/day-state');
+        if (!cancelled) setDayState(d);
+      } catch { /* leave stale */ }
+      try {
+        const dm = await api('/api/conference/display-mode');
+        if (!cancelled) setDisplayMode(dm);
+      } catch { /* leave stale */ }
+    };
+    refresh();
+    const t = setInterval(refresh, 10000);
+
+    let es = null;
+    if (typeof EventSource !== 'undefined') {
+      es = new EventSource('/api/events/day');
+      es.onmessage = () => refresh();
+      es.onerror = () => { /* auto-reconnects */ };
+    }
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+      if (es) { try { es.close(); } catch {} }
+    };
+  }, []);
+
+  const activeSession = useMemo(() => {
+    if (!dayState?.sessions) return null;
+    return dayState.sessions.find((s) => s.id === dayState.active_session_id) || null;
+  }, [dayState]);
+
+  const mode = displayMode?.mode || 'idle';
+  const panelWgMatch = /^panel:(\d+)$/.exec(mode);
+  const inLiveSegment = mode && mode !== 'idle' && mode !== 'welcome';
+
+  // Don't render anything pre-conference / between segments.
+  if (!activeSession && !inLiveSegment) return null;
+
+  // Headline copy derived from what's actually live.
+  let headline = 'Live now';
+  let subline = '';
+  if (activeSession) {
+    const wg = activeSession.wg_number;
+    headline = wg ? `Panel ${wg} — ${PANEL_WG_NAMES[wg] || activeSession.wg_short_name}`
+                  : (activeSession.session_type === 'cross_wg_prioritization'
+                      ? 'Cross-WG consensus vote'
+                      : 'Live vote');
+    subline = activeSession.phase === 'post_discussion'
+      ? 'Voting open — sign in to rank.'
+      : 'Discussion underway — voting opens next.';
+  } else if (panelWgMatch) {
+    const wg = parseInt(panelWgMatch[1], 10);
+    headline = `Panel ${wg} — ${PANEL_WG_NAMES[wg] || ''}`;
+    subline = 'Panel in progress.';
+  } else if (mode === 'table_reactions') {
+    headline = 'Table reactions';
+    subline = 'Breakout tables responding to the panel.';
+  } else if (mode === 'cross_wg') {
+    headline = 'Cross-WG consensus';
+    subline = 'Closing ranked vote across all five working groups.';
+  }
+
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#0E1E35] via-[#0A1628] to-[#0E1E35] px-4 py-20 sm:px-6 lg:py-24">
+      {/* Glow */}
+      <div className="pointer-events-none absolute -top-32 left-1/2 h-[400px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-500/[0.12] to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 right-1/4 h-[300px] w-[600px] rounded-full bg-gradient-to-b from-cyan-500/[0.08] to-transparent blur-3xl" />
+
+      <div className="relative mx-auto max-w-5xl">
+        {/* LIVE badge + date */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-center gap-3"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/[0.12] px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-200">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-80" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </span>
+            Live now
+          </span>
+          <span className="text-xs font-medium uppercase tracking-wider text-white/40">
+            May 21, 2026 · Atlanta
+          </span>
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h2
+          key={headline}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 text-center text-3xl font-bold tracking-tight text-white sm:text-5xl"
+        >
+          {headline}
+        </motion.h2>
+        {subline && (
+          <p className="mt-3 text-center text-base text-white/55 sm:text-lg">
+            {subline}
+          </p>
+        )}
+
+        {/* Counters when there's an active session */}
+        {activeSession && (
+          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-3 gap-4">
+            <LiveStat label="Votes cast"  value={activeSession.vote_count ?? 0} />
+            <LiveStat label="Participants" value={activeSession.unique_voters ?? 0} />
+            <LiveStat label="Comments"    value={activeSession.comment_count ?? 0} />
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <Link
+            to="/welcome"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:shadow-emerald-500/40"
+          >
+            In the room? Sign in to participate
+            <ArrowRight className="h-5 w-5" />
+          </Link>
+          <p className="text-xs text-white/40">
+            Or use conference code <span className="font-mono font-semibold text-amber-200/80">ai26</span> on{' '}
+            <Link to="/welcome" className="underline decoration-white/30 hover:decoration-white/70">welcome</Link>.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LiveStat({ label, value }) {
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-4 text-center backdrop-blur-sm sm:px-6 sm:py-5">
+      <div className="font-mono text-2xl font-bold tabular-nums text-white sm:text-4xl">
+        <AnimatedNumber value={value} />
+      </div>
+      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-white/40 sm:text-xs">
+        {label}
+      </div>
     </div>
   );
 }
