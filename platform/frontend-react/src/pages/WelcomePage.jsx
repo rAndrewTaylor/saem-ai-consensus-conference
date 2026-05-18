@@ -5,7 +5,7 @@
  *   - hero with countdown to the conference start
  *   - SignedInChip so the user knows they're authenticated
  *   - tile grid linking to background, R1 report, WG summaries,
- *     agenda, their working group, and the conference day view
+ *     and the conference day view
  *
  * Auto-redirects to /day once we're inside 20 minutes of conference
  * start, so participants who keep the page open are automatically
@@ -18,7 +18,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   BookOpen, FileBarChart, Users, Radio, MapPin, ArrowRight, Sparkles, Clock,
-  Compass, Mail, KeyRound, Link2, LogOut, AlertCircle, ChevronLeft,
+  Mail, KeyRound, Link2, LogOut, AlertCircle, ChevronLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,6 @@ import { SignedInChip } from '@/components/conference/SignedInChip';
 import {
   api,
   getAnyParticipantToken,
-  getActiveWg,
   setToken,
   clearAllParticipantTokens,
 } from '@/lib/api';
@@ -54,7 +53,6 @@ export function WelcomePage() {
   const navigate = useNavigate();
   const [now, setNow] = useState(() => Date.now());
 
-  const wgNumber = useMemo(() => getActiveWg(), []);
   const hasToken = useMemo(() => !!getAnyParticipantToken(), []);
 
   // Tick every second for the countdown; check the auto-shift threshold.
@@ -95,9 +93,7 @@ export function WelcomePage() {
     }
   }, []);
 
-  // Day-of tiles in row 1 (Conference Day View, Day-of Agenda, Your Group);
-  // pre-conference reference material in row 2 (WG Summaries, Round reports,
-  // Background).
+  // Day-of tile plus pre-conference reference material.
   const tiles = [
     {
       icon: Radio,
@@ -109,21 +105,6 @@ export function WelcomePage() {
       tone: 'amber',
       highlight: ms <= AUTO_SHIFT_LEAD_MS,
     },
-    wgNumber
-      ? {
-          icon: Compass,
-          title: `Your Group · WG ${wgNumber}`,
-          desc: 'Jump straight to your working group page — surveys, pairwise, results.',
-          to: `/wg/${wgNumber}`,
-          tone: 'pink',
-        }
-      : {
-          icon: Compass,
-          title: 'Find your Working Group',
-          desc: 'Sign in with your personal invite link to access your WG page.',
-          to: '/join',
-          tone: 'pink',
-        },
     {
       icon: Users,
       title: 'Working Group Summaries',
@@ -153,14 +134,23 @@ export function WelcomePage() {
         <title>SAEM 2026 AI Consensus — Welcome</title>
       </Helmet>
 
-      {/* Header strip — sign-in chip top right */}
+      {/* Header strip — back-to-home on the left, sign-in chip on the right */}
       <div className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0A1628]/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#0C2340] to-[#00B4D8]">
-              <Sparkles className="h-4 w-4 text-white" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Home
+            </Link>
+            <div className="hidden items-center gap-2 sm:flex">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#0C2340] to-[#00B4D8]">
+                <Sparkles className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-sm font-bold text-white">SAEM 2026 AI Consensus</span>
             </div>
-            <span className="text-sm font-bold text-white">SAEM 2026 AI Consensus</span>
           </div>
           <SignedInChip compact />
         </div>
