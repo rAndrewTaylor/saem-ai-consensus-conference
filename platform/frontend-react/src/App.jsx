@@ -24,6 +24,7 @@ const ResultsPage = lazy(() => import('@/pages/ResultsPage').then(m => ({ defaul
 const GettingStartedPage = lazy(() => import('@/pages/GettingStartedPage').then(m => ({ default: m.GettingStartedPage })));
 const WorkingGroupPage = lazy(() => import('@/pages/WorkingGroupPage').then(m => ({ default: m.WorkingGroupPage })));
 const WorkingGroupsSummaryPage = lazy(() => import('@/pages/WorkingGroupsSummaryPage').then(m => ({ default: m.WorkingGroupsSummaryPage })));
+const WorkingGroupSummaryDetailPage = lazy(() => import('@/pages/WorkingGroupsSummaryPage').then(m => ({ default: m.WorkingGroupSummaryDetailPage })));
 const InvitePage = lazy(() => import('@/pages/InvitePage').then(m => ({ default: m.InvitePage })));
 const TryPage = lazy(() => import('@/pages/TryPage').then(m => ({ default: m.TryPage })));
 const LeadClaimPage = lazy(() => import('@/pages/LeadClaimPage').then(m => ({ default: m.LeadClaimPage })));
@@ -48,6 +49,7 @@ function AnimatedRoutes() {
           <Route path="/" element={<HomePage />} />
           <Route path="/wg" element={<WorkingGroupsSummaryPage />} />
           <Route path="/working-groups" element={<WorkingGroupsSummaryPage />} />
+          <Route path="/working-groups/:wg" element={<WorkingGroupSummaryDetailPage />} />
           <Route path="/wg/:wgNumber" element={<WorkingGroupPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
           {/* Alias for emails that used /join/<token> as a path (older

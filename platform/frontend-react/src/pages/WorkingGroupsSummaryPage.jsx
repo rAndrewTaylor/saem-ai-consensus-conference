@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight,
@@ -366,13 +366,13 @@ export function WorkingGroupsSummaryPage() {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {SUMMARY_DOCS.map((doc) => (
-                    <a
+                    <Link
                       key={doc.wg}
-                      href={`#wg-${doc.wg}`}
+                      to={`/working-groups/${doc.wg}`}
                       className={`rounded-full border px-3 py-1 text-xs font-semibold transition hover:bg-white/[0.08] ${doc.palette.border} ${doc.palette.text}`}
                     >
                       WG {doc.wg}: {doc.title}
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </CardContent>
@@ -417,9 +417,53 @@ export function WorkingGroupsSummaryPage() {
           </div>
         </section>
 
-        {SUMMARY_DOCS.map((doc) => (
-          <SummaryPresentation key={doc.wg} doc={doc} />
-        ))}
+      </main>
+    </div>
+  );
+}
+
+// ---------- Detail page (/working-groups/:wg) ----------
+
+export function WorkingGroupSummaryDetailPage() {
+  const { wg } = useParams();
+  const wgNumber = Number(wg);
+  const doc = SUMMARY_DOCS.find((d) => d.wg === wgNumber);
+  usePageTitle(doc ? `WG ${doc.wg} · ${doc.title}` : 'Working group summary');
+
+  if (!doc) {
+    // Unknown WG — bounce back to the index rather than 404.
+    return <Navigate to="/working-groups" replace />;
+  }
+
+  return (
+    <div className="min-h-screen bg-[#070F1F] text-white">
+      <Helmet>
+        <title>WG {doc.wg} · {doc.title} — SAEM 2026</title>
+      </Helmet>
+      <div className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#070F1F]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          <Link
+            to="/working-groups"
+            className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            All working group summaries
+          </Link>
+          <Badge variant="outline" className={`${doc.palette.border} ${doc.palette.text}`}>
+            WG {doc.wg}
+          </Badge>
+        </div>
+      </div>
+      <main className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
+        <SummaryPresentation doc={doc} />
+        <div className="flex justify-center">
+          <Link to="/working-groups">
+            <Button variant="secondary" size="sm">
+              <ChevronLeft className="h-4 w-4" />
+              Back to all summaries
+            </Button>
+          </Link>
+        </div>
       </main>
     </div>
   );
@@ -436,7 +480,8 @@ function HeroStat({ value, label }) {
 
 function DocumentLaunchCard({ doc }) {
   return (
-    <a href={`#wg-${doc.wg}`} className="group block">
+    <Link to={`/working-groups/${doc.wg}`} className="group block">
+
       <Card className={`relative h-full overflow-hidden border ${doc.palette.border} bg-white/[0.04] transition duration-300 hover:-translate-y-1 hover:bg-white/[0.06]`}>
         <div className={`absolute inset-0 bg-gradient-to-br ${doc.palette.from} ${doc.palette.via} ${doc.palette.to}`} />
         <CardContent className="relative flex h-full flex-col p-6">
@@ -459,7 +504,7 @@ function DocumentLaunchCard({ doc }) {
           </div>
         </CardContent>
       </Card>
-    </a>
+    </Link>
   );
 }
 
