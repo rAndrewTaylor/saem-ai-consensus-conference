@@ -43,7 +43,6 @@ import { useToast } from '@/components/ui/toast';
 import { useParticipantToken } from '@/hooks/useParticipantToken';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
 import { SignedInChip } from '@/components/conference/SignedInChip';
 
@@ -621,9 +620,10 @@ export function ConferencePage() {
       </div>
       </div>
 
-      {/* Sticky bottom chat panel — only renders during panel:N mode so
-          audience can keep submitting questions while ranking. */}
-      <AudienceChatPanel />
+      {/* Audience chat is intentionally NOT rendered on the voting page
+          — ranking is a focused task and the chat drawer competed with
+          the rank list for the bottom of the viewport. Chat stays
+          available on /day, just not here. */}
 
       {/* Breakout note submission — only renders during table_reactions. */}
       <BreakoutNotesPanel />
