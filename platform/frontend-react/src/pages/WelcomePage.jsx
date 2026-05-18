@@ -18,7 +18,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   BookOpen, FileBarChart, Users, Radio, MapPin, ArrowRight, Sparkles, Clock,
-  CalendarDays, Compass, Mail, KeyRound, Link2, LogOut, AlertCircle, ChevronLeft,
+  Compass, Mail, KeyRound, Link2, LogOut, AlertCircle, ChevronLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -108,13 +108,6 @@ export function WelcomePage() {
       to: '/day',
       tone: 'amber',
       highlight: ms <= AUTO_SHIFT_LEAD_MS,
-    },
-    {
-      icon: CalendarDays,
-      title: 'Day-of Agenda',
-      desc: 'How May 21 flows — panels, breakouts, and the closing cross-WG vote.',
-      to: '/day#agenda',
-      tone: 'amber',
     },
     wgNumber
       ? {
