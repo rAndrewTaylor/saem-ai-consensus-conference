@@ -684,6 +684,19 @@ def round2_data(
                 return str(obj)
         return obj
 
+    # Reuse the R1 analytics machinery — embeddings, AI tagging, theme
+    # clusters, pillar/cross-cutting matrices, overlap pairs — since they
+    # operate on the current question TEXT (round-agnostic). This gives
+    # R2 the same depth of cross-WG analysis as R1 with R2 stats overlaid.
+    bundle = fetch_bundle(db)
+    qs_df = per_question_stats(bundle)
+    try:
+        cross = _build_cross_wg_payload(db, bundle, qs_df)
+    except Exception:
+        logger.exception("R2 cross-WG payload failed; degrading gracefully")
+        cross = {"network": None, "themes": [], "pillar_matrix": [],
+                 "cross_cutting_matrix": [], "overlap_pairs": []}
+
     return _scrub({
         "is_admin": auth["is_admin"],
         "viewer_wg_id": auth.get("wg_id"),
@@ -692,4 +705,5 @@ def round2_data(
         "questions": questions,
         "top_shifts": shifts,
         "pairwise_leaders": pair_top,
+        **cross,
     })

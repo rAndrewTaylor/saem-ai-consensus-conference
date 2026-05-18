@@ -316,7 +316,7 @@ export function Round1ReportPage() {
 
 // ─── Components ────────────────────────────────────────────────────────
 
-function OverviewStat({ label, value, sub, accent = 'default' }) {
+export function OverviewStat({ label, value, sub, accent = 'default' }) {
   const colorMap = {
     emerald: 'text-emerald-300',
     red: 'text-red-300',
@@ -354,7 +354,7 @@ function KeyFindings({ text }) {
 
 // ─── F6 — Interactive similarity network (SVG, server-positioned) ─────
 
-function NetworkSVG({ network }) {
+export function NetworkSVG({ network }) {
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null); // node id when isolated
   const [crossOnly, setCrossOnly] = useState(false);
@@ -590,7 +590,7 @@ function NetworkSVG({ network }) {
 
 // ─── D.2 — Sortable overlap pairs table ───────────────────────────────
 
-function OverlapPairsTable({ pairs }) {
+export function OverlapPairsTable({ pairs }) {
   const [sortKey, setSortKey] = useState('similarity');
   const [sortDir, setSortDir] = useState('desc');
 
@@ -657,7 +657,7 @@ function OverlapPairsTable({ pairs }) {
 
 // ─── D.3 — Theme cluster stacked bar ──────────────────────────────────
 
-function ThemeBars({ themes }) {
+export function ThemeBars({ themes }) {
   if (!themes?.length) {
     return <p className="text-xs text-white/40">No theme clusters yet.</p>;
   }
@@ -779,7 +779,7 @@ function CellQuestionsPopover({ open, onClose, title, subtitle, qids, questionsB
 
 // ─── D.4 — Pillar coverage CSS-grid heatmap (clickable cells) ─────────
 
-function PillarMatrix({ matrix, questionsById }) {
+export function PillarMatrix({ matrix, questionsById }) {
   const [open, setOpen] = useState(null); // {pillar, wg}
   if (!matrix?.length) return <p className="text-xs text-white/40">No pillar data.</p>;
 
@@ -857,7 +857,7 @@ function PillarMatrix({ matrix, questionsById }) {
 
 // ─── D.5 — Cross-cutting topic heatmap (clickable cells) ──────────────
 
-function CrossCuttingMatrix({ matrix, questionsById }) {
+export function CrossCuttingMatrix({ matrix, questionsById }) {
   const [open, setOpen] = useState(null); // {tag, wg}
   if (!matrix?.length) return <p className="text-xs text-white/40">No cross-cutting tags.</p>;
 
