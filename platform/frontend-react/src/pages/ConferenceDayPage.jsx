@@ -447,8 +447,11 @@ export function ConferenceDayPage() {
         </div>
       )}
 
-      {/* Sticky comment / suggestion bar — always available when signed in */}
-      {participantToken && (
+      {/* Sticky comment / suggestion bar — hidden during panel:N modes
+          so the AudienceChatPanel below is the only chat surface on
+          the page; the cyan FAB and the bottom "Audience chat · WG"
+          drawer stacked on top of each other was confusing the room. */}
+      {participantToken && !/^panel:\d+$/.test(stage.mode || '') && (
         <CommentBar
           open={commentOpen}
           onOpenChange={setCommentOpen}
