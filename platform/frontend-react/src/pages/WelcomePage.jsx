@@ -98,6 +98,13 @@ export function WelcomePage() {
       tone: 'purple',
     },
     {
+      icon: FileBarChart,
+      title: 'Round 2 Report',
+      desc: 'Deliberation shifts, pairwise leaderboard, and what survived the revise pass.',
+      to: '/reports/round2',
+      tone: 'purple',
+    },
+    {
       icon: Users,
       title: 'Working Group Summaries',
       desc: 'Browse the five WGs, their pillars, members, and current question sets.',

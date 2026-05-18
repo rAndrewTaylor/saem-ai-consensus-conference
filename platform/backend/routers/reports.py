@@ -638,3 +638,58 @@ def round1_figure(
         content=png, media_type="image/png",
         headers={"Cache-Control": "private, max-age=300"},
     )
+
+
+# ----- /round2/data — JSON bundle for the R2 report page ----------------
+
+@router.get("/round2/data")
+def round2_data(
+    db: Session = Depends(get_db),
+    auth: dict = Depends(_signed_in),
+):
+    """Aggregated stats for the Round 2 report.
+
+    Lighter than R1 — no embeddings or clustering. Drives a single-page
+    React view that highlights what survived R2 deliberation, the
+    largest R1→R2 shifts, and the pairwise leaderboard.
+    """
+    from ..services.round2_report.stats import (
+        overall_summary, per_wg_summary, per_question_rows,
+        top_shifts, pairwise_leaders,
+    )
+
+    overall = overall_summary(db)
+    wgs = per_wg_summary(db)
+    questions = per_question_rows(db)
+    shifts = top_shifts(questions, n=10)
+    pair_top = pairwise_leaders(questions, n=10)
+
+    write_audit_log(
+        db, user_email=auth["subject"], action="report_round2_data",
+        detail=f"Round 2 data bundle (admin={auth['is_admin']})",
+    )
+
+    import math
+    def _scrub(obj):
+        if isinstance(obj, dict):
+            return {k: _scrub(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_scrub(x) for x in obj]
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+        if hasattr(obj, "isoformat"):
+            try:
+                return obj.isoformat()
+            except Exception:
+                return str(obj)
+        return obj
+
+    return _scrub({
+        "is_admin": auth["is_admin"],
+        "viewer_wg_id": auth.get("wg_id"),
+        "overall": overall,
+        "working_groups": wgs,
+        "questions": questions,
+        "top_shifts": shifts,
+        "pairwise_leaders": pair_top,
+    })

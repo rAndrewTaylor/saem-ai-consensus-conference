@@ -29,6 +29,7 @@ const LeadClaimPage = lazy(() => import('@/pages/LeadClaimPage').then(m => ({ de
 const LeadDashboardPage = lazy(() => import('@/pages/LeadDashboardPage').then(m => ({ default: m.LeadDashboardPage })));
 const JoinPage = lazy(() => import('@/pages/JoinPage').then(m => ({ default: m.JoinPage })));
 const Round1ReportPage = lazy(() => import('@/pages/Round1ReportPage').then(m => ({ default: m.Round1ReportPage })));
+const Round2ReportPage = lazy(() => import('@/pages/Round2ReportPage').then(m => ({ default: m.Round2ReportPage })));
 const ConferenceDayPage = lazy(() => import('@/pages/ConferenceDayPage').then(m => ({ default: m.ConferenceDayPage })));
 const WelcomePage = lazy(() => import('@/pages/WelcomePage').then(m => ({ default: m.WelcomePage })));
 const StagePage = lazy(() => import('@/pages/StagePage').then(m => ({ default: m.StagePage })));
@@ -58,6 +59,7 @@ function AnimatedRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/results/:wgNumber" element={<ResultsPage />} />
           <Route path="/reports/round1" element={<Round1ReportPage />} />
+          <Route path="/reports/round2" element={<Round2ReportPage />} />
           <Route path="/day" element={<ConferenceDayPage />} />
           <Route path="/stage" element={<StagePage />} />
           <Route path="/command" element={<CommandPage />} />

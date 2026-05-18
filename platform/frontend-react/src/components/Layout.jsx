@@ -59,10 +59,12 @@ export function Layout({ children }) {
       links.push({ to: '/lead', label: 'Lead View', icon: Crown, section: 'wg' });
     }
 
-    // Round 1 Report — visible to anyone who's signed in (admin or
-    // participant); the page itself enforces the auth gate.
+    // Round 1 + Round 2 reports — visible to anyone who's signed in
+    // (admin or participant); the pages themselves enforce auth.
     if (isSignedIn || isAdmin) {
       links.push({ to: '/reports/round1', label: 'Round 1 Report',
+                   icon: FileBarChart, section: 'wg' });
+      links.push({ to: '/reports/round2', label: 'Round 2 Report',
                    icon: FileBarChart, section: 'wg' });
     }
 
