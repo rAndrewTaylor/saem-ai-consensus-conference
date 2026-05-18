@@ -909,7 +909,10 @@ const PANEL_WG_NAMES = {
 function LiveNowPanel() {
   const [dayState, setDayState] = useState(null);
   const [displayMode, setDisplayMode] = useState(null);
+  const [chat, setChat] = useState(null);
+  const [results, setResults] = useState(null);
 
+  // Fetch day state + display mode (always)
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
@@ -943,6 +946,48 @@ function LiveNowPanel() {
     return dayState.sessions.find((s) => s.id === dayState.active_session_id) || null;
   }, [dayState]);
 
+  // When there's an active session, fetch chat + results and keep them fresh.
+  useEffect(() => {
+    if (!activeSession) {
+      setChat(null);
+      setResults(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const c = await api(`/api/conference/chat/${activeSession.id}?sort=top`);
+        if (!cancelled) setChat(c?.messages || []);
+      } catch { /* leave stale */ }
+      try {
+        const r = await api(`/api/conference/results/${activeSession.id}`);
+        if (!cancelled) setResults(r || null);
+      } catch { /* leave stale */ }
+    };
+    refresh();
+    const t = setInterval(refresh, 8000);
+
+    let es = null;
+    if (typeof EventSource !== 'undefined') {
+      es = new EventSource('/api/events/day');
+      es.onmessage = (evt) => {
+        try {
+          const data = JSON.parse(evt.data);
+          if (['chat_message_new', 'chat_upvote_changed', 'chat_message_hidden',
+               'chat_message_unhidden', 'vote_cast', 'phase_changed',
+               'session_started', 'session_stopped'].includes(data?.event)) {
+            refresh();
+          }
+        } catch { /* malformed */ }
+      };
+    }
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+      if (es) { try { es.close(); } catch {} }
+    };
+  }, [activeSession?.id]);
+
   const mode = displayMode?.mode || 'idle';
   const panelWgMatch = /^panel:(\d+)$/.exec(mode);
   const inLiveSegment = mode && mode !== 'idle' && mode !== 'welcome';
@@ -960,8 +1005,8 @@ function LiveNowPanel() {
                       ? 'Cross-WG consensus vote'
                       : 'Live vote');
     subline = activeSession.phase === 'post_discussion'
-      ? 'Voting open — sign in to rank.'
-      : 'Discussion underway — voting opens next.';
+      ? 'Voting now — the room is ranking the questions you see below.'
+      : 'Panel discussion underway — voting opens next.';
   } else if (panelWgMatch) {
     const wg = parseInt(panelWgMatch[1], 10);
     headline = `Panel ${wg} — ${PANEL_WG_NAMES[wg] || ''}`;
@@ -975,12 +1020,11 @@ function LiveNowPanel() {
   }
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#0E1E35] via-[#0A1628] to-[#0E1E35] px-4 py-20 sm:px-6 lg:py-24">
-      {/* Glow */}
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#0E1E35] via-[#0A1628] to-[#0E1E35] px-4 py-16 sm:px-6 lg:py-20">
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[400px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-emerald-500/[0.12] to-transparent blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 right-1/4 h-[300px] w-[600px] rounded-full bg-gradient-to-b from-cyan-500/[0.08] to-transparent blur-3xl" />
 
-      <div className="relative mx-auto max-w-5xl">
+      <div className="relative mx-auto max-w-6xl">
         {/* LIVE badge + date */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -1004,7 +1048,7 @@ function LiveNowPanel() {
           key={headline}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 text-center text-3xl font-bold tracking-tight text-white sm:text-5xl"
+          className="mt-5 text-center text-3xl font-bold tracking-tight text-white sm:text-5xl"
         >
           {headline}
         </motion.h2>
@@ -1014,29 +1058,22 @@ function LiveNowPanel() {
           </p>
         )}
 
-        {/* Counters when there's an active session */}
+        {/* Counters strip */}
         {activeSession && (
-          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-3 gap-4">
-            <LiveStat label="Votes cast"  value={activeSession.vote_count ?? 0} />
+          <div className="mx-auto mt-8 grid max-w-3xl grid-cols-3 gap-3">
+            <LiveStat label="Votes cast"   value={activeSession.vote_count ?? 0} />
             <LiveStat label="Participants" value={activeSession.unique_voters ?? 0} />
-            <LiveStat label="Comments"    value={activeSession.comment_count ?? 0} />
+            <LiveStat label="Comments"     value={activeSession.comment_count ?? 0} />
           </div>
         )}
 
-        {/* CTA */}
-        <div className="mt-10 flex flex-col items-center gap-3">
-          <Link
-            to="/welcome"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:shadow-emerald-500/40"
-          >
-            In the room? Sign in to participate
-            <ArrowRight className="h-5 w-5" />
-          </Link>
-          <p className="text-xs text-white/40">
-            Or use conference code <span className="font-mono font-semibold text-amber-200/80">ai26</span> on{' '}
-            <Link to="/welcome" className="underline decoration-white/30 hover:decoration-white/70">welcome</Link>.
-          </p>
-        </div>
+        {/* Two-column public view: chat + vote leaderboard */}
+        {activeSession && (
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            <LiveChatColumn messages={chat} />
+            <LiveResultsColumn results={results} />
+          </div>
+        )}
       </div>
     </section>
   );
@@ -1052,5 +1089,125 @@ function LiveStat({ label, value }) {
         {label}
       </div>
     </div>
+  );
+}
+
+function LiveChatColumn({ messages }) {
+  const top = (messages || []).slice(0, 6);
+  return (
+    <Card className="border-white/[0.08] bg-white/[0.03]">
+      <CardContent className="p-5">
+        <header className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-cyan-300" />
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white/80">
+              Top discussion
+            </h3>
+          </div>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+            Most upvoted
+          </span>
+        </header>
+        {top.length === 0 ? (
+          <p className="py-8 text-center text-sm text-white/35">
+            Comments will appear here as the room reacts.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {top.map((m) => (
+              <li
+                key={m.id}
+                className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+              >
+                <p className="text-sm leading-relaxed text-white/85">
+                  {m.body}
+                </p>
+                <div className="mt-1.5 flex items-center justify-end text-[11px] text-white/45">
+                  <span className="inline-flex items-center gap-1 font-mono">
+                    ▲ {m.upvote_count ?? 0}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LiveResultsColumn({ results }) {
+  // Choose the most informative result family. The /results endpoint can
+  // return multiple vote types (e.g. importance + ranking); rank by mean
+  // for ranking, by sum for allocation. We display the top 6 questions.
+  const items = useMemo(() => {
+    if (!results?.results) return [];
+    const list = [...results.results];
+    // Prefer ranking (lower mean = better) when present
+    const hasRanking = list.some((r) => /ranking/i.test(r.vote_type || ''));
+    if (hasRanking) {
+      return list
+        .filter((r) => /ranking/i.test(r.vote_type || ''))
+        .sort((a, b) => (a.mean ?? 999) - (b.mean ?? 999))
+        .slice(0, 6);
+    }
+    return list
+      .slice()
+      .sort((a, b) => (b.sum ?? 0) - (a.sum ?? 0))
+      .slice(0, 6);
+  }, [results]);
+
+  return (
+    <Card className="border-white/[0.08] bg-white/[0.03]">
+      <CardContent className="p-5">
+        <header className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-amber-300" />
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white/80">
+              Leading questions
+            </h3>
+          </div>
+          {results?.total_votes != null && (
+            <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+              {results.total_votes} votes
+            </span>
+          )}
+        </header>
+        {items.length === 0 ? (
+          <p className="py-8 text-center text-sm text-white/35">
+            Vote results will appear here as the room ranks.
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {items.map((q, i) => (
+              <li
+                key={q.question_id}
+                className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+              >
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-xs font-bold text-amber-200">
+                  {i + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-sm leading-relaxed text-white/85">
+                    {q.question_text || `Question ${q.question_id}`}
+                  </p>
+                  <div className="mt-1 flex items-center gap-3 text-[11px] text-white/40">
+                    {q.wg_number != null && (
+                      <span>WG {q.wg_number}</span>
+                    )}
+                    <span className="font-mono">
+                      {/ranking/i.test(q.vote_type || '')
+                        ? `mean rank ${q.mean?.toFixed(2)}`
+                        : `score ${q.sum?.toFixed(0)}`}
+                    </span>
+                    <span>{q.n_votes} votes</span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
   );
 }
