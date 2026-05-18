@@ -126,9 +126,9 @@ export function Round1ReportPage() {
         <div className="relative mx-auto max-w-6xl">
           <Link
             to="/reports"
-            className="mb-4 inline-flex items-center gap-1 text-xs text-white/40 transition hover:text-white/70"
+            className="mb-5 inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-500/[0.08] px-3 py-2 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-500/[0.16] hover:text-cyan-100"
           >
-            <ChevronLeft className="h-3 w-3" />
+            <ChevronLeft className="h-4 w-4" />
             Back to Reports
           </Link>
           <Badge variant="primary" className="mb-3">Round 1 Inter-Round Report</Badge>

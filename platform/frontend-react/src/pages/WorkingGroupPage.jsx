@@ -161,7 +161,10 @@ export function WorkingGroupPage() {
         <div className={`pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b ${style.glow} blur-3xl`} />
         <div className="relative mx-auto max-w-5xl">
           <div className="flex items-center justify-between gap-3">
-            <Link to="/welcome" className="inline-flex items-center gap-1.5 text-sm text-white/40 transition hover:text-white/70">
+            <Link
+              to="/welcome"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-500/[0.08] px-3 py-2 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-500/[0.16] hover:text-cyan-100"
+            >
               <ArrowLeft className="h-4 w-4" /> Back to Welcome
             </Link>
             {signedInName && (
