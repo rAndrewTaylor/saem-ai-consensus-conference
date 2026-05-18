@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight, BarChart3, Loader2, Lock, AlertCircle, TrendingUp, TrendingDown,
-  Minus, Trophy, Users, CheckCircle2, Network, Sparkles,
+  Minus, Trophy, Users, CheckCircle2, Network, Sparkles, ChevronLeft,
 } from 'lucide-react';
 import {
   NetworkSVG, OverlapPairsTable, ThemeBars, PillarMatrix, CrossCuttingMatrix,
@@ -120,6 +120,13 @@ export function Round2ReportPage() {
       <section className="relative overflow-hidden border-b border-white/[0.06] px-4 py-10 sm:px-6 sm:py-14">
         <div className="pointer-events-none absolute -top-32 left-1/2 h-[440px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-purple-500/15 to-transparent blur-3xl" />
         <div className="relative mx-auto max-w-5xl">
+          <Link
+            to="/reports"
+            className="mb-4 inline-flex items-center gap-1 text-xs text-white/40 transition hover:text-white/70"
+          >
+            <ChevronLeft className="h-3 w-3" />
+            Back to Reports
+          </Link>
           <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-purple-300">
             Round 2 — deliberation report
           </p>

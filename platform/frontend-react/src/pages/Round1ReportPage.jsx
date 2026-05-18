@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   ArrowRight, Network, Sparkles, BarChart3, Loader2, Lock, Download,
-  AlertCircle, ChevronDown, ChevronUp,
+  AlertCircle, ChevronDown, ChevronUp, ChevronLeft,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -124,6 +124,13 @@ export function Round1ReportPage() {
       <div className="relative overflow-hidden px-4 py-12 sm:px-6">
         <div className="pointer-events-none absolute -top-32 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#1B5E8A]/10 to-transparent blur-3xl" />
         <div className="relative mx-auto max-w-6xl">
+          <Link
+            to="/reports"
+            className="mb-4 inline-flex items-center gap-1 text-xs text-white/40 transition hover:text-white/70"
+          >
+            <ChevronLeft className="h-3 w-3" />
+            Back to Reports
+          </Link>
           <Badge variant="primary" className="mb-3">Round 1 Inter-Round Report</Badge>
           <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             What Round 1 surfaced

@@ -3,7 +3,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { Link } from 'react-router-dom';
 import {
   ClipboardList, GitCompare, Vote, CheckCircle2, ArrowRight,
-  UserPlus, MessageSquare, BarChart3, Calendar, HelpCircle
+  UserPlus, MessageSquare, BarChart3, Calendar, HelpCircle, ChevronLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,15 @@ export function GettingStartedPage() {
             background: 'linear-gradient(327.21deg, rgba(75, 0, 130, 0.2) 3.65%, rgba(136, 0, 204, 0) 40.32%)',
           }}
         />
+        <div className="relative mx-auto max-w-3xl">
+          <Link
+            to="/welcome"
+            className="mb-4 inline-flex items-center gap-1 text-xs text-white/40 transition hover:text-white/70"
+          >
+            <ChevronLeft className="h-3 w-3" />
+            Back to Welcome
+          </Link>
+        </div>
         <div className="relative mx-auto max-w-3xl text-center">
           <Badge variant="default" className="mb-4 bg-white/[0.08] text-white/70 border-0">
             Participant Guide
