@@ -54,10 +54,10 @@ Mock scenario: pretend WG1 just finished its panel discussion, chair is about to
 - Repeat for chat message and breakout note
 
 ### 1:30–1:40 — Cross-WG closing round preview
-- Andrew runs `auto-feature top 2` (cross-WG curator on `/command`)
+- Andrew runs `auto-feature top 4` (cross-WG curator on `/command`)
 - Switches stage to `cross_wg` mode
-- MSAs see all 13 advancing questions on their phones
-- Each MSA drag-ranks the 13 — submits
+- MSAs see all 21 advancing questions on their phones (4 × 4 WGs + 5 from WG5)
+- Each MSA drag-ranks the 21 — submits
 - Tally appears live on Andrew's screen
 
 ### 1:40–1:55 — MSA-specific responsibilities

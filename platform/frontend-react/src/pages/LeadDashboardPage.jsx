@@ -613,7 +613,7 @@ export function LeadDashboardPage() {
 }
 
 /**
- * Conference-day panel pool: each WG votes on 4-5 starter questions during
+ * Conference-day panel pool: each WG votes on 6-8 starter questions during
  * their panel. Co-leads pick the set ahead of time from this WG's R2
  * questions. If left empty, the platform falls back to top-R2 ordering.
  */
@@ -633,7 +633,7 @@ function PanelPoolEditor({ wgNumber, token }) {
   const autoPick = async () => {
     setBusy(true);
     try {
-      await api(`/api/conference/panel/${wgNumber}/auto-feature?n=5`, { method: 'POST', token });
+      await api(`/api/conference/panel/${wgNumber}/auto-feature?n=8`, { method: 'POST', token });
       await refresh();
     } finally { setBusy(false); }
   };
@@ -685,12 +685,12 @@ function PanelPoolEditor({ wgNumber, token }) {
       <CardContent>
         <p className="text-sm text-white/55">
           {n === 0
-            ? 'Pick 4–5 questions your panel audience will rank on May 21. If you leave this empty, the platform falls back to your top R2 questions.'
+            ? 'Pick 6–8 questions your panel audience will rank on May 21. If you leave this empty, the platform falls back to your top R2 questions.'
             : `${n} question${n === 1 ? '' : 's'} queued for your panel. The audience will drag-to-rank exactly this set.`}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" onClick={autoPick} disabled={busy}>
-            {busy ? '…' : 'Auto-pick top 5 by R2'}
+            {busy ? '…' : 'Auto-pick top 8 by R2'}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setExpanded(!expanded)}>
             {expanded ? 'Hide list' : 'Hand-pick from list'}

@@ -385,7 +385,7 @@ def day_state(db: Session = Depends(get_db)):
         {"time": "12:30 PM", "title": "Networking lunch",                        "kind": "break"},
         {"time": "1:30 PM",  "title": "World Café — three rotations",            "kind": "world_cafe"},
         {"time": "2:30 PM",  "title": "Break",                                   "kind": "break"},
-        {"time": "2:50 PM",  "title": "Priority presentations (top 2 per WG)",   "kind": "presentation"},
+        {"time": "2:50 PM",  "title": "Priority presentations (top 4 per WG)",   "kind": "presentation"},
         {"time": "3:35 PM",  "title": "Cross-WG consensus vote (drag to rank)",  "kind": "vote", "session_type": "cross_wg_prioritization"},
         {"time": "4:05 PM",  "title": "Final results & synthesis",               "kind": "results"},
         {"time": "4:35 PM",  "title": "Summary & next steps",                    "kind": "wrap"},
@@ -418,8 +418,8 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
         # round (via /cross-wg/feature), use only those. Otherwise fall
         # back to top-N R2 questions per WG so the session still works
         # before the funnel has been run. WG5 enters with a thematically-
-        # categorized question set and surfaces all 5; other WGs cap at 2
-        # to match the documented "top 2 per WG" advancement rule.
+        # categorized question set and surfaces all 5; other WGs cap at 4
+        # to match the documented "top 4 per WG" advancement rule.
         featured = (
             db.query(Question)
             .filter(
@@ -436,7 +436,7 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
         else:
             questions = []
             for wg in db.query(WorkingGroup).order_by(WorkingGroup.number).all():
-                per_wg_limit = 5 if wg.number == 5 else 2
+                per_wg_limit = 5 if wg.number == 5 else 4
                 top = (
                     db.query(Question)
                     .filter(
@@ -1051,7 +1051,7 @@ def cross_wg_candidates(db: Session = Depends(get_db)):
     Pulls from ConferenceVote rows on wg_presentation sessions. If a WG's
     panel hasn't been voted on yet, falls back to its top R2 questions.
     Returned together with the currently-featured set so the chair can
-    one-click "auto-advance top 2" or fine-tune by hand (e.g., WG5's
+    one-click "auto-advance top 4" or fine-tune by hand (e.g., WG5's
     5-themed structure may want all 5 surfaced).
     """
     wgs = db.query(WorkingGroup).order_by(WorkingGroup.number).all()
@@ -1186,7 +1186,7 @@ def cross_wg_feature(
     }
 
 
-# --- Per-WG panel pool (the 4-5 questions each panel votes on) -----------
+# --- Per-WG panel pool (the 6-8 questions each panel votes on) -----------
 
 class PanelPoolRequest(BaseModel):
     wg_number: int
@@ -1200,7 +1200,7 @@ def panel_candidates(wg_number: int, db: Session = Depends(get_db)):
 
     Returns every active R2 question for the WG with R1/R2 stats, plus
     a flag noting whether it's currently featured in the panel. The
-    chair UI uses this to pick ~4-5 questions per WG.
+    chair UI uses this to pick ~6-8 questions per WG.
     """
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
@@ -1287,12 +1287,13 @@ def panel_feature(
 @router.post("/panel/{wg_number}/auto-feature")
 def panel_auto_feature(
     wg_number: int,
-    n: int = 5,
+    n: int = 8,
     db: Session = Depends(get_db),
     actor: dict = Depends(require_chair),
 ):
     """One-click: feature the top N questions (by R2 include% + importance)
-    for the given WG. Chair OR the WG's co-lead can call this."""
+    for the given WG's panel starter pool. Chair OR the WG's co-lead can
+    call this. Default 8 = upper bound of the 6–8 starter pool per WG."""
     _assert_chair_scope(actor, wg_number)
     wg = db.query(WorkingGroup).filter(WorkingGroup.number == wg_number).first()
     if not wg:
@@ -1367,7 +1368,7 @@ def cross_wg_reset(
 
 @router.post("/cross-wg/auto-feature")
 def cross_wg_auto_feature(
-    n: int = 2,
+    n: int = 4,
     wg5_all: bool = True,
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
@@ -1377,7 +1378,7 @@ def cross_wg_auto_feature(
     WG5 enters with a thematically-categorized question set (Arwen's
     structure) that we want to surface in full, so `wg5_all=True` (the
     default) features every WG5 candidate rather than capping at N.
-    Result: 2×4 + 5 = 13 questions in the closing round.
+    Result: 4×4 + 5 = 21 questions in the closing round.
     """
     candidates = cross_wg_candidates(db)
     ids: list[int] = []

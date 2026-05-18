@@ -51,30 +51,31 @@ Voting on the day must be **simple, touch-friendly, and obvious**. Decisions fro
 
 ## P2 — Conference structure changes (Sun 5/17)
 
-### Per-WG question funnel
+### Per-WG question funnel (revised 2026-05-18)
 
-- **Initial vote (per panel)**: every WG presents **4–5 questions** (chair-curated from R2 results).
-- **Funnel after each panel breakout**: audience priority-ranks those 4–5 questions, narrowing to **2 questions per WG** for the cross-WG round.
-- **Cross-WG final**: ~10 questions total (2 × 5 WGs) for the closing round.
+- **Inputs (per WG)**: 6–8 R2-shortlisted questions, chair- and co-lead-curated.
+- **Per-panel audience vote**: audience priority-ranks those 6–8 questions on
+  their phones at the end of the panel.
+- **Top 4 per WG advance** to the cross-WG round.
+- **Cross-WG final**: ~20 questions total (4 × 5 WGs) for the closing round.
 
 ### Working Group 5 exception
 
 - Enters with **5 thematically categorized questions + sub-questions** (Arwen's structure).
-- **Skip the WG-level funnel** — those 5 themes go straight to the cross-WG round as a group, evaluated against the 8 from the other WGs (2 per × 4 WGs).
-- Cross-WG round therefore: 8 from WG1–4 + 5 themed from WG5 = **13 questions**.
+- **Skip the WG-level funnel** — those 5 themes go straight to the cross-WG round as a group, evaluated against the 16 from the other WGs (4 per × 4 WGs).
+- Cross-WG round therefore: 16 from WG1–4 + 5 themed from WG5 = **21 questions**.
 
 ### Panel format (each WG, ~40 min)
 
-1. **0–10 min** — Co-lead presents R2 results + 2–3 starter questions to panel
-2. **10–25 min** — Panel discussion driven by audience comments/upvotes (chat firehose on stage)
-3. **25–30 min** — Break out to tables, MSAs collect reactions
-4. **30–35 min** — Priority-rank the WG's 4–5 questions (drag-to-reorder, ~30 sec per participant)
-5. **35–40 min** — Show live tally → top 2 advance to cross-WG round; transition
+1. **0–10 min** — Co-lead presents the WG's 6–8 R2-shortlisted questions to the panel
+2. **10–28 min** — Panel discussion driven by audience comments/upvotes (chat firehose on stage). Questions stay fixed; this is commentary, not generation.
+3. **28–34 min** — Audience drag-to-rank the 6–8 questions on phones (~30 sec per participant; they've had the full panel to read them)
+4. **34–40 min** — Live tally on stage → top 4 advance to cross-WG round; transition
 
 ### Cross-WG final (~30 min)
 
-1. **0–10 min** — Display all 13 advancing questions on the projector for review (idle/results mode)
-2. **10–20 min** — Drag-to-reorder all 13 on phones
+1. **0–10 min** — Display all 21 advancing questions on the projector for review (idle/results mode)
+2. **10–20 min** — Drag-to-reorder all 21 on phones
 3. **20–25 min** — Live final tally
 4. **25–30 min** — Chair summarizes top consensus + wrap
 
@@ -100,7 +101,7 @@ Voting on the day must be **simple, touch-friendly, and obvious**. Decisions fro
 - **Format**: Zoom (most aren't at venue yet)
 - **Goals**:
   1. Walk co-leads through their panel's flow (starter questions, audience chat, funnel vote, transition)
-  2. Confirm their R2 4–5 questions are loaded correctly
+  2. Confirm their R2 6–8 starter questions are loaded correctly
   3. Practice as a "moderator" — running the audience chat queue, calling on upvoted questions
   4. Confirm panel timing
   5. Q&A
@@ -109,9 +110,9 @@ Voting on the day must be **simple, touch-friendly, and obvious**. Decisions fro
 
 ### To send
 
-1. **Panelists** (separate from co-leads) — new email outlining the panel format (starter Qs → audience chat → funnel vote), what's expected of them, and platform login. Personal join links if not already set.
+1. **Panelists** (separate from co-leads) — new email outlining the panel format (6–8 starter Qs → audience chat → funnel vote → top 4 advance), what's expected of them, and platform login. Personal join links if not already set.
 2. **All participants** — preview of how voting works on the day (drag-to-reorder, anonymous chat, what to expect). Sets expectations + reduces day-of confusion.
-3. **WG co-leads** — Wed orientation calendar invite + reminder to finalize their 4–5 starter questions by Mon 5/18.
+3. **WG co-leads** — Wed orientation calendar invite + reminder to finalize their 6–8 starter questions by Mon 5/18.
 4. **Informal gathering** — separate optional drinks-after note. Andrew chooses venue.
 
 ---
@@ -119,8 +120,8 @@ Voting on the day must be **simple, touch-friendly, and obvious**. Decisions fro
 ## Decisions Andrew needs to make before I keep building
 
 1. **WG5's 5 themed questions** — what are they exactly? Arwen said they're already structured. Need the actual texts to load into the cross-WG round.
-2. **Each WG's 4–5 starter questions** — chair-curated from R2 results. I can propose a default (top R2 by pairwise + importance) and chair confirms.
-3. **Total final agenda target** — recap is "10 or fewer" but the funnel above yields 10 (from WG1–4) + 5 (from WG5) = 13. Is 13 OK or do we want a hard 10-question cap with WG5 forced to pick 1–2?
+2. **Each WG's 6–8 starter questions** — chair-curated from R2 results. I can propose a default (top R2 by pairwise + importance) and chair confirms.
+3. **Total final agenda target** — funnel yields 16 (from WG1–4) + 5 (from WG5) = 21 going into the cross-WG round. The published agenda is the top-ranked subset of that 21 (target: top 15–20).
 4. **Drink-after venue** — for the informal email.
 5. **Tue 5/19 MSA session time** — 7–9 PM ET OK? Need to send that update to Melissa + MSAs.
 6. **Wed 5/20 co-lead orientation time** — 5 PM ET OK?

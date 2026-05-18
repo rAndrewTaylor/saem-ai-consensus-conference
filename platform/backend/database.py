@@ -201,7 +201,7 @@ class Question(Base):
     # Conference-day funnel: chair marks each panel's top advancing
     # questions, and the cross-WG closing session pulls from these.
     featured_in_cross_wg = Column(Boolean, default=False, nullable=False)
-    # Per-WG panel curation: chair picks ~4-5 questions per WG that
+    # Per-WG panel curation: chair picks ~6-8 questions per WG that
     # show up in that panel's vote pool. Falls back to top R2 if none
     # are featured for a given WG.
     featured_in_panel = Column(Boolean, default=False, nullable=False)

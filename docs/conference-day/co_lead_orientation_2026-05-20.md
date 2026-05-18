@@ -15,23 +15,22 @@
 - Slack channel for day-of comms
 - Drink-after location TBD
 
-### 0:05–0:15 — The panel arc: what happens in your 45 minutes
-- **0–10 min**: Co-lead presents R2 results + 2–3 starter questions
-- **10–25 min**: Panel discussion driven by audience chat (firehose on screen, upvoted Qs surface)
-- **25–30 min**: Break to tables; MSAs collect reactions
-- **30–35 min**: Audience drag-ranks the 4–5 starter questions on phones
-- **35–40 min**: Live tally on projector → top 2 advance; transition
+### 0:05–0:15 — The panel arc: what happens in your 40 minutes
+- **0–10 min**: Co-lead presents R2 results + the 6–8 starter questions
+- **10–28 min**: Panel discussion driven by audience chat (firehose on screen, upvoted Qs surface). Questions are fixed — this is commentary, not generation.
+- **28–34 min**: Audience drag-ranks the 6–8 starter questions on phones (~30 sec)
+- **34–40 min**: Live tally on projector → top 4 advance; transition
 
 ### 0:15–0:25 — Walkthrough on the live platform (Andrew shares screen)
 1. Sign in at `/lead/claim?token=…` (everyone should have done this — confirm in this session)
 2. Open Lead Dashboard
-3. **NEW: panel-pool curator** — pick your 4–5 starter questions now, save
+3. **Panel-pool curator** — pick your 6–8 starter questions now, save
 4. Show same questions on `/day` (audience-side phone view)
 5. Show projector view (`/stage` in panel mode)
 6. Show command center (chair drives this; co-leads do not need it)
 
 ### 0:25–0:35 — Working time
-- Each co-lead opens their own Lead Dashboard, picks their 4–5 starter questions, saves
+- Each co-lead opens their own Lead Dashboard, picks their 6–8 starter questions, saves
 - Andrew + Melissa available in chat / breakout rooms for stuck folks
 - **Deliverable from this orientation: every WG has its panel pool saved by 6:00 PM**
 
@@ -45,7 +44,7 @@
 ### 0:45–0:55 — Q&A + things that can go wrong
 - "What if my panelist drops?" — Andrew has a panelist roster + back-pocket prompts in this doc
 - "What if the audience chat gets nasty?" — chair can hide messages instantly; just keep moving
-- "What if no one ranks on their phone?" — fallback: show all 4–5 as "we discussed all of these"
+- "What if no one ranks on their phone?" — fallback: show all 6–8 as "we discussed all of these" and chair picks top 4 by hand from panel discussion
 - "What if the platform crashes?" — Railway has uptime; in worst case we vote with hands. MSA will note the result.
 
 ### 0:55–1:00 — Quick day-of expectations
@@ -70,13 +69,12 @@
 
 **Before your panel:** open `/lead/claim?token=…` on your phone AND laptop. Make sure you can see the audience chat sidebar.
 
-**Your 45 minutes:**
-1. 10 min: present R2 + your 2–3 starter Qs
-2. 15 min: discussion (call on upvoted chat first)
-3. 5 min: tables breakout (MSA will collect)
-4. 5 min: audience drag-ranks 4–5 Qs on phones
-5. 5 min: live tally → top 2 advance → transition
+**Your 40 minutes:**
+1. 10 min: present R2 + your 6–8 starter Qs
+2. 18 min: discussion (call on upvoted chat first; questions stay fixed)
+3. 6 min: audience drag-ranks the 6–8 Qs on phones
+4. 6 min: live tally → top 4 advance → transition
 
 **If something breaks:** Slack the #saem-ai-day channel or wave Andrew/Melissa down.
 
-**Top 2 advance to cross-WG closing round** (except WG5 — all 5 themes advance).
+**Top 4 advance to cross-WG closing round** (except WG5 — all 5 themes advance). Cross-WG round = 21 questions total.

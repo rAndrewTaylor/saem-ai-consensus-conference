@@ -13,15 +13,14 @@ Thanks again for agreeing to panel at the AI Consensus Conference next Thursday 
 
 ## Quick orientation
 
-You'll be one of 4–5 panelists for your working group's 45-minute slot. Each panel runs like this:
+You'll be one of 4–5 panelists for your working group's 40-minute slot. Each panel runs like this:
 
 | Time | What's happening |
 |---|---|
-| 0–10 min | Your WG co-lead presents Round 2 results + 2–3 starter questions |
-| 10–25 min | Discussion among the panel, driven by **audience chat** — questions and observations from the room appear on a sidebar; the most-upvoted ones rise to the top |
-| 25–30 min | Audience breaks out to their tables for reactions |
-| 30–35 min | Audience priority-ranks the WG's 4–5 starter questions on their phones |
-| 35–40 min | Live tally shown; top 2 advance to the cross-WG closing round |
+| 0–10 min | Your WG co-lead presents Round 2 results + the WG's 6–8 starter questions |
+| 10–28 min | Discussion among the panel, driven by **audience chat** — questions and observations from the room appear on a sidebar; the most-upvoted ones rise to the top. Questions stay fixed; this is commentary, not generation. |
+| 28–34 min | Audience priority-ranks the WG's 6–8 starter questions on their phones (~30 sec) |
+| 34–40 min | Live tally shown; top 4 advance to the cross-WG closing round |
 
 **You don't have to prepare slides.** The co-lead handles the framing. Your job is to be ready to discuss the WG's questions, react to audience input as it comes in, and bring your perspective.
 
