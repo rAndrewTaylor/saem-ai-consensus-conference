@@ -36,7 +36,7 @@ const ROLE_OPTIONS = [
 ];
 
 export function JoinPage() {
-  usePageTitle('Log in');
+  usePageTitle('Sign in');
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams] = useSearchParams();
@@ -191,23 +191,15 @@ export function JoinPage() {
   }
 
   if ((!isInviteMode && !isSharedMode) || accessError || (isInviteMode && !wg)) {
+    // Cold-visitor empty state: someone clicked Sign in from the nav and
+    // didn't arrive with an invite or shared-access token in the URL.
+    // Lead with email sign-in (the path most returning members actually
+    // want), then explain how new attendees get in (QR / email link)
+    // instead of slamming them with a red "Invite required" badge.
+    const isError = Boolean(accessError) || (isInviteMode && !wg);
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#0A1628] px-4 py-16 sm:px-6">
         <div className="w-full max-w-md space-y-4">
-          <Card>
-            <CardContent className="py-10 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/15 text-red-300">
-                <ShieldAlert className="h-6 w-6" />
-              </div>
-              <h1 className="mt-4 text-lg font-semibold text-white">Invite required</h1>
-              <p className="mt-2 text-sm text-white/55">
-                {accessError || 'Please use the official join link to access registration.'}
-              </p>
-              <Link to="/" className="mt-5 inline-block">
-                <Button variant="secondary" size="sm">Back to home</Button>
-              </Link>
-            </CardContent>
-          </Card>
           <SignInCard
             signinEmail={signinEmail}
             setSigninEmail={setSigninEmail}
@@ -217,6 +209,38 @@ export function JoinPage() {
             onPickMatch={handlePickSigninMatch}
             onResetMatches={() => setSigninMatches(null)}
           />
+          <Card>
+            <CardContent className="py-7 px-6 text-center">
+              <div className={`mx-auto flex h-11 w-11 items-center justify-center rounded-xl ${
+                isError ? 'bg-red-500/15 text-red-300' : 'bg-[#00B4D8]/15 text-[#48CAE4]'
+              }`}>
+                {isError ? <ShieldAlert className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
+              </div>
+              <h2 className="mt-4 text-base font-semibold text-white">
+                {isError ? 'Invite link problem' : 'First time here?'}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-white/55">
+                {accessError
+                  ? accessError
+                  : isError
+                    ? 'Please use the official join link from your email to access registration.'
+                    : (
+                      <>
+                        Registration is tied to your invited working group, so we use a personal
+                        email link or a conference-day QR code to get you in.
+                        <br />
+                        <span className="mt-2 inline-block text-white/45">
+                          Check your email for the SAEM invite, or scan the QR code at the
+                          registration desk on May 21.
+                        </span>
+                      </>
+                    )}
+              </p>
+              <Link to="/" className="mt-5 inline-block">
+                <Button variant="secondary" size="sm">Back to home</Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -240,7 +264,7 @@ export function JoinPage() {
               mode === 'signin' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
             }`}
           >
-            Log in
+            Sign in
           </button>
           <button
             onClick={() => setMode('register')}
@@ -331,7 +355,7 @@ export function JoinPage() {
                       <p className="mt-1 text-amber-100/80">
                         {existingAccount.name} &mdash; WG {existingAccount.wg_number}
                         {existingAccount.wg_short_name ? ` (${existingAccount.wg_short_name})` : ''}.
-                        Log in instead so you keep your existing responses.
+                        Sign in instead so you keep your existing responses.
                       </p>
                       <div className="mt-3 flex gap-2">
                         <Button
@@ -341,7 +365,7 @@ export function JoinPage() {
                             setSigninEmail(email.trim());
                           }}
                         >
-                          <LogIn className="h-3.5 w-3.5" /> Log in as this account
+                          <LogIn className="h-3.5 w-3.5" /> Sign in as this account
                         </Button>
                         <Button
                           size="sm"
@@ -566,7 +590,7 @@ function SignInCard({
           />
           <Button onClick={handleSignIn} loading={signingIn} className="shrink-0">
             <Mail className="h-4 w-4" />
-            Log in
+            Sign in
           </Button>
         </div>
       </CardContent>
