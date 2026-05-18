@@ -128,7 +128,7 @@ export function JoinPage() {
       clearAllParticipantTokens();
       setToken(data.wg_number, data.token);
       toast({ message: `Welcome back, ${data.name}!`, type: 'success' });
-      navigate(safeRedirect || `/wg/${data.wg_number}`);
+      navigate(safeRedirect || '/welcome');
     } catch (err) {
       toast({ message: err.message || 'Could not find that email', type: 'error' });
     } finally {
@@ -140,7 +140,7 @@ export function JoinPage() {
     clearAllParticipantTokens();
     setToken(p.wg_number, p.token);
     toast({ message: `Welcome back, ${p.name}!`, type: 'success' });
-    navigate(safeRedirect || `/wg/${p.wg_number}`);
+    navigate(safeRedirect || '/welcome');
   };
   const canSubmit = (isInviteMode ? wg !== null : wg !== null) && role;
 
@@ -170,7 +170,7 @@ export function JoinPage() {
         });
       setToken(data.wg_number, data.token);
       toast({ message: `Welcome, ${data.name}!`, type: 'success' });
-      navigate(safeRedirect || `/wg/${data.wg_number}`);
+      navigate(safeRedirect || '/welcome');
     } catch (err) {
       toast({ message: err.message || 'Registration failed', type: 'error' });
     } finally {

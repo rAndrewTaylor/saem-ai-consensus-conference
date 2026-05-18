@@ -57,7 +57,7 @@ export function InvitePage() {
       });
       setToken(data.wg_number, data.token);
       toast({ message: `Welcome back, ${data.name}!`, type: 'success' });
-      navigate(`/wg/${data.wg_number}`);
+      navigate('/welcome');
     } catch (err) {
       toast({
         message: err.message || 'No account found with that email',
