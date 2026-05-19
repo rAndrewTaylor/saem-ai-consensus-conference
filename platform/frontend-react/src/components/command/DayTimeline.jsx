@@ -79,16 +79,20 @@ export function DayTimeline({ activeMode, onPick }) {
           const nextItem = item.kind === 'break'
             ? agenda.slice(i + 1).find((a) => a.kind !== 'break')
             : null;
+          const isBreak = item.kind === 'break';
           return (
             <li key={i}>
               <button
+                type="button"
                 onClick={() => onPick && onPick({ mode, item, nextItem })}
-                disabled={!clickable && mode === 'idle' && item.kind !== 'break'}
-                className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                disabled={!clickable}
+                className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${
                   isLive
                     ? 'border-[#48CAE4]/50 bg-[#00B4D8]/[0.08] shadow-[0_0_0_1px_rgba(72,202,228,0.15)]'
                     : isDone
-                    ? 'border-white/[0.04] bg-white/[0.01] opacity-50'
+                    ? 'border-white/[0.04] bg-white/[0.01] opacity-60 hover:opacity-100'
+                    : isBreak
+                    ? 'border-amber-400/30 bg-amber-500/[0.05] hover:border-amber-300/60 hover:bg-amber-500/[0.10]'
                     : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
                 }`}
               >
