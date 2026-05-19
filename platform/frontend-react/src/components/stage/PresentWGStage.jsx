@@ -1,23 +1,21 @@
 /**
- * Projector view for the 2:50 PM Priority Presentations slot.
+ * Projector view for the 2:50 PM Priority Presentations slot — rich.
  *
- * One WG at a time — the chair cycles WG1 → WG2 → ... → WG5 from
- * /command using the Next/Prev controls. Each WG's slide shows:
+ * For each WG, we embed the same `SummaryPresentation` deck used by
+ * /working-groups/:wg so the co-lead has the full curated content
+ * (background, composition stats, 6+ questions with pain/expansion/
+ * impact, cross-cutting themes, source references) to talk through.
+ * That richer content is the in-depth summary co-leads have prepped
+ * over the last weeks — it lives in WorkingGroupsSummaryPage's
+ * SUMMARY_DOCS array.
  *
- *   - Title + pillar
- *   - The 4 advancing questions in big read-from-the-back type
- *   - A Round 2 snapshot strip the co-lead can riff on
- *   - Closing line that hands off to the cross-WG vote
+ * When a WG doesn't yet have a SUMMARY_DOCS entry (currently WG2-4),
+ * we fall back to a leaner R2-derived slide showing the title, scope,
+ * the 4 advancing questions, and a Round 2 snapshot strip.
  *
- * The audience phone version (CompactPresentWG, in CompactStageView)
- * mirrors the same 4 questions in read-only card form so participants
- * can follow on their phones while the co-lead presents. NO voting
- * happens during this slot — the cross-WG session stays inactive until
- * 3:35 PM.
- *
- * Mirrors PresentWGPage but renders at projector scale and pulls its
- * WG number from the display-mode 'present:N' string instead of the
- * URL params.
+ * Audience phones still see the read-only CompactPresent view in
+ * CompactStageView — that view keeps focused on the 4 questions
+ * since phones aren't great for long-form reading.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -25,8 +23,51 @@ import { ArrowRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PILLAR_COLORS, WG_LABELS } from '@/components/stage/panelConfig';
+import { SUMMARY_DOCS, SummaryPresentation } from '@/pages/WorkingGroupsSummaryPage';
 
 export function PresentWGStage({ wgNumber, bus }) {
+  // If the WG has a curated summary doc, render that deck full-bleed
+  // with a small closing banner. This is the rich content path.
+  const doc = (SUMMARY_DOCS || []).find((d) => d.wg === wgNumber);
+  if (doc) {
+    return (
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#0A1628] text-white">
+        {/* Eyebrow strip so the audience knows this is the 2:50 slot */}
+        <div
+          className="shrink-0 border-b border-white/[0.06] px-12 py-3"
+          style={{ backgroundColor: 'rgba(0, 180, 216, 0.08)' }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-300">
+            Priority presentation · WG {wgNumber} · co-lead presenting now
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto px-8 py-6 sm:px-12">
+          <SummaryPresentation doc={doc} />
+          {/* Closing band */}
+          <div className="mt-8 rounded-2xl border border-emerald-400/30 bg-emerald-500/[0.06] px-6 py-4">
+            <div className="flex items-center gap-3">
+              <ArrowRight className="h-5 w-5 text-emerald-300" />
+              <p className="text-lg text-white/85">
+                Next: rank all 21 advancing questions across WG1–5 in the cross-WG vote.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for WGs without a SUMMARY_DOCS entry (e.g. WG2-4 today)
+  return <PresentWGFallback wgNumber={wgNumber} bus={bus} />;
+}
+
+// ---------------------------------------------------------------------------
+// Fallback — leaner R2-derived slide for WGs without a curated summary doc.
+// Same structure as the previous version; we still want SOMETHING to render
+// for any WG number the chair selects.
+// ---------------------------------------------------------------------------
+
+function PresentWGFallback({ wgNumber, bus }) {
   const [wg, setWg] = useState(null);
   const [candidates, setCandidates] = useState(null);
   const [r2, setR2] = useState(null);
@@ -95,7 +136,6 @@ export function PresentWGStage({ wgNumber, bus }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0A1628] text-white">
-      {/* Cover band */}
       <div
         className="relative shrink-0 overflow-hidden px-12 pb-6 pt-10"
         style={{ background: `linear-gradient(180deg, ${accent}18 0%, transparent 100%)` }}
@@ -106,18 +146,16 @@ export function PresentWGStage({ wgNumber, bus }) {
           <p className="text-[12px] font-semibold uppercase tracking-[0.3em]" style={{ color: accent }}>
             Priority presentation · WG {wgNumber}{pillar ? ` · ${pillar} pillar` : ''}
           </p>
-          <h1 className="mt-2 text-5xl font-bold tracking-tight">
-            {friendlyName}
-          </h1>
+          <h1 className="mt-2 text-5xl font-bold tracking-tight">{friendlyName}</h1>
           {scope && (
-            <p className="mt-2 max-w-5xl text-xl text-white/65">
-              {scope}.
-            </p>
+            <p className="mt-2 max-w-5xl text-xl text-white/65">{scope}.</p>
           )}
+          <p className="mt-3 inline-block rounded-full border border-amber-400/30 bg-amber-500/[0.08] px-3 py-1 text-[11px] font-medium text-amber-200">
+            Two-page summary still pending for this WG — showing R2 results only
+          </p>
         </div>
       </div>
 
-      {/* Advancing questions — centerpiece */}
       <div className="min-h-0 flex-1 overflow-y-auto px-12 py-4">
         <div className="mx-auto max-w-7xl">
           <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.3em] text-emerald-300">
@@ -126,7 +164,7 @@ export function PresentWGStage({ wgNumber, bus }) {
           {advancing.length === 0 ? (
             <p className="rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] p-6 text-amber-200">
               No questions are flagged for the cross-WG vote yet. The chair
-              can auto-feature top 4 from /command before the slot opens.
+              can auto-feature top {advanceLimit} from /command before the slot opens.
             </p>
           ) : (
             <ol className="grid gap-3">
@@ -172,7 +210,6 @@ export function PresentWGStage({ wgNumber, bus }) {
         </div>
       </div>
 
-      {/* R2 snapshot */}
       {stats && (
         <div className="shrink-0 px-12 pb-4">
           <div className="mx-auto max-w-7xl rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
@@ -198,7 +235,6 @@ export function PresentWGStage({ wgNumber, bus }) {
         </div>
       )}
 
-      {/* Closing band */}
       <div className="shrink-0 border-t border-white/[0.06] bg-[#0E1E35] px-12 py-5">
         <div className="mx-auto flex max-w-7xl items-center gap-3">
           <ArrowRight className="h-5 w-5 text-emerald-300" />

@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
-const SUMMARY_DOCS = [
+export const SUMMARY_DOCS = [
   {
     wg: 1,
     title: 'Clinical Practice & Operations',
@@ -508,7 +508,7 @@ function DocumentLaunchCard({ doc }) {
   );
 }
 
-function SummaryPresentation({ doc }) {
+export function SummaryPresentation({ doc }) {
   return (
     <article id={`wg-${doc.wg}`} className="scroll-mt-20">
       <section className={`relative overflow-hidden rounded-[2rem] border ${doc.palette.border} bg-[#0A1628] shadow-2xl shadow-black/25`}>
