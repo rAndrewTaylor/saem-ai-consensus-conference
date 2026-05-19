@@ -333,7 +333,7 @@ function DayOfSignInBlock() {
       if (data?.token && data?.wg_number) {
         clearAllParticipantTokens();
         setToken(data.wg_number, data.token);
-        navigate(`/wg/${data.wg_number}`);
+        navigate('/day');
       } else {
         setError('Sign-in failed unexpectedly. Try the conference code or ask the help desk.');
       }
@@ -348,7 +348,7 @@ function DayOfSignInBlock() {
     clearAllParticipantTokens();
     if (p?.wg_number && p?.token) {
       setToken(p.wg_number, p.token);
-      navigate(`/wg/${p.wg_number}`);
+      navigate('/day');
     } else {
       navigate('/welcome');
     }

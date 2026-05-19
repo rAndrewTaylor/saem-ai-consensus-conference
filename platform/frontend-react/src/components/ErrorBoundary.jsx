@@ -32,3 +32,28 @@ export class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
+
+/**
+ * Tighter, silent boundary for non-critical day-of widgets (chat panel,
+ * breakout notes, live tile etc). On throw, renders `fallback` (default
+ * null) instead of taking down the whole page. The participant can still
+ * vote and read the agenda even if a sidecar widget bricks.
+ */
+export class SafeBoundary extends Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.warn('[SafeBoundary]', this.props.label || 'unlabeled', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? null;
+    }
+    return this.props.children;
+  }
+}

@@ -242,7 +242,9 @@ function AiPromptSuggester({ sessionId, wgNumber }) {
     try {
       const d = await api(`/api/conference/ai/prompts/${sessionId}`);
       setPromoted(d?.prompts || []);
-    } catch {}
+    } catch {
+      /* non-critical: promoted prompts can refresh on the next poll */
+    }
   }, [sessionId]);
 
   useEffect(() => { refreshPromoted(); }, [refreshPromoted]);
@@ -271,7 +273,9 @@ function AiPromptSuggester({ sessionId, wgNumber }) {
   };
 
   const copy = async (text) => {
-    try { await navigator.clipboard.writeText(text); } catch {}
+    try { await navigator.clipboard.writeText(text); } catch {
+      /* clipboard may be unavailable in locked-down browsers */
+    }
   };
 
   const promote = async (text) => {
@@ -297,7 +301,9 @@ function AiPromptSuggester({ sessionId, wgNumber }) {
         body: { session_id: sessionId },
       });
       setPromoted([]);
-    } catch {}
+    } catch {
+      /* non-critical: user can retry clearing promoted prompts */
+    }
   };
 
   const isPromoted = (text) => promoted.includes(text);
@@ -474,7 +480,7 @@ const PILLAR_COLORS = {
 /**
  * Inline picker so the chair can curate which questions appear in this
  * panel's vote pool. Shows all R2 questions for the WG with checkboxes;
- * a count + one-click 'Auto-pick top 5' button up top.
+ * a count + one-click 'Auto-pick top 8' button up top (6-8 starter pool).
  */
 function PanelPoolCurator({ wgNumber }) {
   const [data, setData] = useState(null);
@@ -492,7 +498,7 @@ function PanelPoolCurator({ wgNumber }) {
   const autoPick = async () => {
     setLoading(true);
     try {
-      await api(`/api/conference/panel/${wgNumber}/auto-feature?n=5`, { method: 'POST' });
+      await api(`/api/conference/panel/${wgNumber}/auto-feature?n=8`, { method: 'POST' });
       await refresh();
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -539,7 +545,7 @@ function PanelPoolCurator({ wgNumber }) {
           disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#00B4D8]/20 px-2.5 py-1.5 text-xs font-semibold text-[#48CAE4] hover:bg-[#00B4D8]/30 disabled:opacity-40"
         >
-          {loading ? '…' : 'Auto-pick top 5'}
+          {loading ? '…' : 'Auto-pick top 8'}
         </button>
         <button
           onClick={() => setExpanded(!expanded)}
@@ -641,7 +647,7 @@ function CrossWgFunnel() {
           disabled={loading}
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#00B4D8]/20 px-3 py-1.5 text-xs font-semibold text-[#48CAE4] hover:bg-[#00B4D8]/30 disabled:opacity-40"
         >
-          {loading ? 'Working…' : 'Auto-feature top 2 / WG'}
+          {loading ? 'Working…' : 'Auto-feature top 4 / WG'}
         </button>
       </div>
 

@@ -12,6 +12,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api, getAnyParticipantToken } from '@/lib/api';
+import { queueSubmit } from '@/lib/offlineQueue';
 import { ArrowUp, ChevronDown, ChevronUp, Send, MessageSquare } from 'lucide-react';
 
 const REFRESH_MS = 4_000;
@@ -22,6 +23,7 @@ export function AudienceChatPanel() {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [sort, setSort] = useState('top');
   const esRef = useRef(null);
@@ -34,7 +36,9 @@ export function AudienceChatPanel() {
         const d = await api('/api/conference/display-mode');
         if (cancelled) return;
         setMode(d?.mode || 'idle');
-      } catch {}
+      } catch {
+        /* display-mode polling continues below */
+      }
     };
     refresh();
     if (typeof EventSource !== 'undefined') {
@@ -44,12 +48,18 @@ export function AudienceChatPanel() {
         try {
           const data = JSON.parse(evt.data);
           if (data?.event === 'display_mode_changed') setMode(data.mode);
-        } catch {}
+        } catch {
+          /* ignore malformed keepalive/proxy events */
+        }
       });
     }
     return () => {
       cancelled = true;
-      if (esRef.current) { try { esRef.current.close(); } catch {} }
+      if (esRef.current) {
+        try { esRef.current.close(); } catch {
+          /* close is best-effort */
+        }
+      }
     };
   }, []);
 
@@ -74,7 +84,9 @@ export function AudienceChatPanel() {
       const token = getAnyParticipantToken();
       const data = await api(`/api/conference/chat/${sessionId}?sort=${sort}`, { token });
       setMessages(data?.messages || []);
-    } catch {}
+    } catch {
+      /* retry on the next display-mode update */
+    }
   }, [sessionId, sort]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -88,14 +100,21 @@ export function AudienceChatPanel() {
     const body = (text || '').trim();
     if (!body || !sessionId) return;
     setSubmitting(true);
+    setStatus(null);
     try {
       const token = getAnyParticipantToken();
-      await api(`/api/conference/chat/${sessionId}`, {
-        method: 'POST', body: { body }, token,
+      const res = await queueSubmit({
+        url: `/api/conference/chat/${sessionId}`,
+        body: { body },
+        token,
+        kind: 'chat',
       });
       setText('');
-      refresh();
-    } catch {} finally {
+      setStatus(res?.queued ? 'Message queued; it will post when you are back online.' : 'Posted.');
+      if (!res?.queued) refresh();
+    } catch (e) {
+      setStatus(e.message || 'Message failed. Try again.');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -103,14 +122,20 @@ export function AudienceChatPanel() {
   const upvote = async (msg) => {
     try {
       const token = getAnyParticipantToken();
-      await api(`/api/conference/chat/${msg.id}/upvote`, { method: 'POST', token });
+      await queueSubmit({
+        url: `/api/conference/chat/${msg.id}/upvote`,
+        token,
+        kind: 'chat_upvote',
+      });
       // Optimistic
       setMessages((prev) => prev.map((m) =>
         m.id === msg.id
           ? { ...m, has_upvoted: !m.has_upvoted, upvote_count: m.upvote_count + (m.has_upvoted ? -1 : 1) }
           : m
       ));
-    } catch {}
+    } catch {
+      setStatus('Upvote failed. Try again.');
+    }
   };
 
   // Hide when not in a panel mode
@@ -156,6 +181,9 @@ export function AudienceChatPanel() {
               Post
             </button>
           </div>
+          {status && (
+            <p className="mt-1 text-[11px] text-white/40">{status}</p>
+          )}
 
           {/* Sort toggle */}
           <div className="mt-2 flex items-center gap-1 text-[10px]">

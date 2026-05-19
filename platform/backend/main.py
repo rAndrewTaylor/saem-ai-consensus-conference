@@ -206,10 +206,12 @@ async def health():
 
 
 @app.get("/api/diag")
-async def diag():
+async def diag(admin: dict = Depends(require_admin)):
     """Lightweight diagnostic: reports DB schema + demo data state.
-    Public endpoint — safe info only, no secrets.
+    Admin-only — was public, but the column names + participant counts
+    were a free recon endpoint. Gate to require_admin going forward.
     """
+    _ = admin  # marker — gating, not used in payload
     from sqlalchemy import inspect as sa_inspect
     from .database import Participant, Question, WorkingGroup
 
@@ -349,7 +351,13 @@ async def sse_day_events(request: Request):
 
     async def event_generator():
         try:
-            yield f"event: connected\ndata: {json.dumps({'channel': 'day'})}\n\n"
+            # Emit as default "message" events only. The event name is
+            # included in the JSON payload (`data.event`) and consumers
+            # dispatch on that. Emitting `event: <name>` here would cause
+            # the browser to route to addEventListener('<name>') and miss
+            # the common onmessage / addEventListener('message') handlers
+            # used across every client subscriber.
+            yield f"data: {json.dumps({'event': 'connected', 'channel': 'day'})}\n\n"
             while True:
                 if await request.is_disconnected():
                     break
@@ -381,8 +389,8 @@ async def sse_conference_events(request: Request, session_id: int):
 
     async def event_generator():
         try:
-            # Send an initial keepalive so the client knows the connection is live
-            yield f"event: connected\ndata: {json.dumps({'session_id': session_id})}\n\n"
+            # Emit as default "message" events only — see day-stream comment.
+            yield f"data: {json.dumps({'event': 'connected', 'session_id': session_id})}\n\n"
             while True:
                 # Check if the client has disconnected
                 if await request.is_disconnected():

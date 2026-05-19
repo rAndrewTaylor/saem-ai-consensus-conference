@@ -1,18 +1,20 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Radio, Coffee, Mic, Users, Globe, Award, Trophy, Sparkles,
-  ChevronRight, MessageSquare, Send, CheckCircle2, Loader2,
+  ChevronRight, Send, CheckCircle2, Loader2,
   Wifi, WifiOff, Clock, MapPin, ArrowRight, Lock, ChevronUp, ChevronDown,
-  ArrowUp, ArrowDown, X, Cloud, CloudOff, LayoutGrid,
+  ArrowUp, ArrowDown, CloudOff, LayoutGrid,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
 import { api, getAnyParticipantToken, getActiveWg, getLeadToken, setToken } from '@/lib/api';
+import { subscribeSSE } from '@/lib/sseSubscribe';
+import { SafeBoundary } from '@/components/ErrorBoundary';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { queueSubmit, subscribe as subscribeQueue } from '@/lib/offlineQueue';
 import { AudienceChatPanel } from '@/components/stage/AudienceChatPanel';
@@ -21,6 +23,8 @@ import { useStageDisplay } from '@/components/stage/StageView';
 import { CompactStageView } from '@/components/stage/CompactStageView';
 import { SignedInChip } from '@/components/conference/SignedInChip';
 import QRCode from 'qrcode';
+
+const MotionDiv = motion.div;
 
 // Poll the day-state endpoint every 12s so the page reacts when admin
 // starts/stops a session or toggles a phase. Cheap (sub-2KB JSON).
@@ -66,8 +70,8 @@ function parseAgendaTimeET(timeStr, ymd) {
 
 export function ConferenceDayPage() {
   usePageTitle('Conference Day · May 21');
-  const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Stage integration must be at the top of the component (hooks rules):
   // calling these after conditional returns below would mismatch hook
@@ -82,7 +86,6 @@ export function ConferenceDayPage() {
   const [online, setOnline] = useState(navigator.onLine);
   const [pending, setPending] = useState(0);
   const [now, setNow] = useState(new Date());
-  const [commentOpen, setCommentOpen] = useState(false);
 
   const participantToken = getAnyParticipantToken();
   // wgNumber: prefer the saem_active_wg localStorage (set on participant
@@ -102,7 +105,9 @@ export function ConferenceDayPage() {
           setWgNumber(d.wg_number);
         } else if (d?.wg_number) {
           setWgNumber(d.wg_number);
-          try { localStorage.setItem('saem_active_wg', String(d.wg_number)); } catch {}
+          try { localStorage.setItem('saem_active_wg', String(d.wg_number)); } catch {
+            /* localStorage may be unavailable in private browsing */
+          }
         }
       })
       .catch(() => {});
@@ -138,20 +143,21 @@ export function ConferenceDayPage() {
   useEffect(() => subscribeQueue(setPending), []);
 
   // SSE — when admin starts/stops a session or toggles phase, refresh
-  // immediately instead of waiting for the next 12s poll. Falls back to
-  // polling if EventSource isn't supported or the connection drops.
+  // immediately instead of waiting for the next 12s poll. Uses the
+  // resilient subscribeSSE helper which retries after permanent close
+  // (Railway/Cloudflare sometimes 502-and-stay-closed on wifi blips).
+  // Only vibrates on session/mode changes — not on every vote_cast,
+  // which would buzz every phone in the room dozens of times per panel.
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const es = new EventSource('/api/events/day');
-    es.onmessage = () => {
+    if (typeof EventSource === 'undefined') return undefined;
+    const stop = subscribeSSE('/api/events/day', (data) => {
       refresh();
-      // Subtle haptic when a session opens up — only if the device supports it
-      try {
-        if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-      } catch {}
-    };
-    es.onerror = () => { /* auto-reconnects */ };
-    return () => es.close();
+      const evt = data?.event;
+      if (evt === 'session_started' || evt === 'display_mode_changed' || evt === 'phase_changed') {
+        try { if (navigator.vibrate) navigator.vibrate([40, 30, 40]); } catch { /* optional */ }
+      }
+    });
+    return stop;
   }, [refresh]);
 
   useEffect(() => {
@@ -208,6 +214,7 @@ export function ConferenceDayPage() {
 
   // Currently-highlighted agenda step
   const currentAgenda = currentStepIndex >= 0 ? agendaWithTimes[currentStepIndex] : null;
+  const forceDetailsOpen = /^#(panel-\d+|cross-wg|world-cafe|agenda|panels)$/.test(location.hash || '');
 
   // Print view — strip interactive elements when ?print=1 is set
   const isPrint = typeof window !== 'undefined' &&
@@ -237,7 +244,7 @@ export function ConferenceDayPage() {
   }
 
   if (isPrint) {
-    return <PrintView data={data} agendaWithTimes={agendaWithTimes} />;
+    return <PrintView agendaWithTimes={agendaWithTimes} />;
   }
 
   return (
@@ -265,7 +272,7 @@ export function ConferenceDayPage() {
 
       {/* Inter-session details (agenda, contributions, QR). Auto-collapses
           during a live segment so the stage stays the focus. */}
-      <details className="mx-auto w-full max-w-2xl px-4 sm:px-6" open={!inLiveSegment}>
+      <details className="mx-auto w-full max-w-2xl px-4 sm:px-6" open={!inLiveSegment || forceDetailsOpen}>
         <summary className="mt-6 cursor-pointer list-none rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-2 text-sm font-medium text-white/60 hover:bg-white/[0.04]">
           Agenda · Your contributions · Join links
         </summary>
@@ -447,29 +454,20 @@ export function ConferenceDayPage() {
         </div>
       )}
 
-      {/* Sticky comment / suggestion bar — hidden during panel:N modes
-          so the AudienceChatPanel below is the only chat surface on
-          the page; the cyan FAB and the bottom "Audience chat · WG"
-          drawer stacked on top of each other was confusing the room. */}
-      {participantToken && !/^panel:\d+$/.test(stage.mode || '') && (
-        <CommentBar
-          open={commentOpen}
-          onOpenChange={setCommentOpen}
-          activeSession={activeSession}
-          token={participantToken}
-        />
-      )}
-
       {/* Demographics prompt — shown once per token if role/career_stage missing */}
       {participantToken && (
         <DemographicsPrompt token={participantToken} />
       )}
 
       {/* Audience chat panel — only renders while the stage is in panel:N mode */}
-      <AudienceChatPanel />
+      <SafeBoundary label="AudienceChatPanel">
+        <AudienceChatPanel />
+      </SafeBoundary>
 
       {/* Breakout note submission — only renders while the stage is in table_reactions mode */}
-      <BreakoutNotesPanel />
+      <SafeBoundary label="BreakoutNotesPanel">
+        <BreakoutNotesPanel />
+      </SafeBoundary>
     </div>
   );
 }
@@ -544,6 +542,14 @@ function InlineVoteCard({ session, token, onSubmitted }) {
     : session.phase === 'post_discussion' ? 'Post-discussion vote'
     : session.phase?.replace(/_/g, ' ') || '';
 
+  // Reset submission state when the session changes phase (pre → post).
+  // Each phase produces its own vote_type record server-side, so a
+  // participant who voted pre-discussion should be invited to re-rank
+  // post-discussion instead of staying on the "Submitted ✓" screen.
+  useEffect(() => {
+    setSubmitted(false);
+  }, [session.id, session.phase]);
+
   useEffect(() => {
     if (!token) { setQuestions([]); return; }
     if (isCross) { setQuestions([]); return; }
@@ -562,7 +568,9 @@ function InlineVoteCard({ session, token, onSubmitted }) {
   const handleSubmitRanking = async () => {
     setSubmitting(true);
     try {
-      const rankings = Object.fromEntries(rankOrder.slice(0, 5).map((qid, i) => [qid, i + 1]));
+      // Submit the full ranked order — per-panel pool is 6-8 questions and
+      // we want every rank position recorded for the leaderboard.
+      const rankings = Object.fromEntries(rankOrder.map((qid, i) => [qid, i + 1]));
       const res = await queueSubmit({
         url: `/api/conference/vote/${session.id}/ranking`,
         body: { rankings },
@@ -593,7 +601,7 @@ function InlineVoteCard({ session, token, onSubmitted }) {
   };
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="mb-6 overflow-hidden rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5"
@@ -627,6 +635,10 @@ function InlineVoteCard({ session, token, onSubmitted }) {
           </div>
         )}
 
+        {token && error && (
+          <p className="mt-3 text-xs text-rose-300">{error}</p>
+        )}
+
         {token && questions?.length === 0 && (
           <p className="mt-3 text-xs text-white/55">
             No questions configured for this session yet.
@@ -650,15 +662,13 @@ function InlineVoteCard({ session, token, onSubmitted }) {
         {token && questions && questions.length > 0 && !submitted && !isCross && (
           <div className="mt-4 space-y-2">
             <p className="text-[11px] text-white/55">
-              Rank your top 5 — tap arrows to reorder. Top of list = highest priority.
+              Rank all questions — tap arrows to reorder. Top of list = highest priority.
             </p>
-            {rankOrder.slice(0, 8).map((qid, idx) => {
+            {rankOrder.map((qid, idx) => {
               const q = questions.find((x) => x.id === qid);
               if (!q) return null;
               return (
-                <div key={qid} className={`flex items-start gap-2 rounded-lg border p-2 ${
-                  idx < 5 ? 'border-emerald-400/30 bg-emerald-500/[0.04]' : 'border-white/[0.06]'
-                }`}>
+                <div key={qid} className="flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.03] p-2">
                   <div className="flex shrink-0 flex-col gap-0.5">
                     <button onClick={() => move(idx, -1)}
                             disabled={idx === 0}
@@ -673,7 +683,7 @@ function InlineVoteCard({ session, token, onSubmitted }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="mr-1 text-[10px] font-mono font-bold text-emerald-300">
-                      {idx < 5 ? `#${idx + 1}` : '·'}
+                      #{idx + 1}
                     </span>
                     <span className="text-xs text-white/85">{q.text}</span>
                   </div>
@@ -707,127 +717,7 @@ function InlineVoteCard({ session, token, onSubmitted }) {
           </button>
         )}
       </div>
-    </motion.div>
-  );
-}
-
-
-// Sticky comment / suggestion bar — always available, supports comment
-// types matching the backend's CommentSubmit schema.
-function CommentBar({ open, onOpenChange, activeSession, token }) {
-  const toast = useToast();
-  const [type, setType] = useState('general');
-  const [text, setText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const targetSession = activeSession;  // attach to whatever is active; null → can't submit
-
-  const submit = async () => {
-    if (!text.trim()) {
-      toast({ message: 'Write something first', type: 'error' });
-      return;
-    }
-    if (!targetSession) {
-      toast({ message: 'No active session — wait for a panel to open', type: 'error' });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await queueSubmit({
-        url: `/api/conference/comment/${targetSession.id}`,
-        body: { comment_text: text.trim(), comment_type: type },
-        token,
-        kind: 'comment',
-      });
-      setText('');
-      onOpenChange(false);
-      toast({
-        message: res?.queued ? 'Comment queued (will sync when online)' : 'Comment submitted ✓',
-        type: 'success',
-      });
-    } catch (e) {
-      toast({ message: e.message || 'Submit failed', type: 'error' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <>
-      {/* Floating action button */}
-      {!open && (
-        <button
-          onClick={() => onOpenChange(true)}
-          className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500 text-white shadow-xl transition hover:bg-cyan-400"
-          aria-label="Open comment box"
-        >
-          <MessageSquare className="h-5 w-5" />
-        </button>
-      )}
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'tween', duration: 0.22 }}
-            className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-white/[0.1] bg-[#0E1E35] p-4 shadow-2xl"
-          >
-            <div className="mx-auto max-w-2xl">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-white/90">
-                    {targetSession ? 'Comment on the live session' : 'Comments open during a panel'}
-                  </p>
-                  <p className="text-[11px] text-white/45">
-                    {targetSession ? `Attaching to: ${sessionLabel(targetSession)}` : 'Wait for the next panel to start'}
-                  </p>
-                </div>
-                <button onClick={() => onOpenChange(false)}
-                         className="rounded p-1 text-white/55 hover:bg-white/[0.06] hover:text-white">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {[
-                  { v: 'general', l: 'General' },
-                  { v: 'modification', l: 'Suggested wording change' },
-                  { v: 'new_question', l: 'New question idea' },
-                ].map((t) => (
-                  <button key={t.v}
-                          onClick={() => setType(t.v)}
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
-                            type === t.v
-                              ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30'
-                              : 'border border-white/[0.08] bg-white/[0.02] text-white/55 hover:bg-white/[0.06]'
-                          }`}>
-                    {t.l}
-                  </button>
-                ))}
-              </div>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                disabled={!targetSession}
-                rows={3}
-                placeholder="What's missing? What should change?"
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-cyan-400/50 disabled:opacity-50"
-              />
-              <div className="mt-2 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button size="sm" loading={submitting} onClick={submit} disabled={!targetSession}>
-                  <Send className="h-3.5 w-3.5" />
-                  Submit
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    </MotionDiv>
   );
 }
 
@@ -949,7 +839,7 @@ function SessionRow({ session }) {
       </div>
       <AnimatePresence>
         {qrOpen && (
-          <motion.div
+          <MotionDiv
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -957,7 +847,7 @@ function SessionRow({ session }) {
             className="overflow-hidden"
           >
             <QRDisplay url={sessionUrl} label={sessionLabel(session)} />
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
     </div>
@@ -1108,7 +998,7 @@ function WorldCafeCard({ sessions, token, currentAgenda }) {
 
         <AnimatePresence>
           {station && (
-            <motion.div
+            <MotionDiv
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -1145,7 +1035,7 @@ function WorldCafeCard({ sessions, token, currentAgenda }) {
                   <p className="mt-2 text-[10px] text-white/40">Sign in to capture notes.</p>
                 )}
               </div>
-            </motion.div>
+            </MotionDiv>
           )}
         </AnimatePresence>
       </CardContent>
@@ -1278,7 +1168,7 @@ function DemographicsPrompt({ token }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
-      <motion.div
+      <MotionDiv
         initial={{ y: '100%', opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.22 }}
@@ -1324,7 +1214,7 @@ function DemographicsPrompt({ token }) {
           <Button variant="ghost" size="sm" onClick={skip}>Skip</Button>
           <Button size="sm" loading={submitting} onClick={submit}>Save</Button>
         </div>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 }
@@ -1332,7 +1222,7 @@ function DemographicsPrompt({ token }) {
 
 // ─── Print view (?print=1) — projector-friendly agenda + sessions ────────
 
-function PrintView({ data, agendaWithTimes }) {
+function PrintView({ agendaWithTimes }) {
   return (
     <div className="bg-white text-slate-900 min-h-screen p-8 print:p-4">
       <Helmet>

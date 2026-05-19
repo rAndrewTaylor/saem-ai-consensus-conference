@@ -21,6 +21,7 @@ Railway gives you a managed PostgreSQL database, automatic HTTPS, and deploys fr
    JWT_SECRET=<random 32+ character string>
    ANTHROPIC_API_KEY=<your Anthropic API key>
    ALLOWED_ORIGINS=https://<your-railway-domain>.up.railway.app
+   SHARED_JOIN_TOKEN=ai26
    LOG_LEVEL=INFO
    ```
 
@@ -84,8 +85,14 @@ docker compose up -d
 | `JWT_SECRET` | Yes | Secret key for signing JWT tokens (random 32+ chars) |
 | `ANTHROPIC_API_KEY` | For AI features | Anthropic API key for Claude synthesis |
 | `ALLOWED_ORIGINS` | Yes | Comma-separated allowed CORS origins |
+| `SHARED_JOIN_TOKEN` | Conference day | Shared code used by `/welcome?access=ai26` and the conference-code sign-in |
 | `LOG_LEVEL` | No | Logging level (default: INFO) |
 | `PORT` | No (auto on Railway) | HTTP port (default: 8000) |
+
+Conference-day note: the Docker image intentionally runs Uvicorn with one
+worker because live SSE updates are process-local. Do not raise worker count
+for May 21 unless the SSE bus has been moved to Redis or another shared
+pub/sub backend.
 
 ---
 
@@ -94,7 +101,11 @@ docker compose up -d
 - [ ] Visit `/health` — should show `{"status": "ok", "database": "connected"}`
 - [ ] Visit `/` — should show the React landing page
 - [ ] Visit `/dashboard` — log in with your ADMIN_SECRET
+- [ ] Confirm `SHARED_JOIN_TOKEN=ai26` is set in production
+- [ ] Scan a table-card QR and confirm `/welcome?access=ai26` can sign in
 - [ ] Add questions to a working group via the dashboard
+- [ ] Create the 5 WG panel sessions plus the cross-WG session before conference day
+- [ ] Confirm each WG has a locked panel pool before Wed evening
 - [ ] Test the survey flow: visit `/survey/1/round_1`
 - [ ] Share the URL with co-leads for testing
 - [ ] Set up a custom domain if desired

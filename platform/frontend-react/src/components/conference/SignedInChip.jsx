@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, LogOut, Navigation } from 'lucide-react';
-import { getAnyParticipantToken } from '@/lib/api';
+import { api, getAnyParticipantToken } from '@/lib/api';
 
 const FOLLOW_KEY = 'saem_follow_stage';
 
@@ -33,9 +33,9 @@ export function SignedInChip({ compact = false }) {
   useEffect(() => {
     const token = getAnyParticipantToken();
     if (!token) { setMe({ name: null }); return; }
-    const params = new URLSearchParams({ token });
-    fetch(`/api/participants/me?${params.toString()}`)
-      .then((r) => (r.ok ? r.json() : null))
+    // Send the token via Authorization header (not querystring) so it
+    // doesn't end up in Railway/Cloudflare access logs or referer headers.
+    api('/api/participants/me', { token })
       .then(setMe)
       .catch(() => setMe(null));
   }, []);

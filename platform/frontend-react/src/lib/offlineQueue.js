@@ -13,6 +13,7 @@
  */
 
 const STORAGE_KEY = 'saem_conf_offline_queue_v1';
+const FAILED_STORAGE_KEY = 'saem_conf_offline_queue_failed_v1';
 const listeners = new Set();
 let draining = false;
 
@@ -33,10 +34,29 @@ function save(arr) {
   }
 }
 
+function loadFailed() {
+  try {
+    const raw = localStorage.getItem(FAILED_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFailed(arr) {
+  try {
+    localStorage.setItem(FAILED_STORAGE_KEY, JSON.stringify(arr));
+  } catch {
+    /* quota; non-fatal */
+  }
+}
+
 function notify() {
   const q = load();
   listeners.forEach((cb) => {
-    try { cb(q.length); } catch {}
+    try { cb(q.length); } catch {
+      /* subscribers should not break queue draining */
+    }
   });
 }
 
@@ -85,7 +105,11 @@ export async function drainQueue() {
         q = load(); q.shift(); save(q); notify();
       } catch (e) {
         if (e.permanent) {
-          // Drop poisoned items so they don't block the queue
+          // Move poisoned items aside so they don't block the queue, while
+          // preserving evidence for help-desk/debugging after the event.
+          const failed = loadFailed();
+          failed.push({ ...head, failed_at: Date.now(), error: e.message || 'Permanent sync failure' });
+          saveFailed(failed.slice(-25));
           q = load(); q.shift(); save(q); notify();
           continue;
         }

@@ -186,7 +186,7 @@ function CompactCrossWg({ bus }) {
       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">Closing vote</p>
       <h2 className="mt-1 text-base font-bold text-white">Cross-WG prioritization</h2>
       {rows.length === 0 ? (
-        <p className="mt-2 text-xs text-white/55">Tap below to allocate your 100 points across the top questions.</p>
+        <p className="mt-2 text-xs text-white/55">Tap below to drag-rank the top questions across working groups.</p>
       ) : (
         <div className="mt-3 space-y-1.5">
           {rows.map((q) => {

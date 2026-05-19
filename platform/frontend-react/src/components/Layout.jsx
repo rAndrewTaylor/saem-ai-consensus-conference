@@ -14,6 +14,7 @@ const NO_CHROME_PATTERNS = [
   /^\/day$/,
   /^\/vote\//,
   /^\/stage$/,
+  /^\/command$/,
 ];
 
 export function Layout({ children }) {
@@ -25,7 +26,7 @@ export function Layout({ children }) {
   // toggling between chrome'd and no-chrome routes (e.g. clicking the
   // Conference Day tab from /reports/round1) changes the hook count
   // between renders and React throws.
-  const wgNumber = useMemo(() => getActiveWg(), [location.pathname]);
+  const wgNumber = getActiveWg();
   const isSignedIn = wgNumber !== null;
 
   // Day-of nav: visitors hit the landing page first. The primary slot

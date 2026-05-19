@@ -179,7 +179,17 @@ function VoteTally({ mode, bus }) {
     if (!isPanel) return;
     try {
       const d = await api('/api/conference/cross-wg/candidates');
-      setFeaturedIds(new Set((d?.questions || []).filter((q) => q.is_featured).map((q) => q.id)));
+      // The endpoint returns { groups: [{ candidates: [...] }] }. Flatten
+      // to a single Set of every question_id currently flagged
+      // featured_in_cross_wg, so the star-toggle preserves the rest of
+      // the slate (the POST below sends `replace: true` with this set).
+      const ids = new Set();
+      (d?.groups || []).forEach((g) => {
+        (g.candidates || []).forEach((c) => {
+          if (c?.is_featured) ids.add(c.question_id);
+        });
+      });
+      setFeaturedIds(ids);
     } catch {}
   }, [isPanel]);
 

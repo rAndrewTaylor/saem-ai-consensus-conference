@@ -13,7 +13,7 @@
  *   1. Vote opens     (active id changes) → /vote/:id   (4s grace)
  *   2. Vote closes    (active id → null)  → /day        (1.5s grace)
  *   3. Mode → cross_wg with no active session → /day#cross-wg
- *   4. Mode → table_reactions                → /day#breakout
+ *   4. Mode → table_reactions                → /day#world-cafe
  *   5. Mode → panel:N                        → /day#panel-N
  *
  * Mode-based transitions only fire when the user is not in the middle
@@ -23,10 +23,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api, getAnyParticipantToken } from '@/lib/api';
+import { subscribeSSE } from '@/lib/sseSubscribe';
 import { useToast } from '@/components/ui/toast';
 import { getFollowStage } from '@/components/conference/SignedInChip';
 
-const DAY_ROUTE_PATTERNS = [/^\/day$/, /^\/vote\//];
+// Routes where the orchestrator may issue an auto-navigation. This used
+// to be just /day and /vote/*, but that meant anyone reading /welcome,
+// /background, /reports, /working-groups, or a WG detail page when the
+// chair started a session got zero auto-push and sat on the wrong page
+// for the entire panel. Day-of, every reader-style route should also
+// follow the stage when follow-stage is on.
+const DAY_ROUTE_PATTERNS = [
+  /^\/$/,
+  /^\/day$/,
+  /^\/vote\//,
+  /^\/welcome$/,
+  /^\/background$/,
+  /^\/reports/,
+  /^\/working-groups/,
+  /^\/wg(\/|$)/,
+  /^\/guide$/,
+];
 const POLL_MS = 15000;
 
 function isOnDayRoute(pathname) {
@@ -61,38 +78,43 @@ export function StageFollowOrchestrator() {
         const d = await api('/api/conference/day-state');
         if (cancelled) return;
         setActiveSessionId(d?.active_session_id || null);
-      } catch {}
+      } catch {
+        /* keep polling; transient network failures are expected in the room */
+      }
       try {
         const dm = await api('/api/conference/display-mode');
         if (cancelled) return;
         setMode(dm?.mode || 'idle');
-      } catch {}
+      } catch {
+        /* keep polling; transient network failures are expected in the room */
+      }
     };
 
     refresh();
     const t = setInterval(refresh, POLL_MS);
 
+    let stopSSE = null;
     if (typeof EventSource !== 'undefined') {
-      const es = new EventSource('/api/events/day');
-      sseRef.current = es;
-      es.addEventListener('message', (evt) => {
-        try {
-          const data = JSON.parse(evt.data);
-          if (data?.event === 'display_mode_changed') {
-            setMode(data.mode || 'idle');
-          } else if ([
-            'session_started', 'session_stopped', 'phase_changed',
-          ].includes(data?.event)) {
-            refresh();
-          }
-        } catch {}
+      stopSSE = subscribeSSE('/api/events/day', (data) => {
+        if (data?.event === 'display_mode_changed') {
+          setMode(data.mode || 'idle');
+        } else if (['session_started', 'session_stopped', 'phase_changed'].includes(data?.event)) {
+          refresh();
+        }
       });
     }
 
     return () => {
       cancelled = true;
       clearInterval(t);
-      if (sseRef.current) { try { sseRef.current.close(); } catch {} sseRef.current = null; }
+      if (stopSSE) stopSSE();
+      // Legacy sseRef cleanup (left for safety if any older direct EventSource use exists)
+      if (sseRef.current) {
+        try { sseRef.current.close(); } catch {
+          /* close is best-effort */
+        }
+        sseRef.current = null;
+      }
     };
   }, [active]);
 
@@ -151,7 +173,7 @@ export function StageFollowOrchestrator() {
         scheduleNav(`/day#panel-${wg}`, 1500,
           `Panel ${wg} is live — opening agenda.`);
       } else if (mode === 'table_reactions') {
-        scheduleNav('/day#breakout', 1500,
+        scheduleNav('/day#world-cafe', 1500,
           'Breakout starting — back to agenda.');
       } else if (mode === 'cross_wg') {
         scheduleNav('/day#cross-wg', 1500,

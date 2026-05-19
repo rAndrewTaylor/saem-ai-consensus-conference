@@ -187,19 +187,25 @@ function LoginForm({ onLogin }) {
 // ---------------------------------------------------------------------------
 function SessionForm({ wgs, onCreated }) {
   const [open, setOpen] = useState(false);
-  const [sessionType, setSessionType] = useState('vote');
+  // Backend whitelists exactly two session_types and two phases
+  // (`validators.py`). The earlier vote/discussion/review and
+  // deliberation/final_vote/review options 400'd every click.
+  const [sessionType, setSessionType] = useState('wg_presentation');
   const [wgNumber, setWgNumber] = useState('1');
-  const [phase, setPhase] = useState('deliberation');
+  const [phase, setPhase] = useState('pre_discussion');
   const [creating, setCreating] = useState(false);
   const toast = useToast();
+
+  const isCross = sessionType === 'cross_wg_prioritization';
 
   const handleCreate = async () => {
     setCreating(true);
     try {
-      await api('/api/conference/sessions', {
-        method: 'POST',
-        body: { session_type: sessionType, wg_number: Number(wgNumber), phase },
-      });
+      const body = { session_type: sessionType, phase };
+      // Cross-WG sessions have no WG; omit wg_number so the backend
+      // stores wg_id = NULL.
+      if (!isCross) body.wg_number = Number(wgNumber);
+      await api('/api/conference/sessions', { method: 'POST', body });
       toast({ message: 'Session created', type: 'success' });
       setOpen(false);
       onCreated();
@@ -228,9 +234,8 @@ function SessionForm({ wgs, onCreated }) {
                   onChange={(e) => setSessionType(e.target.value)}
                   className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 >
-                  <option value="vote">Vote</option>
-                  <option value="discussion">Discussion</option>
-                  <option value="review">Review</option>
+                  <option value="wg_presentation">WG presentation</option>
+                  <option value="cross_wg_prioritization">Cross-WG prioritization</option>
                 </select>
               </div>
               <div>
@@ -257,9 +262,8 @@ function SessionForm({ wgs, onCreated }) {
                   onChange={(e) => setPhase(e.target.value)}
                   className="rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                 >
-                  <option value="deliberation">Deliberation</option>
-                  <option value="final_vote">Final Vote</option>
-                  <option value="review">Review</option>
+                  <option value="pre_discussion">Pre-discussion</option>
+                  <option value="post_discussion">Post-discussion</option>
                 </select>
               </div>
               <div className="flex gap-2">
@@ -465,7 +469,10 @@ export function DashboardPage() {
   // Session toggle
   // ---------------------------------------------------------------------------
   const toggleSession = async (session) => {
-    const action = session.status === 'live' ? 'stop' : 'start';
+    // The backend returns `is_active: true|false`; the older `status: 'live'`
+    // shape was a phantom that always tested false, leaving every Start/Stop
+    // button dead.
+    const action = session.is_active ? 'stop' : 'start';
     setTogglingSession(session.id);
     try {
       await api(`/api/conference/sessions/${session.id}/${action}`, { method: 'POST' });
@@ -815,7 +822,7 @@ export function DashboardPage() {
                             <span className="text-sm font-semibold capitalize text-white/80">
                               {s.session_type}
                             </span>
-                            {s.status === 'live' ? (
+                            {s.is_active ? (
                               <Badge variant="live">LIVE</Badge>
                             ) : (
                               <Badge variant="default">Closed</Badge>
@@ -827,12 +834,12 @@ export function DashboardPage() {
                         </div>
                       </div>
                       <Button
-                        variant={s.status === 'live' ? 'danger' : 'success'}
+                        variant={s.is_active ? 'danger' : 'success'}
                         size="sm"
                         loading={togglingSession === s.id}
                         onClick={() => toggleSession(s)}
                       >
-                        {s.status === 'live' ? (
+                        {s.is_active ? (
                           <><Square className="h-3.5 w-3.5" /> Stop</>
                         ) : (
                           <><Play className="h-3.5 w-3.5" /> Start</>

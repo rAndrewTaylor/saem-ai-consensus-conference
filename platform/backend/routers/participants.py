@@ -13,7 +13,7 @@ from ..database import (
     get_db, WorkingGroup, Participant, DelphiResponse, PairwiseVote,
     Question, QuestionStatus, DelphiRound, write_audit_log,
 )
-from ..auth import require_admin
+from ..auth import require_admin, get_participant_token
 from ..validators import sanitize_text
 
 # Suffix used to tag self-service tester accounts (distinct from pre-seeded demo data)
@@ -802,10 +802,22 @@ def update_self_demographics(
 
 
 @router.get("/me")
-def participant_me(token: str, db: Session = Depends(get_db)):
+def participant_me(
+    token: Optional[str] = None,
+    bearer: Optional[str] = Depends(get_participant_token),
+    db: Session = Depends(get_db),
+):
     """Public: look up a participant by their token. Used by the frontend
-    to show 'Signed in as [name]' indicators without re-claiming."""
-    p = db.query(Participant).filter(Participant.token == token).first()
+    to show 'Signed in as [name]' indicators without re-claiming.
+
+    Accepts the token via the Authorization Bearer header (preferred —
+    keeps the token out of access logs and referer headers) OR a
+    `?token=` querystring for back-compat with older clients.
+    """
+    effective = bearer or token
+    if not effective:
+        return {"name": None, "wg_number": None}
+    p = db.query(Participant).filter(Participant.token == effective).first()
     if not p or not p.is_active:
         # Be quiet for anonymous/invalid tokens — this just means "no name to show"
         return {"name": None, "wg_number": None}

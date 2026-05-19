@@ -7,7 +7,12 @@ class ApiError extends Error {
   }
 }
 
-export async function api(url, { method = 'GET', body, token, params } = {}) {
+// Default fetch timeout (ms). Long enough to clear captive-portal
+// handshakes on hotel Wi-Fi, short enough that a flat-out hung connection
+// drops to the offline queue instead of stalling the spinner forever.
+const FETCH_TIMEOUT_MS = 15000;
+
+export async function api(url, { method = 'GET', body, token, params, timeoutMs } = {}) {
   const urlObj = new URL(url, window.location.origin);
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
@@ -29,34 +34,55 @@ export async function api(url, { method = 'GET', body, token, params } = {}) {
     if (adminToken) {
       headers['Authorization'] = `Bearer ${adminToken}`;
     } else {
-      // Fall back to the most recently used participant token
-      for (let i = 0; i < localStorage.length; i += 1) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('saem_token_wg')) {
-          const ptoken = localStorage.getItem(key);
-          if (ptoken) {
-            headers['Authorization'] = `Bearer ${ptoken}`;
-            break;
+      // Prefer the participant token bound to the active WG (set on claim);
+      // fall back to whatever is in localStorage so endpoints that accept
+      // any participant token still work.
+      const activeWg = localStorage.getItem('saem_active_wg');
+      let ptoken = activeWg ? localStorage.getItem(`saem_token_wg${activeWg}`) : null;
+      if (!ptoken) {
+        for (let i = 0; i < localStorage.length; i += 1) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('saem_token_wg')) {
+            ptoken = localStorage.getItem(key);
+            if (ptoken) break;
           }
         }
       }
+      if (ptoken) headers['Authorization'] = `Bearer ${ptoken}`;
     }
   }
 
   if (body) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(urlObj.toString(), {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const ms = typeof timeoutMs === 'number' ? timeoutMs : FETCH_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = ms > 0 ? setTimeout(() => controller.abort(), ms) : null;
+
+  let res;
+  try {
+    res = await fetch(urlObj.toString(), {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new ApiError(0, 'Request timed out — check your connection and try again.');
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 
   if (!res.ok) {
     let detail = `Error ${res.status}`;
     try {
       const json = await res.json();
       detail = json.detail || detail;
-    } catch {}
+    } catch {
+      /* response was not JSON; keep the status-derived detail */
+    }
     throw new ApiError(res.status, detail);
   }
 
@@ -78,7 +104,9 @@ export async function downloadFile(url, fallbackFilename = 'download') {
     try {
       const json = await res.json();
       detail = json.detail || detail;
-    } catch {}
+    } catch {
+      /* response was not JSON; keep the status-derived detail */
+    }
     throw new ApiError(res.status, detail);
   }
 
@@ -111,6 +139,11 @@ export const getActiveWg = () => {
   return v ? parseInt(v, 10) : null;
 };
 export const getAnyParticipantToken = () => {
+  const activeWg = getActiveWg();
+  if (activeWg) {
+    const activeToken = getToken(activeWg);
+    if (activeToken) return activeToken;
+  }
   for (let i = 0; i < localStorage.length; i += 1) {
     const key = localStorage.key(i);
     if (key && key.startsWith('saem_token_wg')) {
@@ -123,7 +156,10 @@ export const getAnyParticipantToken = () => {
 // Clear all participant tokens — used by the "Switch user" flow on
 // shared/kiosk devices (one phone, multiple people signing in across
 // the day) and by the email-login chooser when the user picks a row
-// that differs from whatever is currently cached.
+// that differs from whatever is currently cached. Also clears the
+// co-lead and admin tokens so a true "switch user" on a shared device
+// doesn't silently leave the next person logged in with elevated
+// privileges.
 export const clearAllParticipantTokens = () => {
   const keys = [];
   for (let i = 0; i < localStorage.length; i += 1) {
@@ -132,6 +168,8 @@ export const clearAllParticipantTokens = () => {
   }
   keys.forEach((k) => localStorage.removeItem(k));
   localStorage.removeItem('saem_active_wg');
+  localStorage.removeItem('saem_lead_token');
+  localStorage.removeItem('saem_admin_token');
 };
 export const getAdminToken = () => localStorage.getItem('saem_admin_token');
 export const setAdminToken = (token) => localStorage.setItem('saem_admin_token', token);

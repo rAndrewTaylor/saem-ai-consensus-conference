@@ -366,7 +366,7 @@ class ConferenceVote(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "session_id", "participant_id", "vote_type",
+            "session_id", "participant_id", "question_id", "vote_type",
             name="uq_conference_vote",
         ),
     )
@@ -577,6 +577,43 @@ def _apply_additive_migrations():
                         raise
         if added:
             log.info("Added missing conference_sessions columns: %s", added)
+
+    # Conference-day question curation flags
+    desired_question_cols = {
+        "featured_in_cross_wg": "BOOLEAN",
+        "featured_in_panel": "BOOLEAN",
+    }
+    if "questions" in inspector.get_table_names():
+        existing = {c["name"] for c in inspector.get_columns("questions")}
+        added = []
+        with engine.begin() as conn:
+            for col, col_type in desired_question_cols.items():
+                if col not in existing:
+                    try:
+                        conn.execute(sa_text(f"ALTER TABLE questions ADD COLUMN {col} {col_type} NOT NULL DEFAULT FALSE"))
+                        added.append(col)
+                    except Exception:
+                        log.exception("Failed to add column %s to questions", col)
+                        raise
+        if added:
+            log.info("Added missing questions columns: %s", added)
+
+    # The conference vote row model stores one row per question. Older
+    # deployments used a unique constraint that omitted question_id, which
+    # blocks multi-question rankings/ratings. PostgreSQL can repair this
+    # in-place; SQLite dev DBs are recreated for tests/local use.
+    if not is_sqlite and "conference_votes" in inspector.get_table_names():
+        with engine.begin() as conn:
+            try:
+                conn.execute(sa_text("ALTER TABLE conference_votes DROP CONSTRAINT IF EXISTS uq_conference_vote"))
+                conn.execute(sa_text(
+                    "ALTER TABLE conference_votes "
+                    "ADD CONSTRAINT uq_conference_vote "
+                    "UNIQUE (session_id, participant_id, question_id, vote_type)"
+                ))
+            except Exception:
+                log.exception("Failed to ensure conference_votes uniqueness constraint")
+                raise
 
     # Partial unique index on participants.(wg_id, lower(trim(email))) for
     # active rows with non-empty email. Prevents two active participants

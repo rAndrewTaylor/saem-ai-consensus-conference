@@ -17,9 +17,9 @@ Written 2026-05-18. Conference is Thursday 2026-05-21.
   sign in" banner that renders within T-24h through T+12h of start.
 - **`pages/JoinPage.jsx`** — the existing email-login `SignInCard` now
   renders a chooser when the backend returns `{multiple: true, matches}`.
-- **`components/Layout.jsx`** — nav reordered: Welcome → Conference Day
-  → My Group come first; Round 1/2 reports moved into a "Pre-conference"
-  disclosure (dropdown on desktop, labeled section in the mobile menu).
+- **`components/Layout.jsx`** — day-of nav is intentionally minimal:
+  Consensus Day, Admin, and Log in. `/day`, `/vote`, `/stage`, `/command`,
+  and `/welcome` use no global chrome so audience/chair views stay focused.
 - **`lib/api.js`** — new `clearAllParticipantTokens()` helper used by
   Switch User and by the chooser flows to prevent stale localStorage on
   shared/kiosk devices.
@@ -37,8 +37,8 @@ Written 2026-05-18. Conference is Thursday 2026-05-21.
 - **`platform/scripts/generate_table_cards.py`** — generates a print-ready
   PDF (4 cards per US Letter page, default 16 cards = 4 pages) with QR
   pointing to `/welcome?access=ai26`, the URL spelled out, and the code
-  in a prominent amber chip. Output at
-  `docs/conference-day/table_cards.pdf` (already built).
+  in a prominent amber chip. Output should be saved at
+  `docs/conference-day/table_cards.pdf`.
   Re-run with `python scripts/generate_table_cards.py --count N` to
   print more.
 
@@ -61,8 +61,9 @@ Without this, the conference-code button on `/welcome` will show
 
 ### 2. Print the table cards
 
-`docs/conference-day/table_cards.pdf` is ready to print. Four cards per
-page on US Letter. Standard cardstock recommended. Cut on the page midlines.
+Generate `docs/conference-day/table_cards.pdf` before printing. Four cards
+per page on US Letter. Standard cardstock recommended. Cut on the page
+midlines.
 
 Default is 16 cards (4 pages). If you want more, regenerate with
 `python platform/scripts/generate_table_cards.py --count 24` (or any
@@ -95,7 +96,7 @@ backstops for "nothing works" attendees:
 1. Open `/welcome` on a cold device (clear localStorage / private window).
 2. Scan the printed QR → should land on `/welcome?access=ai26`.
 3. Tap **Conference code** → registers in `/join?access=ai26` flow,
-   then lands in `/wg/<n>`.
+   then lands on the conference-day experience.
 4. Tap **Switch user / sign out** on `/welcome` → token cleared.
 5. Tap **Email** → enter a known existing email → should sign in
    (or show chooser if duplicates exist).
@@ -103,6 +104,17 @@ backstops for "nothing works" attendees:
    route to claim flow.
 
 Test surfaces: iOS Safari, Android Chrome, iOS Chrome.
+
+## Day-before production setup
+
+- [ ] Create six conference sessions: WG1, WG2, WG3, WG4, WG5, and the
+  cross-WG prioritization session. Record their IDs in the chair notes.
+- [ ] Confirm each WG has 6-8 `featured_in_panel` questions saved from the
+  Lead Dashboard or `/command` panel-pool tool.
+- [ ] Confirm the cross-WG auto-feature button advances the documented top
+  4 per WG, with WG5 carrying all 5 themed questions.
+- [ ] Chair dry-run: `/command` → `panel:1` → start vote → stop vote →
+  auto-feature/star questions → `table_reactions` → `cross_wg`.
 
 ## Risks parked but not addressed
 

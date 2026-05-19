@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createElement, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -42,9 +42,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { useParticipantToken } from '@/hooks/useParticipantToken';
 import { api } from '@/lib/api';
+import { queueSubmit } from '@/lib/offlineQueue';
 import { cn } from '@/lib/utils';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
 import { SignedInChip } from '@/components/conference/SignedInChip';
+
+const MotionDiv = motion.div;
+const MotionSpan = motion.span;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -103,6 +107,7 @@ export function ConferencePage() {
   // Live updates
   const [voterCount, setVoterCount] = useState(0);
   const [sseConnected, setSseConnected] = useState(false);
+  const [sessionStopped, setSessionStopped] = useState(false);
   const sseRef = useRef(null);
 
   // Submission states per tab
@@ -125,42 +130,38 @@ export function ConferencePage() {
   // Fetch session + questions
   // ---------------------------------------------------------------------------
 
+  const fetchQuestions = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await api(`/api/conference/sessions/${sessionId}/questions`, { token });
+      setSession(data.session ?? data);
+      const qs = data.questions ?? data.items ?? [];
+      setQuestions(qs);
+      const savedRank = loadLocal(sessionId, 'rank');
+      if (savedRank && savedRank.length === qs.length) {
+        setRankOrder(savedRank);
+      } else {
+        setRankOrder(qs.map((q) => q.id || q.question_id));
+      }
+      const savedImportance = loadLocal(sessionId, 'importance');
+      if (savedImportance) {
+        setImportanceValues(savedImportance);
+      } else {
+        const defaults = {};
+        qs.forEach((q) => { defaults[q.id || q.question_id] = 5; });
+        setImportanceValues(defaults);
+      }
+      setVoterCount(data.voter_count ?? 0);
+    } catch (err) {
+      setPageError(err.message);
+    }
+  }, [token, sessionId]);
+
   useEffect(() => {
     if (!token) return;
-
-    (async () => {
-      setPageLoading(true);
-      try {
-        const data = await api(`/api/conference/sessions/${sessionId}/questions`, { token });
-        setSession(data.session ?? data);
-        const qs = data.questions ?? data.items ?? [];
-        setQuestions(qs);
-
-        // Restore from localStorage or initialize defaults
-        const savedRank = loadLocal(sessionId, 'rank');
-        if (savedRank && savedRank.length === qs.length) {
-          setRankOrder(savedRank);
-        } else {
-          setRankOrder(qs.map(q => q.id || q.question_id));
-        }
-
-        const savedImportance = loadLocal(sessionId, 'importance');
-        if (savedImportance) {
-          setImportanceValues(savedImportance);
-        } else {
-          const defaults = {};
-          qs.forEach(q => { defaults[q.id || q.question_id] = 5; });
-          setImportanceValues(defaults);
-        }
-
-        setVoterCount(data.voter_count ?? 0);
-      } catch (err) {
-        setPageError(err.message);
-      } finally {
-        setPageLoading(false);
-      }
-    })();
-  }, [token, sessionId]);
+    setPageLoading(true);
+    fetchQuestions().finally(() => setPageLoading(false));
+  }, [token, sessionId, fetchQuestions]);
 
   // ---------------------------------------------------------------------------
   // Autosave to localStorage
@@ -183,14 +184,21 @@ export function ConferencePage() {
     es.onopen = () => setSseConnected(true);
     es.onerror = () => setSseConnected(false);
 
-    es.addEventListener('vote_update', (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        setVoterCount(data.voter_count ?? (prev => prev + 1));
-      } catch {
-        setVoterCount(prev => prev + 1);
+    // Backend now emits all events as default "message" with `data.event`
+    // in the payload. Filter for vote_update / session_stopped / phase_changed.
+    es.onmessage = (e) => {
+      let data;
+      try { data = JSON.parse(e.data); } catch { return; }
+      if (data?.event === 'vote_update') {
+        setVoterCount(data.voter_count ?? ((prev) => prev + 1));
+      } else if (data?.event === 'session_stopped') {
+        setSessionStopped(true);
+      } else if (data?.event === 'phase_changed') {
+        // Reload questions list on phase flip so post-discussion vote
+        // can re-rank against current question set.
+        fetchQuestions();
       }
-    });
+    };
 
     return () => {
       es.close();
@@ -204,18 +212,23 @@ export function ConferencePage() {
   // ---------------------------------------------------------------------------
 
   const submitRanking = async () => {
+    if (sessionStopped) {
+      toast({ message: 'Voting has closed for this session.', type: 'info' });
+      return;
+    }
     setRankSubmitting(true);
     try {
       // Backend expects {rankings: {question_id: rank}} — convert array order to dict
       const rankings = {};
       rankOrder.forEach((qId, idx) => { rankings[qId] = idx + 1; });
-      await api(`/api/conference/vote/${sessionId}/ranking`, {
-        method: 'POST',
-        token,
+      const res = await queueSubmit({
+        url: `/api/conference/vote/${sessionId}/ranking`,
         body: { rankings },
+        token,
+        kind: 'ranking',
       });
       setSubmittedTabs(prev => ({ ...prev, ranking: true }));
-      toast({ message: 'Priority ranking submitted!', type: 'success' });
+      toast({ message: res?.queued ? 'Ranking queued (will sync when online)' : 'Priority ranking submitted!', type: 'success' });
     } catch (err) {
       toast({ message: err.message || 'Submission failed', type: 'error' });
     } finally {
@@ -232,15 +245,20 @@ export function ConferencePage() {
   }, []);
 
   const submitImportance = async () => {
+    if (sessionStopped) {
+      toast({ message: 'Voting has closed for this session.', type: 'info' });
+      return;
+    }
     setImportanceSubmitting(true);
     try {
-      await api(`/api/conference/vote/${sessionId}/importance`, {
-        method: 'POST',
-        token,
+      const res = await queueSubmit({
+        url: `/api/conference/vote/${sessionId}/importance`,
         body: { ratings: importanceValues },
+        token,
+        kind: 'importance',
       });
       setSubmittedTabs(prev => ({ ...prev, importance: true }));
-      toast({ message: 'Importance ratings submitted!', type: 'success' });
+      toast({ message: res?.queued ? 'Ratings queued (will sync when online)' : 'Importance ratings submitted!', type: 'success' });
     } catch (err) {
       toast({ message: err.message || 'Submission failed', type: 'error' });
     } finally {
@@ -256,12 +274,13 @@ export function ConferencePage() {
     if (!commentText.trim()) return;
     setCommentSubmitting(true);
     try {
-      await api(`/api/conference/comment/${sessionId}`, {
-        method: 'POST',
-        token,
+      const res = await queueSubmit({
+        url: `/api/conference/comment/${sessionId}`,
         body: { comment_type: commentType, comment_text: commentText.trim() },
+        token,
+        kind: 'comment',
       });
-      toast({ message: 'Comment submitted!', type: 'success' });
+      toast({ message: res?.queued ? 'Comment queued (will sync when online)' : 'Comment submitted!', type: 'success' });
       setCommentText('');
     } catch (err) {
       toast({ message: err.message || 'Failed to submit comment', type: 'error' });
@@ -410,16 +429,20 @@ export function ConferencePage() {
               </span>
               LIVE
             </Badge>
+            <span
+              className={`h-2 w-2 rounded-full ${sseConnected ? 'bg-cyan-300' : 'bg-amber-300'}`}
+              title={sseConnected ? 'Live updates connected' : 'Live updates reconnecting'}
+            />
             <div className="flex items-center gap-1.5 text-sm text-white/50">
               <Users className="h-4 w-4" />
-              <motion.span
+              <MotionSpan
                 key={voterCount}
                 initial={{ y: -6, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 className="font-semibold tabular-nums text-white/80"
               >
                 {voterCount}
-              </motion.span>
+              </MotionSpan>
               <span className="hidden sm:inline">voters</span>
             </div>
           </div>
@@ -429,7 +452,7 @@ export function ConferencePage() {
       {/* Tabs */}
       <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
         <Tabs.List className="relative mb-6 flex gap-1 rounded-xl border border-white/[0.06] bg-[#0E1E35] p-1">
-          {TAB_CONFIG.map(({ value, label, icon: Icon }) => (
+          {TAB_CONFIG.map(({ value, label, icon }) => (
             <Tabs.Trigger
               key={value}
               value={value}
@@ -440,7 +463,7 @@ export function ConferencePage() {
                   : 'text-white/50 hover:text-white/80'
               )}
             >
-              <Icon className="h-4 w-4" />
+              {createElement(icon, { className: 'h-4 w-4' })}
               <span className="hidden sm:inline">{label}</span>
               {submittedTabs[value] && (
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
@@ -451,7 +474,7 @@ export function ConferencePage() {
 
         {/* Tab content with animation */}
         <AnimatePresence mode="wait">
-          <motion.div
+          <MotionDiv
             key={activeTab}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -474,14 +497,14 @@ export function ConferencePage() {
                 </CardHeader>
                 <CardContent className="space-y-2 p-4">
                   {submittedTabs.ranking && (
-                    <motion.div
+                    <MotionDiv
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-300"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Submitted successfully! You can update and resubmit.
-                    </motion.div>
+                    </MotionDiv>
                   )}
 
                   <DragRanking
@@ -508,14 +531,14 @@ export function ConferencePage() {
                 </CardHeader>
                 <CardContent className="space-y-5 p-4">
                   {submittedTabs.importance && (
-                    <motion.div
+                    <MotionDiv
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       className="mb-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-300"
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Submitted successfully! You can update and resubmit.
-                    </motion.div>
+                    </MotionDiv>
                   )}
 
                   {questions.map((q) => {
@@ -559,7 +582,7 @@ export function ConferencePage() {
               </Card>
             </Tabs.Content>
 
-          </motion.div>
+          </MotionDiv>
         </AnimatePresence>
       </Tabs.Root>
 
@@ -691,7 +714,7 @@ function SortableRankRow({ id, index, text }) {
   return (
     <li
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
       className={cn(
         'flex select-none items-center gap-2 rounded-lg border bg-white/[0.03] px-2.5 py-2 sm:px-3',
         isDragging
@@ -703,10 +726,11 @@ function SortableRankRow({ id, index, text }) {
       <button
         type="button"
         aria-label="Drag to reorder"
-        className="-m-1 flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded text-white/40 hover:bg-white/[0.06] hover:text-white/70 active:cursor-grabbing"
+        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+        className="-m-1 flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded text-white/55 hover:bg-white/[0.06] hover:text-white/80 active:cursor-grabbing"
         {...listeners}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-5 w-5" />
       </button>
       <span className={cn(
         'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold',

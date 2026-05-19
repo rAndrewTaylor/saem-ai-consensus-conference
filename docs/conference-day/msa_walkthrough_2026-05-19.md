@@ -42,7 +42,8 @@ Mock scenario: pretend WG1 just finished its panel discussion, chair is about to
 
 ### 1:05–1:20 — Drag-to-rank vote test
 - Andrew switches to `panel:1` and starts the vote session
-- Every MSA drags-and-drops to reorder on their phone — confirm touch feels good on a real phone
+- Every MSA follows the automatic prompt to `/vote/<session>` and drags-and-drops to reorder on their phone — confirm touch feels good on a real phone
+- If someone stays on the compact `/day` inline card, that fallback uses arrow buttons; the full voting page is the canonical drag-to-rank flow
 - One MSA on landscape iPad to confirm it works for tablets too
 - One MSA submits multiple times (last write wins) to confirm edit-vote flow
 - Live tally appears on Andrew's command-center screen

@@ -38,6 +38,15 @@ def _publish_day(event: str, payload: dict) -> None:
         pass
 
 
+def _publish_vote(session_id: int, payload: dict) -> None:
+    """Best-effort notification on the session-specific voting SSE channel."""
+    try:
+        from ..main import publish_vote_event
+        publish_vote_event(session_id, {"event": "vote_update", **payload})
+    except Exception:
+        pass
+
+
 async def require_chair(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db),
@@ -82,6 +91,9 @@ class SessionCreate(BaseModel):
     session_type: str  # "wg_presentation" or "cross_wg_prioritization"
     phase: str = "pre_discussion"
 
+class PhaseUpdate(BaseModel):
+    phase: str
+
 class RankingVoteSubmit(BaseModel):
     """Submit a ranking of top-N questions."""
     rankings: dict[int, int]  # question_id -> rank (1 = highest)
@@ -116,6 +128,15 @@ def _validate_phase(phase: str) -> str:
     if phase not in VALID_PHASES:
         raise HTTPException(400, f"Invalid phase: {phase}. Must be one of: {VALID_PHASES}")
     return phase
+
+
+def _validate_session_question_ids(session_id: int, db: Session, question_ids) -> None:
+    """Reject votes for questions outside the session's configured pool."""
+    allowed = {int(q["id"]) for q in get_session_questions(session_id, db)["questions"]}
+    submitted = {int(qid) for qid in question_ids}
+    unknown = sorted(submitted - allowed)
+    if unknown:
+        raise HTTPException(400, f"Questions are not in this session: {unknown}")
 
 
 def _upsert_votes(
@@ -176,10 +197,26 @@ def start_session(
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """Activate a voting session (opens it for responses)."""
+    """Activate a voting session (opens it for responses).
+
+    Idempotent: re-calling on an already-active session is a no-op and
+    does NOT overwrite `started_at`. Prevents the double-click race
+    where a second POST silently shifts the start clock.
+    """
     cs = db.query(ConferenceSession).get(session_id)
     if not cs:
         raise HTTPException(404, "Session not found")
+    if cs.is_active:
+        # Already running — return current state without touching DB or
+        # publishing a spurious `session_started` event.
+        return {"session_id": cs.id, "is_active": True}
+    db.query(ConferenceSession).filter(
+        ConferenceSession.id != session_id,
+        ConferenceSession.is_active == True,  # noqa: E712
+    ).update({
+        ConferenceSession.is_active: False,
+        ConferenceSession.ended_at: datetime.utcnow(),
+    })
     cs.is_active = True
     cs.started_at = datetime.utcnow()
     db.commit()
@@ -222,11 +259,12 @@ def stop_session(
 @router.post("/sessions/{session_id}/phase")
 def update_phase(
     session_id: int,
-    phase: str,
+    body: PhaseUpdate,
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
     """Update the phase of a session (pre_discussion -> post_discussion)."""
+    phase = body.phase
     _validate_phase(phase)
     cs = db.query(ConferenceSession).get(session_id)
     if not cs:
@@ -530,6 +568,7 @@ def submit_ranking(
         raise HTTPException(400, "Session not active")
 
     participant = verify_participant_token(token, db)
+    _validate_session_question_ids(session_id, db, vote.rankings.keys())
 
     vote_type = f"ranking_{cs.phase}"
     new_votes = [
@@ -546,6 +585,7 @@ def submit_ranking(
     _upsert_votes(db, session_id, participant.id, vote_type, new_votes)
     db.commit()
     _publish_day("vote_cast", {"session_id": session_id, "vote_type": vote_type})
+    _publish_vote(session_id, {"vote_type": vote_type})
     return {"status": "recorded", "count": len(vote.rankings)}
 
 
@@ -562,6 +602,7 @@ def submit_importance(
         raise HTTPException(400, "Session not active")
 
     participant = verify_participant_token(token, db)
+    _validate_session_question_ids(session_id, db, vote.ratings.keys())
 
     # Validate every rating
     for rating in vote.ratings.values():
@@ -581,6 +622,7 @@ def submit_importance(
     _upsert_votes(db, session_id, participant.id, "importance", new_votes)
     db.commit()
     _publish_day("vote_cast", {"session_id": session_id, "vote_type": "importance"})
+    _publish_vote(session_id, {"vote_type": "importance"})
     return {"status": "recorded", "count": len(vote.ratings)}
 
 
@@ -606,6 +648,7 @@ def submit_allocation(
         raise HTTPException(400, "Session not active")
 
     participant = verify_participant_token(token, db)
+    _validate_session_question_ids(session_id, db, vote.allocations.keys())
 
     new_votes = [
         ConferenceVote(
@@ -622,6 +665,7 @@ def submit_allocation(
     _upsert_votes(db, session_id, participant.id, "point_allocation", new_votes)
     db.commit()
     _publish_day("vote_cast", {"session_id": session_id, "vote_type": "point_allocation"})
+    _publish_vote(session_id, {"vote_type": "point_allocation"})
     return {"status": "recorded", "total_points": total}
 
 
@@ -640,9 +684,13 @@ def submit_comment(
     if not sanitized_text:
         raise HTTPException(400, "Comment text must not be empty")
 
+    cs = db.query(ConferenceSession).get(session_id)
+    if not cs:
+        raise HTTPException(404, "Session not found")
+
     participant = None
     if token:
-        participant = db.query(Participant).filter(Participant.token == token).first()
+        participant = verify_participant_token(token, db)
 
     cc = ConferenceComment(
         session_id=session_id,
@@ -656,8 +704,17 @@ def submit_comment(
 
 
 @router.post("/breakout/{session_id}")
-def submit_breakout_note(session_id: int, note: BreakoutNoteSubmit, db: Session = Depends(get_db)):
+def submit_breakout_note(
+    session_id: int,
+    note: BreakoutNoteSubmit,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(get_participant_token),
+):
     """Submit facilitator notes from a breakout discussion."""
+    verify_participant_token(token, db)
+    cs = db.query(ConferenceSession).get(session_id)
+    if not cs:
+        raise HTTPException(404, "Session not found")
     bn = BreakoutNote(
         session_id=session_id,
         table_number=note.table_number,
@@ -1025,8 +1082,15 @@ def set_display_mode(
         db.add(row)
     else:
         row.mode = body.mode
-    row.slide_index = body.slide_index
-    row.panel_tab = body.panel_tab
+    # Patch semantics: only overwrite slide_index / panel_tab if the
+    # client explicitly set them. Otherwise leave the previous value.
+    # Avoids the foot-gun where `setDisplay({ mode: 'panel:3' })` silently
+    # wipes the panel_tab that another tab just selected.
+    fields_set = body.model_fields_set if hasattr(body, "model_fields_set") else set(body.dict(exclude_unset=True).keys())  # noqa: B009
+    if "slide_index" in fields_set:
+        row.slide_index = body.slide_index
+    if "panel_tab" in fields_set:
+        row.panel_tab = body.panel_tab
     db.commit()
 
     _publish_day("display_mode_changed", {

@@ -13,6 +13,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { api, getAnyParticipantToken } from '@/lib/api';
+import { queueSubmit } from '@/lib/offlineQueue';
 import { ClipboardList, Send, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function BreakoutNotesPanel() {
@@ -21,6 +22,7 @@ export function BreakoutNotesPanel() {
   const [collapsed, setCollapsed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState(null);
   const esRef = useRef(null);
   const [form, setForm] = useState({
     table_number: '',
@@ -43,12 +45,18 @@ export function BreakoutNotesPanel() {
         try {
           const data = JSON.parse(evt.data);
           if (data?.event === 'display_mode_changed') setMode(data.mode);
-        } catch {}
+        } catch {
+          /* ignore malformed keepalive/proxy events */
+        }
       });
     }
     return () => {
       cancelled = true;
-      if (esRef.current) { try { esRef.current.close(); } catch {} }
+      if (esRef.current) {
+        try { esRef.current.close(); } catch {
+          /* close is best-effort */
+        }
+      }
     };
   }, []);
 
@@ -73,15 +81,21 @@ export function BreakoutNotesPanel() {
       suggestions: form.suggestions || null,
     };
     setSubmitting(true);
+    setStatus(null);
     try {
       const token = getAnyParticipantToken();
-      await api(`/api/conference/breakout/${activeSession.id}`, {
-        method: 'POST', body: payload, token,
+      const res = await queueSubmit({
+        url: `/api/conference/breakout/${activeSession.id}`,
+        body: payload,
+        token,
+        kind: 'breakout',
       });
       setSubmitted(true);
+      setStatus(res?.queued ? 'Notes queued; they will sync when back online.' : 'Notes submitted.');
       setTimeout(() => setSubmitted(false), 4000);
     } catch (e) {
       console.error(e);
+      setStatus(e.message || 'Submit failed. Try again.');
     } finally {
       setSubmitting(false);
     }
@@ -131,7 +145,7 @@ export function BreakoutNotesPanel() {
 
           <div className="mt-3 flex items-center justify-between">
             <p className="text-[11px] text-white/40">
-              {activeSession ? `Session ${activeSession.id}` : 'No active session'} · re-submit anytime to update
+              {status || (activeSession ? `Session ${activeSession.id}` : 'No active session')} · re-submit anytime to update
             </p>
             <button
               onClick={submit}

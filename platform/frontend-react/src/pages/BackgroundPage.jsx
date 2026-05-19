@@ -360,7 +360,7 @@ function ConferenceDaySection() {
         <DayCard title="World café"
           body="Three rotations across pillars (Technology · People · Society) for cross-WG synthesis." />
         <DayCard title="Cross-WG consensus vote"
-          body="Closing drag-to-rank vote across each WG's top 5 questions. The result is the conference's prioritized agenda." />
+          body="Closing drag-to-rank vote across each WG's top 4 questions (plus all of WG5's 5 themes — 21 in total). The result is the conference's prioritized agenda." />
       </div>
     </section>
   );
