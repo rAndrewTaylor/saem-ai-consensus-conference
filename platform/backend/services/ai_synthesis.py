@@ -31,11 +31,18 @@ def _get_client() -> anthropic.AsyncAnthropic:
     )
 
 
-async def run_synthesis(prompt: str, input_data: dict, model: Optional[str] = None) -> dict:
+async def run_synthesis(
+    prompt: str,
+    input_data: dict,
+    model: Optional[str] = None,
+    max_tokens: int = 8192,
+) -> dict:
     """Run a synthesis prompt through Claude and return the result.
 
     Uses AsyncAnthropic for proper async execution, with timeout and
-    exponential-backoff retry logic (max 2 retries).
+    exponential-backoff retry logic (max 2 retries). `max_tokens` caps
+    the output size — shrink it for quick summarization tasks (e.g. the
+    chair-side discussion-prompt suggester) so they finish faster.
     """
     model = model or DEFAULT_MODEL
     client = _get_client()
@@ -46,7 +53,7 @@ async def run_synthesis(prompt: str, input_data: dict, model: Optional[str] = No
         try:
             message = await client.messages.create(
                 model=model,
-                max_tokens=8192,
+                max_tokens=max_tokens,
                 messages=[
                     {"role": "user", "content": prompt}
                 ],
@@ -419,5 +426,14 @@ async def suggest_discussion_prompts(
         chat_messages="\n".join(f"- {c}" for c in safe_chats),
         n=n,
     )
-    result = await run_synthesis(prompt, {})
+    # This is a light summarization task — use Sonnet (much faster than
+    # Opus) and a tight max_tokens cap. Three short discussion prompts
+    # fit well under 1024 tokens; the old default of 8192 was forcing
+    # Opus to plan for a much longer response.
+    result = await run_synthesis(
+        prompt,
+        {},
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+    )
     return _parse_prompt_array(result.get("output", ""))[:n]

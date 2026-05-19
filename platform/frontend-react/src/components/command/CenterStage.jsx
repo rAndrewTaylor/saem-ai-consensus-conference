@@ -254,8 +254,12 @@ function AiPromptSuggester({ sessionId, wgNumber }) {
     setError(null);
     setSuggestions([]);
     try {
+      // AI synthesis can take 30-60s on Anthropic's side; override the
+      // default 15s api() timeout so the spinner doesn't drop the call
+      // while the backend is still working.
       const d = await api(`/api/conference/ai/suggest-prompts?session_id=${sessionId}&n=3`, {
         method: 'POST',
+        timeoutMs: 90000,
       });
       setSuggestions(d?.suggestions || []);
       setMeta({ n_messages: d?.n_messages_used || 0 });
