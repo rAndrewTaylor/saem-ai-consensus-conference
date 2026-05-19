@@ -26,7 +26,6 @@ import {
   ListOrdered,
   Sliders,
   Send,
-  MessageSquare,
   Home, LayoutGrid,
   CheckCircle2,
   CheckCircle,
@@ -121,10 +120,9 @@ export function ConferencePage() {
   const [importanceValues, setImportanceValues] = useState({});
   const [importanceSubmitting, setImportanceSubmitting] = useState(false);
 
-  // Comment
-  const [commentType, setCommentType] = useState('general');
-  const [commentText, setCommentText] = useState('');
-  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  // Comments removed from the live voting page — the action while
+  // a session is open is the vote itself. Keep useless state out of
+  // memory.
 
   // ---------------------------------------------------------------------------
   // Fetch session + questions
@@ -263,29 +261,6 @@ export function ConferencePage() {
       toast({ message: err.message || 'Submission failed', type: 'error' });
     } finally {
       setImportanceSubmitting(false);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Comment handler
-  // ---------------------------------------------------------------------------
-
-  const submitComment = async () => {
-    if (!commentText.trim()) return;
-    setCommentSubmitting(true);
-    try {
-      const res = await queueSubmit({
-        url: `/api/conference/comment/${sessionId}`,
-        body: { comment_type: commentType, comment_text: commentText.trim() },
-        token,
-        kind: 'comment',
-      });
-      toast({ message: res?.queued ? 'Comment queued (will sync when online)' : 'Comment submitted!', type: 'success' });
-      setCommentText('');
-    } catch (err) {
-      toast({ message: err.message || 'Failed to submit comment', type: 'error' });
-    } finally {
-      setCommentSubmitting(false);
     }
   };
 
@@ -586,61 +561,10 @@ export function ConferencePage() {
         </AnimatePresence>
       </Tabs.Root>
 
-      {/* Comment section */}
-      <div className="mt-10">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-purple-400" />
-              Comments &amp; Feedback
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label htmlFor="comment-type" className="mb-1 block text-sm font-medium text-white/70">
-                Comment type
-              </label>
-              {/* Per dry-run direction (May 15): modifications happen post-
-                  conference for papers, not day-of. Comment-type narrowed
-                  to general feedback + 'new question' suggestion. */}
-              <select
-                id="comment-type"
-                value={commentType}
-                onChange={(e) => setCommentType(e.target.value)}
-                className="h-10 w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 text-sm text-white/90 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-              >
-                <option value="general">General comment</option>
-                <option value="new_question">Suggest a new question</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="comment-text" className="mb-1 block text-sm font-medium text-white/70">
-                Your comment
-              </label>
-              <textarea
-                id="comment-text"
-                rows={3}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Share your thoughts or propose a new question…"
-                className="w-full resize-none rounded-lg border border-white/[0.1] bg-white/[0.04] px-4 py-3 text-sm text-white/90 placeholder-white/30 transition focus:border-purple-400/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={submitComment}
-                loading={commentSubmitting}
-                disabled={!commentText.trim()}
-                size="sm"
-                className="gap-1.5"
-              >
-                <Send className="h-3.5 w-3.5" />
-                Submit Comment
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Comments removed from the live voting page — when a vote is
+          open, the only action is the vote itself. General feedback
+          channels (audience chat during panel discussion, post-conference
+          manuscript pipeline) cover everything this textarea used to. */}
       </div>
 
       {/* Audience chat is intentionally NOT rendered on the voting page
