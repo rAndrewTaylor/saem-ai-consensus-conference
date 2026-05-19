@@ -444,7 +444,11 @@ class ConferenceDisplayMode(Base):
     id = Column(Integer, primary_key=True)
     mode = Column(String(50), nullable=False, default="idle")
     slide_index = Column(Integer, nullable=True)  # for welcome deck
-    panel_tab = Column(String(20), nullable=True)  # for panel: results|vote|comparison
+    # Originally VARCHAR(20) — sized for panel-tab values like "results"
+    # or "vote". Widened to 200 so we can also encode the next-segment
+    # label for break mode ("10:15 AM · Panel 3 — Education & Training"
+    # and similar). See migration in _apply_additive_migrations.
+    panel_tab = Column(String(200), nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -597,6 +601,21 @@ def _apply_additive_migrations():
                         raise
         if added:
             log.info("Added missing questions columns: %s", added)
+
+    # conference_display_mode.panel_tab was originally VARCHAR(20) — too
+    # short for the "10:15 AM · Panel 3 — Education & Training" labels we
+    # now encode for break mode. Widen to VARCHAR(200) in place. Postgres
+    # widens varchar without rewriting the table.
+    if not is_sqlite and "conference_display_mode" in inspector.get_table_names():
+        with engine.begin() as conn:
+            try:
+                conn.execute(sa_text(
+                    "ALTER TABLE conference_display_mode "
+                    "ALTER COLUMN panel_tab TYPE VARCHAR(200)"
+                ))
+            except Exception:
+                log.exception("Failed to widen conference_display_mode.panel_tab")
+                raise
 
     # The conference vote row model stores one row per question. Older
     # deployments used a unique constraint that omitted question_id, which
