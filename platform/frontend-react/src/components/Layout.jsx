@@ -15,6 +15,7 @@ const NO_CHROME_PATTERNS = [
   /^\/vote\//,
   /^\/stage$/,
   /^\/command$/,
+  /^\/present\//,
 ];
 
 export function Layout({ children }) {

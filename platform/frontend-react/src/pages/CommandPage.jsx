@@ -20,6 +20,7 @@ import { useStageDisplay } from '@/components/stage/StageView';
 import { DayTimeline, modeForAgendaItem } from '@/components/command/DayTimeline';
 import { CenterStage } from '@/components/command/CenterStage';
 import { LiveSignal } from '@/components/command/LiveSignal';
+import { PriorityPresentationLinks } from '@/components/command/PriorityPresentationLinks';
 import { ExternalLink, LogOut, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
@@ -154,8 +155,9 @@ export function CommandPage() {
             onChange={stage.setDisplay}
           />
         </main>
-        <aside className="col-span-3 min-h-0">
+        <aside className="col-span-3 flex min-h-0 flex-col gap-4 overflow-y-auto">
           <LiveSignal mode={stage.mode} bus={stage.bus} />
+          <PriorityPresentationLinks />
         </aside>
       </div>
     </div>
