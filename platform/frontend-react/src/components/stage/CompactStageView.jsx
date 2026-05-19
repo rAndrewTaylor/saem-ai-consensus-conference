@@ -22,6 +22,8 @@ export function CompactStageView({ mode, slideIndex, panelTab, bus }) {
 
   const panelMatch = /^panel:(\d+)$/.exec(mode);
   if (panelMatch) return <CompactPanel wgNumber={parseInt(panelMatch[1], 10)} bus={bus} />;
+  const presentMatch = /^present:(\d+)$/.exec(mode);
+  if (presentMatch) return <CompactPresent wgNumber={parseInt(presentMatch[1], 10)} bus={bus} />;
   if (mode === 'idle') return <CompactIdle bus={bus} />;
   if (mode === 'welcome') return <CompactWelcome slideIndex={slideIndex || 0} />;
   if (mode === 'table_reactions') return <CompactTables bus={bus} />;
@@ -146,6 +148,72 @@ function CompactPanel({ wgNumber, bus }) {
             </div>
           </details>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ---- Priority presentation (2:50 PM, no voting yet) ---------------------
+
+function CompactPresent({ wgNumber, bus }) {
+  const [candidates, setCandidates] = useState(null);
+  useEffect(() => {
+    if (!wgNumber) return;
+    api(`/api/conference/panel/${wgNumber}/candidates`)
+      .then((d) => setCandidates(d?.questions || []))
+      .catch(() => setCandidates([]));
+  }, [wgNumber, bus]);
+
+  const accent = PILLAR_COLORS[wgNumber] || '#00B4D8';
+  const wgName = WG_LABELS[wgNumber] || `Working Group ${wgNumber}`;
+  const advanceLimit = wgNumber === 5 ? 5 : 4;
+  const advancing = (candidates || []).slice().sort((a, b) => {
+    if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
+    return (b.r2_include_pct ?? 0) - (a.r2_include_pct ?? 0);
+  }).slice(0, advanceLimit);
+
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+      <div className="flex items-center gap-3 p-4" style={{ backgroundColor: `${accent}15` }}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base font-bold"
+             style={{ backgroundColor: `${accent}30`, color: accent }}>
+          {wgNumber}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+            Priority presentation · live
+          </p>
+          <h2 className="text-sm font-bold text-white truncate">{wgName}</h2>
+        </div>
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-[11px] text-white/55">
+          The co-lead is presenting these {advanceLimit} questions. Voting opens at the cross-WG round.
+        </p>
+      </div>
+      <div className="space-y-2 px-4 pb-4">
+        {candidates === null && <p className="text-xs text-white/40">Loading…</p>}
+        {candidates !== null && advancing.length === 0 && (
+          <p className="rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 text-xs text-amber-200">
+            Co-lead hasn't curated the panel pool yet — chair can auto-feature top 4 from /command.
+          </p>
+        )}
+        {advancing.map((q, i) => (
+          <div key={q.id}
+               className="flex items-start gap-2 rounded-lg border p-2.5"
+               style={{ borderColor: `${accent}25`, backgroundColor: `${accent}08` }}>
+            <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[11px] font-bold"
+                  style={{ backgroundColor: `${accent}30`, color: accent }}>
+              {i + 1}
+            </span>
+            <p className="flex-1 text-xs leading-snug text-white/90 line-clamp-4">{q.text}</p>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-white/[0.04] bg-white/[0.02] px-4 py-2.5">
+        <p className="text-[10px] text-white/45">
+          You'll rank all {wgNumber === 5 ? 21 : 21} advancing questions across WG1–5 in the cross-WG vote next.
+        </p>
       </div>
     </div>
   );

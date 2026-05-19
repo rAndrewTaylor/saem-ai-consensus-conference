@@ -21,6 +21,7 @@ import { PanelStage } from '@/components/stage/PanelStage';
 import { TableReactionsStage } from '@/components/stage/TableReactionsStage';
 import { CrossWgStage } from '@/components/stage/CrossWgStage';
 import { BreakView } from '@/components/stage/BreakView';
+import { PresentWGStage } from '@/components/stage/PresentWGStage';
 
 const SSE_URL = '/api/events/day';
 
@@ -111,6 +112,8 @@ export function StageView({ mode, slideIndex, panelTab, bus, isAdmin, onChange, 
 
   const panelWgMatch = /^panel:(\d+)$/.exec(mode || '');
   const panelWgNumber = panelWgMatch ? parseInt(panelWgMatch[1], 10) : null;
+  const presentWgMatch = /^present:(\d+)$/.exec(mode || '');
+  const presentWgNumber = presentWgMatch ? parseInt(presentWgMatch[1], 10) : null;
   // Full-bleed projector mode: fill the parent flex slot. Compact mode
   // (embedded in /day) shrinks to content.
   const heightClass = compact ? '' : 'h-full overflow-hidden';
@@ -136,6 +139,7 @@ export function StageView({ mode, slideIndex, panelTab, bus, isAdmin, onChange, 
       {mode === 'table_reactions' && <TableReactionsStage bus={bus} />}
       {mode === 'cross_wg' && <CrossWgStage bus={bus} />}
       {mode === 'break' && <BreakView panelTab={panelTab} compact={compact} />}
+      {presentWgNumber && <PresentWGStage wgNumber={presentWgNumber} bus={bus} />}
     </div>
   );
 }

@@ -61,8 +61,22 @@ export function CommandPage() {
     if (stage.mode === 'table_reactions') return { label: 'Breakout', color: 'bg-amber-500/20 text-amber-300' };
     if (stage.mode === 'cross_wg') return { label: 'Cross-WG vote', color: 'bg-purple-500/20 text-purple-300' };
     if (stage.mode === 'break') return { label: 'On break', color: 'bg-slate-500/20 text-slate-200' };
+    const presentMatch = /^present:(\d+)$/.exec(stage.mode || '');
+    if (presentMatch) {
+      return { label: `Presenting WG ${presentMatch[1]}`, color: 'bg-cyan-500/20 text-cyan-200' };
+    }
     return { label: stage.mode, color: 'bg-white/[0.08] text-white/60' };
   })();
+
+  // Cycle helper for the 2:50 PM presentation slot (mode = 'present:N').
+  const presentWgNumber = (() => {
+    const m = /^present:(\d+)$/.exec(stage.mode || '');
+    return m ? parseInt(m[1], 10) : null;
+  })();
+  const goPresentWG = (n) => {
+    if (n < 1 || n > 5) return;
+    stage.setDisplay({ mode: `present:${n}` });
+  };
 
   const pickSegment = async ({ mode, item, nextItem }) => {
     // Build payload then dispatch through setDisplay. Done as an async
@@ -157,7 +171,7 @@ export function CommandPage() {
         </main>
         <aside className="col-span-3 flex min-h-0 flex-col gap-4 overflow-y-auto">
           <LiveSignal mode={stage.mode} bus={stage.bus} />
-          <PriorityPresentationLinks />
+          <PriorityPresentationLinks activeMode={stage.mode} onPickPresent={goPresentWG} />
         </aside>
       </div>
     </div>

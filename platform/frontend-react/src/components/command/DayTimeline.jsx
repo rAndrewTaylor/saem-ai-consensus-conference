@@ -32,8 +32,15 @@ const KIND_ICON = {
 /**
  * Map a day-state agenda item to a stage display mode.
  *
- * Note: break items return the literal 'break' mode so the audience
- * sees a "we're on break, back at X" view instead of the idle carousel.
+ * Notes:
+ * - break items return the literal 'break' mode so the audience sees
+ *   a "we're on break, back at X" view instead of the idle carousel.
+ * - presentation items (the 2:50 PM Priority Presentations slot) start
+ *   at present:1; the chair cycles through WG1→WG5 with Next/Prev in
+ *   /command. Each WG's slide is presented while the audience phone
+ *   shows the same 4 questions read-only (no voting until 3:35 PM).
+ * - results items map to cross_wg so the projector shows the final
+ *   ranked agenda after the cross-WG vote completes.
  */
 export function modeForAgendaItem(item) {
   if (!item) return 'idle';
@@ -41,7 +48,8 @@ export function modeForAgendaItem(item) {
   if (item.kind === 'panel' && item.wg) return `panel:${item.wg}`;
   if (item.kind === 'reaction' || item.kind === 'world_cafe') return 'table_reactions';
   if (item.kind === 'vote' && item.session_type === 'cross_wg_prioritization') return 'cross_wg';
-  if (item.kind === 'presentation' || item.kind === 'results') return 'cross_wg';
+  if (item.kind === 'presentation') return 'present:1';
+  if (item.kind === 'results') return 'cross_wg';
   if (item.kind === 'break') return 'break';
   return 'idle';
 }
@@ -58,8 +66,16 @@ export function DayTimeline({ activeMode, onPick }) {
 
   // Mark items relative to current time (Atlanta/ET). Simpler: just match
   // active mode to determine "now" — agenda times are approximate during
-  // the day anyway, the chair drives the actual segment.
-  const nowIdx = agenda.findIndex((a) => modeForAgendaItem(a) === activeMode);
+  // the day anyway, the chair drives the actual segment. For present:N
+  // (per-WG presentation cycling) any present:* mode highlights the
+  // single Priority Presentations row.
+  const isModeMatch = (item) => {
+    const m = modeForAgendaItem(item);
+    if (m === activeMode) return true;
+    if (item.kind === 'presentation' && /^present:\d+$/.test(activeMode || '')) return true;
+    return false;
+  };
+  const nowIdx = agenda.findIndex(isModeMatch);
 
   return (
     <div className="h-full overflow-y-auto rounded-2xl border border-white/[0.06] bg-[#0E1E35] p-3">
@@ -80,6 +96,7 @@ export function DayTimeline({ activeMode, onPick }) {
             ? agenda.slice(i + 1).find((a) => a.kind !== 'break')
             : null;
           const isBreak = item.kind === 'break';
+          const isPresentRow = item.kind === 'presentation';
           return (
             <li key={i}>
               <button
