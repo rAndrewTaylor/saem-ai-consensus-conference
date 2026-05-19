@@ -794,12 +794,6 @@ function FacetCarousel({ wgNumber, bus, accent }) {
 // audience's eye after they've read the question list on the left.
 
 const FIGURE_CYCLE_MS = 12_000;
-const IMPORTANCE_BUCKETS = [
-  { label: '1–3', min: 1, max: 3 },
-  { label: '3–5', min: 3, max: 5 },
-  { label: '5–7', min: 5, max: 7 },
-  { label: '7–9', min: 7, max: 9.01 },
-];
 
 function FigureCarousel({ wgNumber, bus, accent }) {
   const [data, setData] = useState(null);
@@ -818,53 +812,38 @@ function FigureCarousel({ wgNumber, bus, accent }) {
     [data]
   );
 
-  // Build per-figure datasets
-  const importanceBuckets = useMemo(() => {
-    return IMPORTANCE_BUCKETS.map((b) => ({
-      bucket: b.label,
-      count: questions.filter((q) => {
-        const v = q.r2_importance_mean ?? q.r1_importance_mean ?? null;
-        return v != null && v >= b.min && v < b.max;
-      }).length,
-    }));
-  }, [questions]);
-
-  // Per-question importance bar chart — sorted, with shift colored
-  const rankedRows = useMemo(() => questions
-    .filter((q) => q.r2_importance_mean != null)
+  // Consensus rows — every question with an R2 include% reading,
+  // sorted CONTESTED FIRST so the audience sees where the WG is still
+  // dividing. Color encodes "settled" (≥85%) vs "live debate" (50-84%)
+  // vs "low support" (<50%, rare since these typically got removed).
+  const consensusRows = useMemo(() => questions
+    .filter((q) => q.r2_include_pct != null)
     .map((q) => {
-      const r1 = q.r1_importance_mean;
+      const incl = q.r2_include_pct;
       const r2 = q.r2_importance_mean;
-      const shift = r1 != null && r2 != null ? r2 - r1 : null;
+      const tone = incl >= 85 ? 'settled' : incl >= 50 ? 'live' : 'low';
+      const fill = tone === 'settled' ? '#10b981' : tone === 'live' ? '#fbbf24' : '#f87171';
       return {
-        name: q.short_text || `Q${q.id}`,
+        id: q.id,
         text: q.text,
+        short: q.short_text || `Q${q.id}`,
+        include: incl,
         importance: r2,
-        shift,
-        // Bar color encodes shift direction
-        fill: shift == null
-          ? accent
-          : shift > 0.2 ? '#10b981'
-          : shift < -0.2 ? '#f87171'
-          : accent,
+        tone,
+        fill,
       };
     })
-    .sort((a, b) => (b.importance || 0) - (a.importance || 0))
-    .slice(0, 10),
-  [questions, accent]);
-
-  const shiftScatter = useMemo(() => questions
-    .filter((q) => q.r1_importance_mean != null && q.r2_importance_mean != null)
-    .map((q, i) => {
-      const r1 = q.r1_importance_mean;
-      const r2 = q.r2_importance_mean;
-      const diff = r2 - r1;
-      return {
-        x: r1,
-        y: r2,
-        label: q.short_text || `Q${i + 1}`,
-        fill: diff > 0.2 ? '#10b981' : diff < -0.2 ? '#f87171' : 'rgba(255,255,255,0.55)',
-      };
+    // contested first, then descending by importance within a tier
+    .sort((a, b) => {
+      // Live debate sorted by closeness-to-50, then settled by include desc
+      const tonePriority = { live: 0, settled: 1, low: 2 };
+      const tp = tonePriority[a.tone] - tonePriority[b.tone];
+      if (tp !== 0) return tp;
+      if (a.tone === 'live') {
+        // Most contested = closest to 50%
+        return Math.abs(a.include - 67) - Math.abs(b.include - 67);
+      }
+      return (b.include || 0) - (a.include || 0);
     }),
   [questions]);
 
@@ -890,55 +869,90 @@ function FigureCarousel({ wgNumber, bus, accent }) {
 
   const totalQs = questions.length;
 
+  // Process funnel counts for the "How we got here" infographic.
+  const funnelCounts = useMemo(() => {
+    // Active = anything in R2 that wasn't removed
+    const active = questions.length;
+    // Confirmed = strong consensus (≥85% include)
+    const confirmed = consensusRows.filter((r) => r.tone === 'settled').length;
+    // Live debate = 50–84% include
+    const live = consensusRows.filter((r) => r.tone === 'live').length;
+    // Removed = status === 'removed' from the original data
+    const removed = (data?.questions || []).filter((q) => q.status === 'removed').length;
+    return { active, confirmed, live, removed };
+  }, [questions, consensusRows, data]);
+
   const figures = useMemo(() => {
     const out = [];
 
-    // ── Infographic 1: top importance leaderboard ──
-    // Static, audience-readable from the back of the room. No hover.
-    if (rankedRows.length >= 1) {
+    // ── Infographic 1: Where consensus is still forming ──
+    // The most actionable view: which questions still divide the WG.
+    // Contested rows (50–84% include) appear first; settled rows last.
+    // Tells the audience where panel time should go AND prompts their
+    // own ranking on questions still in play.
+    if (consensusRows.length >= 1) {
       out.push({
-        key: 'ranked',
-        label: 'Top questions by R2 importance',
-        render: () => (
-          <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto">
-            {rankedRows.slice(0, 5).map((r, i) => (
-              <div
-                key={r.name + i}
-                className="rounded-xl border p-3"
-                style={{
-                  borderColor: `${r.fill}40`,
-                  backgroundColor: `${r.fill}10`,
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono text-base font-bold"
-                    style={{ backgroundColor: `${r.fill}30`, color: r.fill }}
-                  >
-                    {i + 1}
+        key: 'consensus',
+        label: 'Where consensus is still forming',
+        render: () => {
+          const live = consensusRows.filter((r) => r.tone === 'live');
+          const settled = consensusRows.filter((r) => r.tone === 'settled');
+          const renderRow = (r) => (
+            <div
+              key={r.id}
+              className="rounded-xl border p-2.5"
+              style={{ borderColor: `${r.fill}40`, backgroundColor: `${r.fill}0F` }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex shrink-0 flex-col items-center">
+                  <span className="font-mono text-2xl font-bold tabular-nums text-white">
+                    {Math.round(r.include)}
                   </span>
-                  <p className="min-w-0 flex-1 text-sm leading-snug text-white/90 line-clamp-3">
-                    {r.text}
-                  </p>
-                  <div className="flex shrink-0 flex-col items-end">
-                    <span className="font-mono text-2xl font-bold tabular-nums text-white">
-                      {Number(r.importance).toFixed(1)}
-                    </span>
-                    <span className="text-[9px] uppercase tracking-wider text-white/35">/ 9</span>
-                  </div>
+                  <span className="text-[8px] font-semibold uppercase tracking-wider" style={{ color: r.fill }}>
+                    % include
+                  </span>
                 </div>
+                <p className="min-w-0 flex-1 text-[12px] leading-snug text-white/90 line-clamp-3">
+                  {r.text}
+                </p>
               </div>
-            ))}
-          </div>
-        ),
+            </div>
+          );
+          return (
+            <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto">
+              {live.length > 0 && (
+                <div>
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                      Live debate · {live.length}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">{live.slice(0, 3).map(renderRow)}</div>
+                </div>
+              )}
+              {settled.length > 0 && (
+                <div className="mt-1">
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                      Settled consensus · {settled.length}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">{settled.slice(0, 2).map(renderRow)}</div>
+                </div>
+              )}
+            </div>
+          );
+        },
       });
     }
 
-    // ── Infographic 2: biggest R1→R2 shifts ──
+    // ── Infographic 2: Where minds changed (kept; tightened) ──
     if (topShifts.up.length || topShifts.down.length) {
       out.push({
         key: 'shift',
-        label: 'Biggest deliberation shifts',
+        label: 'Where minds changed (R1 → R2)',
         render: () => (
           <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto">
             <ShiftSection title="Warmed to" tone="emerald" items={topShifts.up} />
@@ -948,54 +962,58 @@ function FigureCarousel({ wgNumber, bus, accent }) {
       });
     }
 
-    // ── Infographic 3: importance distribution as four big numbers ──
-    if (importanceBuckets.some((b) => b.count > 0)) {
-      out.push({
-        key: 'distribution',
-        label: 'Importance distribution',
-        render: () => {
-          const totalCount = importanceBuckets.reduce((s, b) => s + b.count, 0) || totalQs || 1;
-          // Color ramp: low importance → cool, high importance → warm.
-          const tones = ['#94a3b8', '#60a5fa', '#fbbf24', accent];
-          return (
-            <div className="grid h-full grid-cols-2 gap-2.5">
-              {importanceBuckets.map((b, i) => {
-                const tone = tones[i] || accent;
-                const pct = Math.round((b.count / totalCount) * 100);
-                return (
+    // ── Infographic 3: How we got here (process funnel) ──
+    // Trust-building: shows the audience that today's slate is the
+    // refined output of weeks of WG deliberation. Big tabular numerals
+    // because the audience reads from across the ballroom.
+    out.push({
+      key: 'funnel',
+      label: 'How we got here',
+      render: () => {
+        const stages = [
+          { n: funnelCounts.active + funnelCounts.removed, label: 'Candidates after WG kickoff', tone: '#94a3b8' },
+          { n: funnelCounts.active, label: `Cleared R1 → advanced to R2`, tone: '#60a5fa' },
+          { n: funnelCounts.confirmed + funnelCounts.live, label: 'On today’s slate (panel pool)', tone: accent },
+          { n: 4, label: 'Advance to the cross-WG closing round', tone: '#10b981' },
+        ];
+        return (
+          <div className="flex h-full min-h-0 flex-col justify-center gap-2">
+            {stages.map((s, i) => {
+              // Funnel taper: each row visually narrower than the one above
+              const widthPct = 100 - i * 10;
+              return (
+                <div key={i} className="flex flex-col items-center">
                   <div
-                    key={b.bucket}
-                    className="flex flex-col justify-between rounded-xl border p-3"
-                    style={{ borderColor: `${tone}40`, backgroundColor: `${tone}10` }}
+                    className="flex w-full items-center justify-between rounded-xl border px-4 py-2.5"
+                    style={{
+                      width: `${widthPct}%`,
+                      borderColor: `${s.tone}45`,
+                      backgroundColor: `${s.tone}12`,
+                    }}
                   >
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: tone }}>
-                        Importance {b.bucket}
-                      </p>
-                      <p className="mt-2 font-mono text-4xl font-bold tabular-nums text-white sm:text-5xl">
-                        {b.count}
-                      </p>
-                      <p className="mt-1 text-[11px] text-white/55">
-                        {b.count === 1 ? 'question' : 'questions'} · {pct}%
-                      </p>
-                    </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: tone, opacity: 0.85 }}
-                      />
-                    </div>
+                    <span className="font-mono text-3xl font-bold tabular-nums text-white sm:text-4xl">
+                      {s.n}
+                    </span>
+                    <span className="ml-3 text-right text-[11px] leading-snug text-white/65 sm:text-xs">
+                      {s.label}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          );
-        },
-      });
-    }
+                  {i < stages.length - 1 && (
+                    <span className="my-0.5 text-white/30">▼</span>
+                  )}
+                </div>
+              );
+            })}
+            <p className="mt-2 text-center text-[10px] text-white/35">
+              Your phone vote picks the top 4 from today’s slate.
+            </p>
+          </div>
+        );
+      },
+    });
 
     return out;
-  }, [rankedRows, topShifts, importanceBuckets, accent, totalQs]);
+  }, [consensusRows, topShifts, funnelCounts, accent]);
 
   useEffect(() => {
     if (figures.length <= 1) return;
