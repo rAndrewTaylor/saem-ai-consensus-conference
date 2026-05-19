@@ -266,6 +266,7 @@ export function ConferenceDayPage() {
         <CompactStageView
           mode={stage.mode}
           slideIndex={stage.slideIndex}
+          panelTab={stage.panelTab}
           bus={stage.bus}
         />
       </section>

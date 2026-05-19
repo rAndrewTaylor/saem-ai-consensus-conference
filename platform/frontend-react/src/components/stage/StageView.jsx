@@ -20,6 +20,7 @@ import { WelcomeDeck } from '@/components/stage/WelcomeDeck';
 import { PanelStage } from '@/components/stage/PanelStage';
 import { TableReactionsStage } from '@/components/stage/TableReactionsStage';
 import { CrossWgStage } from '@/components/stage/CrossWgStage';
+import { BreakView } from '@/components/stage/BreakView';
 
 const SSE_URL = '/api/events/day';
 
@@ -133,6 +134,7 @@ export function StageView({ mode, slideIndex, panelTab, bus, isAdmin, onChange, 
       )}
       {mode === 'table_reactions' && <TableReactionsStage bus={bus} />}
       {mode === 'cross_wg' && <CrossWgStage bus={bus} />}
+      {mode === 'break' && <BreakView panelTab={panelTab} compact={compact} />}
     </div>
   );
 }

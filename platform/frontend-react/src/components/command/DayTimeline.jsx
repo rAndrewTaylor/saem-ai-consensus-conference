@@ -31,6 +31,9 @@ const KIND_ICON = {
 
 /**
  * Map a day-state agenda item to a stage display mode.
+ *
+ * Note: break items return the literal 'break' mode so the audience
+ * sees a "we're on break, back at X" view instead of the idle carousel.
  */
 export function modeForAgendaItem(item) {
   if (!item) return 'idle';
@@ -39,6 +42,7 @@ export function modeForAgendaItem(item) {
   if (item.kind === 'reaction' || item.kind === 'world_cafe') return 'table_reactions';
   if (item.kind === 'vote' && item.session_type === 'cross_wg_prioritization') return 'cross_wg';
   if (item.kind === 'presentation' || item.kind === 'results') return 'cross_wg';
+  if (item.kind === 'break') return 'break';
   return 'idle';
 }
 
@@ -70,10 +74,15 @@ export function DayTimeline({ activeMode, onPick }) {
           const isLive = mode === activeMode && i === nowIdx;
           const isDone = nowIdx >= 0 && i < nowIdx;
           const clickable = mode !== 'idle' || item.kind === 'break';
+          // For break segments, find the next non-break item so the
+          // BreakView can show participants when to come back.
+          const nextItem = item.kind === 'break'
+            ? agenda.slice(i + 1).find((a) => a.kind !== 'break')
+            : null;
           return (
             <li key={i}>
               <button
-                onClick={() => onPick && onPick({ mode, item })}
+                onClick={() => onPick && onPick({ mode, item, nextItem })}
                 disabled={!clickable && mode === 'idle' && item.kind !== 'break'}
                 className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
                   isLive

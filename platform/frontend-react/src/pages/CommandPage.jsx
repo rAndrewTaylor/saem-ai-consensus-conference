@@ -57,13 +57,27 @@ export function CommandPage() {
     if (/^panel:\d+$/.test(stage.mode)) return { label: 'Panel live', color: 'bg-emerald-500/20 text-emerald-300' };
     if (stage.mode === 'table_reactions') return { label: 'Breakout', color: 'bg-amber-500/20 text-amber-300' };
     if (stage.mode === 'cross_wg') return { label: 'Cross-WG vote', color: 'bg-purple-500/20 text-purple-300' };
+    if (stage.mode === 'break') return { label: 'On break', color: 'bg-slate-500/20 text-slate-200' };
     return { label: stage.mode, color: 'bg-white/[0.08] text-white/60' };
   })();
 
-  const pickSegment = ({ mode }) => {
-    if (mode === 'welcome') stage.setDisplay({ mode: 'welcome', slide_index: 0 });
-    else if (/^panel:\d+$/.test(mode)) stage.setDisplay({ mode, panel_tab: 'results' });
-    else stage.setDisplay({ mode });
+  const pickSegment = ({ mode, item, nextItem }) => {
+    if (mode === 'welcome') {
+      stage.setDisplay({ mode: 'welcome', slide_index: 0 });
+    } else if (/^panel:\d+$/.test(mode)) {
+      stage.setDisplay({ mode, panel_tab: 'results' });
+    } else if (mode === 'break') {
+      // Encode the next segment's time + title in panel_tab so the
+      // BreakView on the projector and audience phones can show
+      // "Back at 10:15 AM · Panel 3 — Education & Training" without
+      // a schema migration.
+      const next = nextItem
+        ? `${nextItem.time}${nextItem.title ? ' · ' + nextItem.title : ''}`
+        : '';
+      stage.setDisplay({ mode: 'break', panel_tab: next || null });
+    } else {
+      stage.setDisplay({ mode });
+    }
   };
 
   return (

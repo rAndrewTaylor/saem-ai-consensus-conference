@@ -15,8 +15,9 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WG_LABELS, PILLAR_COLORS, PANEL_PROMPTS } from '@/components/stage/panelConfig';
+import { BreakView } from '@/components/stage/BreakView';
 
-export function CompactStageView({ mode, slideIndex, bus }) {
+export function CompactStageView({ mode, slideIndex, panelTab, bus }) {
   if (!mode) return <Skeleton className="h-24 w-full rounded-xl" />;
 
   const panelMatch = /^panel:(\d+)$/.exec(mode);
@@ -25,6 +26,7 @@ export function CompactStageView({ mode, slideIndex, bus }) {
   if (mode === 'welcome') return <CompactWelcome slideIndex={slideIndex || 0} />;
   if (mode === 'table_reactions') return <CompactTables bus={bus} />;
   if (mode === 'cross_wg') return <CompactCrossWg bus={bus} />;
+  if (mode === 'break') return <BreakView panelTab={panelTab} compact />;
   return null;
 }
 
