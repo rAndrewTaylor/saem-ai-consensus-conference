@@ -22,6 +22,7 @@ import { CenterStage } from '@/components/command/CenterStage';
 import { LiveSignal } from '@/components/command/LiveSignal';
 import { ExternalLink, LogOut, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/toast';
 
 export function CommandPage() {
   usePageTitle('Command Center · May 21');
@@ -29,6 +30,7 @@ export function CommandPage() {
   const navigate = useNavigate();
   const stage = useStageDisplay(true /* assume admin for this page */);
   const [clock, setClock] = useState(new Date());
+  const toast = useToast();
 
   useEffect(() => {
     const t = setInterval(() => setClock(new Date()), 30_000);
@@ -61,11 +63,14 @@ export function CommandPage() {
     return { label: stage.mode, color: 'bg-white/[0.08] text-white/60' };
   })();
 
-  const pickSegment = ({ mode, item, nextItem }) => {
+  const pickSegment = async ({ mode, item, nextItem }) => {
+    // Build payload then dispatch through setDisplay. Done as an async
+    // wrapper so we can confirm via toast and surface backend errors.
+    let payload;
     if (mode === 'welcome') {
-      stage.setDisplay({ mode: 'welcome', slide_index: 0 });
+      payload = { mode: 'welcome', slide_index: 0 };
     } else if (/^panel:\d+$/.test(mode)) {
-      stage.setDisplay({ mode, panel_tab: 'results' });
+      payload = { mode, panel_tab: 'results' };
     } else if (mode === 'break') {
       // Encode the next segment's time + title in panel_tab so the
       // BreakView on the projector and audience phones can show
@@ -74,9 +79,20 @@ export function CommandPage() {
       const next = nextItem
         ? `${nextItem.time}${nextItem.title ? ' · ' + nextItem.title : ''}`
         : '';
-      stage.setDisplay({ mode: 'break', panel_tab: next || null });
+      payload = { mode: 'break', panel_tab: next || null };
     } else {
-      stage.setDisplay({ mode });
+      payload = { mode };
+    }
+    try {
+      await stage.setDisplay(payload);
+      // Confirmation toast — gives the chair feedback that the click
+      // landed even when the resulting view is on a different surface.
+      const label = mode === 'break'
+        ? (payload.panel_tab ? `On break — back at ${payload.panel_tab}` : 'On break')
+        : (item?.title || mode);
+      toast({ message: `Stage → ${label}`, type: 'success' });
+    } catch (err) {
+      toast({ message: `Couldn't switch stage: ${err.message || err}`, type: 'error' });
     }
   };
 

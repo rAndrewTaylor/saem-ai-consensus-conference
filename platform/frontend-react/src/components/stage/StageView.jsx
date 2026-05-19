@@ -87,12 +87,13 @@ export function useStageDisplay(isAdmin) {
       slide_index: patch.slide_index ?? null,
       panel_tab: patch.panel_tab ?? null,
     };
-    try {
-      await api('/api/conference/display-mode', { method: 'POST', body: payload });
-      setMode(payload.mode);
-      setSlideIndex(payload.slide_index);
-      setPanelTab(payload.panel_tab);
-    } catch (e) { /* no-op */ }
+    // Don't swallow backend errors — let the caller's toast / handler
+    // surface them. Optimistic local state update happens only on
+    // success so the timeline accurately reflects the persisted mode.
+    await api('/api/conference/display-mode', { method: 'POST', body: payload });
+    setMode(payload.mode);
+    setSlideIndex(payload.slide_index);
+    setPanelTab(payload.panel_tab);
   }, [mode, isAdmin]);
 
   return { mode, slideIndex, panelTab, bus, setDisplay, isLoaded };
