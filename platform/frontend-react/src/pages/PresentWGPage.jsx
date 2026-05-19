@@ -31,21 +31,31 @@ export function PresentWGPage() {
   const [err, setErr] = useState(null);
 
   useEffect(() => {
-    if (!wgNumber) return;
+    if (!wgNumber || Number.isNaN(wgNumber)) {
+      setErr('Invalid WG number in URL.');
+      return undefined;
+    }
     let cancelled = false;
     (async () => {
-      try {
-        const [wgs, panel, results] = await Promise.all([
-          api('/api/surveys/working-groups'),
-          api(`/api/conference/panel/${wgNumber}/candidates`),
-          api(`/api/surveys/results/${wgNumber}/round_2`),
-        ]);
-        if (cancelled) return;
-        setWg((wgs || []).find((w) => w.wg_number === wgNumber) || null);
-        setCandidates(panel?.questions || []);
-        setR2(results || null);
-      } catch (e) {
-        if (!cancelled) setErr(e.message || 'Failed to load');
+      // Fetch independently — if one source fails the rest still
+      // render. Previously these were Promise.all'd, so a single
+      // 500 or network glitch on any leg blanked the whole slide.
+      const safe = async (url) => {
+        try { return await api(url); } catch (e) { return { __error: e }; }
+      };
+      const [wgs, panel, results] = await Promise.all([
+        safe('/api/surveys/working-groups'),
+        safe(`/api/conference/panel/${wgNumber}/candidates`),
+        safe(`/api/surveys/results/${wgNumber}/round_2`),
+      ]);
+      if (cancelled) return;
+      const wgsList = Array.isArray(wgs) ? wgs : (wgs?.__error ? [] : (wgs || []));
+      setWg(wgsList.find((w) => w?.wg_number === wgNumber) || null);
+      setCandidates(panel?.__error ? [] : (panel?.questions || []));
+      setR2(results?.__error ? null : (results || null));
+      // Only show a fatal error if EVERYTHING failed.
+      if (wgs?.__error && panel?.__error && results?.__error) {
+        setErr(`Couldn't load WG ${wgNumber}: ${wgs.__error.message || 'network error'}`);
       }
     })();
     return () => { cancelled = true; };
@@ -92,11 +102,14 @@ export function PresentWGPage() {
   if (err) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A1628] text-white">
-        <p className="text-sm text-rose-300">Couldn't load WG {wgNumber}: {err}</p>
+        <p className="text-sm text-rose-300">{err}</p>
       </div>
     );
   }
-  if (!wg || !candidates) {
+  if (candidates === null) {
+    // Still fetching — render a calm loading state. We don't gate on `wg`
+    // separately because the panel/candidates endpoint is the one that
+    // matters most for the slide; WG metadata has a friendly fallback.
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A1628] text-white">
         <p className="text-sm text-white/40">Loading WG {wgNumber}…</p>
@@ -104,8 +117,11 @@ export function PresentWGPage() {
     );
   }
 
-  const friendlyName = WG_LABELS[wgNumber] || wg.name;
-  const scope = (wg.scope || '').split('.')[0]; // first sentence
+  // Friendly name + scope, both defensive against missing wg metadata.
+  const friendlyName = WG_LABELS[wgNumber] || wg?.name || `Working Group ${wgNumber}`;
+  const rawScope = wg?.scope || '';
+  const scope = rawScope.split('.')[0];
+  const pillar = wg?.pillar || '';
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0A1628] text-white">
@@ -125,7 +141,7 @@ export function PresentWGPage() {
         <div className="relative mx-auto max-w-7xl">
           <div className="flex items-baseline gap-4">
             <p className="text-[12px] font-semibold uppercase tracking-[0.3em]" style={{ color: accent }}>
-              WG {wgNumber} · {wg.pillar} pillar
+              WG {wgNumber}{pillar ? ` · ${pillar} pillar` : ''}
             </p>
           </div>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-6xl">
