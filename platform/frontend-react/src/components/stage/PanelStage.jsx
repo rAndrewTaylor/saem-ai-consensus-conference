@@ -197,14 +197,17 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
         );
       })()}
 
-      {/* Body: three columns — text/questions (L), figures (M), chat (R).
-          On the Vote and Comparison tabs the left+middle merge so the
-          live tally / shift comparison gets the full visual width.
-          Each section gets a slightly different tint so participants
-          can navigate visually at a glance. */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1fr_1.1fr_1fr]">
-        {/* LEFT — questions + text insights, two stacked cycling panels */}
-        {effectivePanelTab === 'results' ? (
+      {/* Body layout.
+          - Results tab: three columns — text/questions (L), figures (M),
+            audience word-cloud + chat (R). Everything the audience is
+            saying lives on the right so the room can see it.
+          - Vote tab: full-width VoteView. The room is voting, not
+            chatting; chat + word cloud would compete with the ranked
+            leaderboard for attention. We hide them.
+          - Comparison tab: full width too (pre/post deliberation read). */}
+      {effectivePanelTab === 'results' ? (
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1fr_1.1fr_1fr]">
+          {/* LEFT — questions + text insights, two stacked cycling panels */}
           <div className="flex h-full min-h-0 flex-col gap-3 border-r border-white/[0.06] px-5 pb-3">
             <div
               className="flex min-h-0 flex-[1.6] flex-col rounded-2xl border p-3"
@@ -219,27 +222,8 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
               <FacetCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
             </div>
           </div>
-        ) : (
-          // Vote / Comparison: take the full left+middle width
-          <div className="col-span-2 flex h-full min-h-0 flex-col border-r border-white/[0.06] px-6 pb-3">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={effectivePanelTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
-                className="flex min-h-0 flex-1 flex-col"
-              >
-                {effectivePanelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} />}
-                {effectivePanelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        )}
 
-        {/* MIDDLE — figures (only on results tab; vote/compare take this col) */}
-        {effectivePanelTab === 'results' && (
+          {/* MIDDLE — figures */}
           <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-5 pb-3">
             <div
               className="flex h-full min-h-0 flex-col rounded-2xl border p-3"
@@ -248,24 +232,41 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
               <FigureCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
             </div>
           </div>
-        )}
 
-        {/* RIGHT — word cloud on top, chat takes the rest */}
-        <div className="flex h-full min-h-0 flex-col gap-3 px-4 pb-3">
-          <div
-            className="h-[160px] shrink-0 rounded-2xl border p-2"
-            style={{ borderColor: 'rgba(252, 211, 77, 0.18)', backgroundColor: 'rgba(252, 211, 77, 0.05)' }}
-          >
-            <WordCloud sessionId={sessionId} bus={bus} accent={accent} />
-          </div>
-          <div
-            className="min-h-0 flex-1 overflow-hidden rounded-2xl border p-2"
-            style={{ borderColor: 'rgba(248, 113, 113, 0.18)', backgroundColor: 'rgba(248, 113, 113, 0.05)' }}
-          >
-            <ChatSidebar sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} isAdmin={isAdmin} />
+          {/* RIGHT — word cloud on top, chat takes the rest */}
+          <div className="flex h-full min-h-0 flex-col gap-3 px-4 pb-3">
+            <div
+              className="h-[160px] shrink-0 rounded-2xl border p-2"
+              style={{ borderColor: 'rgba(252, 211, 77, 0.18)', backgroundColor: 'rgba(252, 211, 77, 0.05)' }}
+            >
+              <WordCloud sessionId={sessionId} bus={bus} accent={accent} />
+            </div>
+            <div
+              className="min-h-0 flex-1 overflow-hidden rounded-2xl border p-2"
+              style={{ borderColor: 'rgba(248, 113, 113, 0.18)', backgroundColor: 'rgba(248, 113, 113, 0.05)' }}
+            >
+              <ChatSidebar sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} isAdmin={isAdmin} />
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        // Vote / Comparison: single column, full width, no chat / cloud.
+        <div className="flex min-h-0 flex-1 flex-col px-8 pb-3">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={effectivePanelTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              {effectivePanelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} />}
+              {effectivePanelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
