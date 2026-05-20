@@ -27,7 +27,10 @@ function getStoredPreviewSize() {
     const v = localStorage.getItem(PREVIEW_SIZE_KEY);
     if (v === 'compact' || v === 'expanded' || v === 'hidden') return v;
   } catch { /* localStorage may be blocked */ }
-  return 'compact';
+  // Default to hidden — the toolbar still shows "Live on projector: <mode>"
+  // so the chair has confirmation, without the iframe eating vertical space
+  // and rendering text too small to read at compact size.
+  return 'hidden';
 }
 
 const WG_NAMES = {
@@ -146,18 +149,23 @@ function StagePreview() {
 // ---- Banner / status -----------------------------------------------------
 
 function ModeBanner({ mode, slideIndex, panelWg }) {
+  const presentMatch = /^present:(\d+)$/.exec(mode || '');
   const label = (() => {
     if (panelWg) return `Panel ${panelWg} — ${WG_NAMES[panelWg]}`;
+    if (presentMatch) return `Priority Presentation · WG ${presentMatch[1]} — ${WG_NAMES[parseInt(presentMatch[1], 10)] || ''}`;
     if (mode === 'idle') return 'Idle — auto-rotating dashboard';
     if (mode === 'welcome') return `Welcome slide ${(slideIndex || 0) + 1} of 6`;
     if (mode === 'table_reactions') return 'Table reactions — breakout';
     if (mode === 'cross_wg') return 'Cross-WG prioritization';
+    if (mode === 'break') return 'On break';
     return mode || '—';
   })();
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Current mode</p>
-      <p className="mt-0.5 text-sm font-semibold text-white">{label}</p>
+    <div className="rounded-xl border border-cyan-400/25 bg-cyan-500/[0.06] px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-cyan-300/85">
+        Current segment
+      </p>
+      <p className="mt-0.5 text-base font-bold text-white sm:text-lg">{label}</p>
     </div>
   );
 }
@@ -233,53 +241,139 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
     onChange?.(next);
   };
 
-  return (
-    <div className="space-y-2">
-      <PanelPoolCurator key={wgNumber} wgNumber={wgNumber} />
-
-      <ActionRow>
-        {/* Tab switcher for what's shown on the projector */}
-        <TabBtn active={panelTab === 'results'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'results' })} icon={BarChart3}>Results</TabBtn>
-        <TabBtn active={panelTab === 'vote'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'vote' })} icon={Vote}>Live Vote</TabBtn>
-        <TabBtn active={panelTab === 'comparison'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'comparison' })} icon={Repeat}>Pre/Post</TabBtn>
-      </ActionRow>
-
-      {session && (
-        <ActionRow>
-          {!session.is_active ? (
-            <PrimaryAction onClick={start} icon={Play}>Start vote</PrimaryAction>
-          ) : (
-            <>
-              <SecondaryAction onClick={togglePhase} icon={RotateCcw}>
-                Phase: {session.phase === 'pre_discussion' ? 'Pre-discussion (toggle to Post)' : 'Post-discussion (toggle to Pre)'}
-              </SecondaryAction>
-              <DangerAction onClick={stop} icon={Square}>Stop vote</DangerAction>
-            </>
-          )}
-          <span className="ml-auto rounded-md bg-white/[0.04] px-2 py-1 font-mono text-[10px] text-white/50">
-            session {session.id}
-          </span>
-        </ActionRow>
+  // Status pill — phase + active state, in one place
+  const statusPill = session && (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+        session.is_active
+          ? 'bg-emerald-500/20 text-emerald-300'
+          : 'bg-white/[0.06] text-white/55'
+      }`}
+    >
+      {session.is_active ? (
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+      ) : null}
+      {session.is_active ? 'Vote open' : 'Vote closed'}
+      {session.phase && (
+        <span className="text-white/55">·</span>
       )}
+      {session.phase && (
+        <span className="font-normal capitalize text-white/75">
+          {session.phase === 'pre_discussion' ? 'pre-discussion' : 'post-discussion'}
+        </span>
+      )}
+    </span>
+  );
 
+  return (
+    <div className="space-y-3">
+      {/* 1. PRIMARY ACTION — the thing the chair came here to click. Big, prominent. */}
+      <SectionGroup title="Primary action" rightSlot={statusPill}>
+        {session ? (
+          !session.is_active ? (
+            <BigButton onClick={start} icon={Play} tone="emerald">
+              Start vote for WG {wgNumber}
+            </BigButton>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <BigButton onClick={stop} icon={Square} tone="rose">
+                Stop vote
+              </BigButton>
+              <SecondaryAction onClick={togglePhase} icon={RotateCcw}>
+                Toggle phase → {session.phase === 'pre_discussion' ? 'Post-discussion' : 'Pre-discussion'}
+              </SecondaryAction>
+            </div>
+          )
+        ) : (
+          <p className="text-xs text-white/40">No session record for this WG.</p>
+        )}
+      </SectionGroup>
+
+      {/* 2. TRANSITION — move forward when the segment is done. */}
+      <SectionGroup title="When this panel is done">
+        <ActionRow>
+          <SecondaryAction onClick={() => transition({ mode: 'table_reactions' })} icon={ArrowRight}>
+            Move to breakout
+          </SecondaryAction>
+          {wgNumber < 5 && (
+            <PrimaryAction onClick={() => transition({ mode: `panel:${wgNumber + 1}`, panel_tab: 'results' })} icon={ArrowRight}>
+              Next: Panel {wgNumber + 1}
+            </PrimaryAction>
+          )}
+          {wgNumber === 5 && (
+            <PrimaryAction onClick={() => transition({ mode: 'cross_wg' })} icon={ArrowRight}>
+              Move to Cross-WG vote
+            </PrimaryAction>
+          )}
+        </ActionRow>
+      </SectionGroup>
+
+      {/* 3. PROJECTOR TAB — what's displayed on the screen. Small. */}
+      <SectionGroup title="Projector view">
+        <ActionRow>
+          <TabBtn active={panelTab === 'results'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'results' })} icon={BarChart3}>Results</TabBtn>
+          <TabBtn active={panelTab === 'vote'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'vote' })} icon={Vote}>Live Vote</TabBtn>
+          <TabBtn active={panelTab === 'comparison'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'comparison' })} icon={Repeat}>Pre/Post</TabBtn>
+        </ActionRow>
+      </SectionGroup>
+
+      {/* 4. AI prompt suggester — collapsed control. */}
       {session && <AiPromptSuggester sessionId={session.id} wgNumber={wgNumber} />}
 
-      <ActionRow>
-        <SecondaryAction onClick={() => transition({ mode: 'table_reactions' })} icon={ArrowRight}>
-          Move to breakout
-        </SecondaryAction>
-        {wgNumber < 5 && (
-          <PrimaryAction onClick={() => transition({ mode: `panel:${wgNumber + 1}`, panel_tab: 'results' })} icon={ArrowRight}>
-            Next: Panel {wgNumber + 1}
-          </PrimaryAction>
-        )}
-        {wgNumber === 5 && (
-          <PrimaryAction onClick={() => transition({ mode: 'cross_wg' })} icon={ArrowRight}>
-            Move to Cross-WG vote
-          </PrimaryAction>
-        )}
-      </ActionRow>
+      {/* 5. PANEL POOL — pre-curation, collapsed by default. */}
+      <CollapsibleSection title="Panel pool (curate the questions audience will rank)" defaultOpen={false}>
+        <PanelPoolCurator key={wgNumber} wgNumber={wgNumber} />
+      </CollapsibleSection>
     </div>
+  );
+}
+
+// ---- Section primitives -------------------------------------------------
+
+function SectionGroup({ title, rightSlot, children }) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{title}</p>
+        {rightSlot}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CollapsibleSection({ title, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-white/[0.02]"
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{title}</p>
+        {open ? <ChevronUp className="h-3.5 w-3.5 text-white/40" /> : <ChevronDown className="h-3.5 w-3.5 text-white/40" />}
+      </button>
+      {open && <div className="border-t border-white/[0.06] p-3">{children}</div>}
+    </div>
+  );
+}
+
+function BigButton({ onClick, icon: Icon, tone = 'emerald', children }) {
+  const toneCls = {
+    emerald: 'bg-emerald-500 hover:bg-emerald-400 text-white',
+    rose: 'bg-rose-500 hover:bg-rose-400 text-white',
+    cyan: 'bg-[#00B4D8] hover:bg-[#48CAE4] text-white',
+  }[tone] || 'bg-emerald-500 hover:bg-emerald-400 text-white';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-base font-bold shadow-sm transition ${toneCls}`}
+    >
+      {Icon && <Icon className="h-5 w-5" />}
+      {children}
+    </button>
   );
 }
 
