@@ -18,7 +18,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useTheme } from '@/hooks/useTheme';
-import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, BarChart3, Vote, Repeat, ArrowRight, Sparkles, X, Copy, Monitor, CheckCircle2, Trash2 } from 'lucide-react';
+import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ExternalLink, BarChart3, Vote, Repeat, ArrowRight, Sparkles, X, Copy, Monitor, CheckCircle2, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+
+// Remember the chair's preferred preview size across sessions
+const PREVIEW_SIZE_KEY = 'saem_command_preview_size';
+function getStoredPreviewSize() {
+  try {
+    const v = localStorage.getItem(PREVIEW_SIZE_KEY);
+    if (v === 'compact' || v === 'expanded' || v === 'hidden') return v;
+  } catch { /* localStorage may be blocked */ }
+  return 'compact';
+}
 
 const WG_NAMES = {
   1: 'Clinical Practice & Operations',
@@ -56,6 +66,28 @@ function StagePreview() {
   // remounts on toggle (cheaper than postMessage for this scale).
   const { theme } = useTheme();
   const src = `/stage?theme=${theme}&minimal=1`;
+
+  // Three sizes — chair preference persists in localStorage:
+  //   compact:  small fixed-height crop (default — frees vertical space
+  //             so the timeline, action buttons, and right sidecars are
+  //             all visible without scrolling)
+  //   expanded: full 16:9 aspect-video (when chair wants a clean preview)
+  //   hidden:   collapsed toolbar only — chair relies on the projector
+  //             in the room and reclaims the entire center column
+  const [size, setSize] = useState(() => getStoredPreviewSize());
+  const updateSize = (next) => {
+    setSize(next);
+    try { localStorage.setItem(PREVIEW_SIZE_KEY, next); } catch { /* blocked */ }
+  };
+
+  const cycleLabel = size === 'expanded' ? 'Shrink' : size === 'compact' ? 'Hide' : 'Show';
+  const CycleIcon = size === 'expanded' ? Minimize2 : size === 'compact' ? ChevronUp : ChevronDown;
+  const onCycle = () => {
+    if (size === 'expanded') updateSize('compact');
+    else if (size === 'compact') updateSize('hidden');
+    else updateSize('expanded');
+  };
+
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-black overflow-hidden">
       {/* External toolbar — sits above the iframe so it never covers
@@ -65,25 +97,48 @@ function StagePreview() {
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
           Live on projector
         </span>
-        <a
-          href="/stage"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-white/60 hover:bg-white/[0.06] hover:text-white"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Open in new window
-        </a>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onCycle}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-white/60 hover:bg-white/[0.06] hover:text-white"
+            title={`${cycleLabel} preview`}
+          >
+            <CycleIcon className="h-3 w-3" />
+            {cycleLabel}
+          </button>
+          {size !== 'expanded' && (
+            <button
+              type="button"
+              onClick={() => updateSize('expanded')}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-white/60 hover:bg-white/[0.06] hover:text-white"
+              title="Expand preview to 16:9"
+            >
+              <Maximize2 className="h-3 w-3" />
+            </button>
+          )}
+          <a
+            href="/stage"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-white/60 hover:bg-white/[0.06] hover:text-white"
+          >
+            <ExternalLink className="h-3 w-3" />
+            New window
+          </a>
+        </div>
       </div>
-      <div className="aspect-video w-full">
-        <iframe
-          key={theme}
-          title="Stage preview"
-          src={src}
-          className="h-full w-full"
-          style={{ border: 0 }}
-        />
-      </div>
+      {size !== 'hidden' && (
+        <div className={size === 'expanded' ? 'aspect-video w-full' : 'h-32 w-full sm:h-36'}>
+          <iframe
+            key={theme}
+            title="Stage preview"
+            src={src}
+            className="h-full w-full"
+            style={{ border: 0 }}
+          />
+        </div>
+      )}
     </div>
   );
 }
