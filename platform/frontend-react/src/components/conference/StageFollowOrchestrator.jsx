@@ -181,6 +181,9 @@ export function StageFollowOrchestrator() {
       } else if (mode === 'cross_wg') {
         scheduleNav('/day#cross-wg', 1500,
           'Closing round — back to agenda.');
+      } else if (mode === 'final_synthesis') {
+        scheduleNav('/day', 1500,
+          'Closing synthesis — back to agenda.');
       } else if (/^present:(\d+)$/.test(mode || '')) {
         const wg = mode.split(':')[1];
         scheduleNav('/day', 1500,

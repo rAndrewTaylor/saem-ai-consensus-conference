@@ -249,8 +249,12 @@ export function ConferenceDayPage() {
   // session, show the cross-WG card (preview of the advancing pool).
   // Once started, the InlineVoteCard auto-renders for the active session.
   const inCrossWgMode = stage.mode === 'cross_wg';
+  // Final synthesis (4:05 PM): audience phone shows the same closing
+  // markdown the projector is rendering — focused, no agenda below.
+  const inFinalSynthMode = stage.mode === 'final_synthesis';
   const focusedMode = !isPrint && (
-    inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode || inPresentMode || inCrossWgMode
+    inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode
+    || inPresentMode || inCrossWgMode || inFinalSynthMode
   );
 
   if (loading && !data) {
@@ -361,6 +365,16 @@ export function ConferenceDayPage() {
                   />
                 </div>
               )}
+            </SafeBoundary>
+          )}
+          {inFinalSynthMode && (
+            <SafeBoundary label="FinalSynthesis(focused)">
+              <CompactStageView
+                mode={stage.mode}
+                slideIndex={stage.slideIndex}
+                panelTab={stage.panelTab}
+                bus={stage.bus}
+              />
             </SafeBoundary>
           )}
         </section>

@@ -29,6 +29,7 @@ export function CompactStageView({ mode, slideIndex, panelTab, bus }) {
   if (mode === 'table_reactions') return <CompactTables bus={bus} />;
   if (mode === 'world_cafe') return <CompactWorldCafe bus={bus} />;
   if (mode === 'cross_wg') return <CompactCrossWg bus={bus} />;
+  if (mode === 'final_synthesis') return <CompactSynthesis bus={bus} />;
   if (mode === 'break') return <BreakView panelTab={panelTab} compact />;
   return null;
 }
@@ -239,6 +240,43 @@ function CompactTables() {
       <p className="mt-2 text-xs text-white/55">
         Discuss with your table. Facilitators: submit your notes from the form below.
       </p>
+    </div>
+  );
+}
+
+// Audience phone version of the final synthesis card. Pulls the same
+// markdown the projector renders and shows the room a readable preview;
+// regen is admin-only and lives on the projector flow.
+function CompactSynthesis({ bus }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    api('/api/conference/synthesis/latest')
+      .then((d) => setData(d?.markdown ? d : null))
+      .catch(() => setData(null));
+  }, [bus]);
+  return (
+    <div className="rounded-2xl border border-amber-400/30 bg-amber-500/[0.04] p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">Closing synthesis</p>
+      <h2 className="mt-1 text-base font-bold text-white">Final results &amp; synthesis</h2>
+      {!data && (
+        <p className="mt-2 text-xs text-white/55">
+          The chair will draft the room's closing synthesis in a moment — appears here once generated.
+        </p>
+      )}
+      {data && (
+        <>
+          <p className="mt-2 text-[10px] text-white/45">
+            Drafted at {new Date(data.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+          </p>
+          <div className="mt-3 max-h-[60vh] overflow-y-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-3 text-[13px] leading-relaxed text-white/85">
+            {data.markdown.split(/\n+/).slice(0, 60).map((line, i) => (
+              <p key={i} className={line.startsWith('## ') ? 'mt-3 text-amber-200 font-bold' : line.startsWith('### ') ? 'mt-2 text-white font-semibold' : 'mt-1'}>
+                {line.replace(/^#+\s*/, '')}
+              </p>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

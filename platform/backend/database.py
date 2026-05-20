@@ -432,6 +432,26 @@ class ConferenceChatUpvote(Base):
     )
 
 
+class ConferenceSynthesis(Base):
+    """Final synthesis document drafted at 4:05 PM from the day's
+    cross-WG vote + comments / chat / breakout notes + per-WG context.
+    Append-only — every regeneration writes a new row so the chair can
+    see history if Claude's output drifts run-to-run.
+    """
+    __tablename__ = "conference_synthesis"
+
+    id = Column(Integer, primary_key=True)
+    markdown = Column(Text, nullable=False)
+    model = Column(String(80))
+    input_token_count = Column(Integer)
+    output_token_count = Column(Integer)
+    n_questions = Column(Integer)
+    n_breakout_notes = Column(Integer)
+    n_chat_messages = Column(Integer)
+    n_comments = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class ConferenceDisplayMode(Base):
     """Singleton — which mode the projector / audience view is showing.
 

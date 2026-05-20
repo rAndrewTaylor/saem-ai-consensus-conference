@@ -14,7 +14,7 @@ from ..database import (
     get_db, WorkingGroup, Question, Participant, ConferenceSession,
     ConferenceVote, ConferenceComment, BreakoutNote, QuestionStatus,
     ConferenceChatMessage, ConferenceChatUpvote, ConferenceDisplayMode,
-    AuditLog, CoLead, write_audit_log,
+    ConferenceSynthesis, AuditLog, CoLead, write_audit_log,
 )
 from ..auth import (
     require_admin, get_participant_token, verify_participant_token,
@@ -1747,3 +1747,334 @@ def ai_clear_prompts(
     )
     _publish_day("ai_prompts_changed", {"session_id": body.session_id, "prompts": []})
     return {"session_id": body.session_id, "prompts": []}
+
+
+# --- Final synthesis (4:05 PM "Final results & synthesis" agenda step) -----
+
+# One-paragraph background framing for each WG. Loaded into the prompt
+# so Claude can ground the synthesis in each WG's stated scope rather
+# than re-inferring it from the question text. Keep these short and
+# concrete — they're context, not output.
+WG_BACKGROUND = {
+    1: (
+        "Clinical Practice & Operations — how AI tools land in ED workflows: "
+        "clinical decision support, throughput, staffing allocation, "
+        "implementation, governance, and post-market monitoring."
+    ),
+    2: (
+        "Infrastructure & Data — the technical substrate underneath ED AI: "
+        "data quality, validation, monitoring for drift, interoperability, "
+        "build-vs-buy, evidence requirements, and regulatory pathways."
+    ),
+    3: (
+        "Education, Training & Competency — preparing the EM workforce: "
+        "curricular integration, faculty development, learner assessment, "
+        "AI literacy as a core competency, and CME for practicing clinicians."
+    ),
+    4: (
+        "Human-AI Interaction & Perception of Self — clinician trust, "
+        "cognitive integration, automation-bias mitigation, professional "
+        "identity, patient consent / disclosure, and the clinician-patient "
+        "relationship under AI augmentation."
+    ),
+    5: (
+        "Ethics, Legal & Societal — bias, equity for understudied "
+        "populations, liability, transparency, regulatory and policy "
+        "frameworks, and the societal implications of widespread ED AI."
+    ),
+}
+
+
+def _gather_synthesis_inputs(db: Session) -> dict:
+    """Pull together everything the final synthesis prompt needs:
+    cross-WG ranked questions, all breakout notes, all chat messages,
+    all comments, per-WG question pools. Returns a structured dict.
+    """
+    wgs = {w.id: w for w in db.query(WorkingGroup).all()}
+
+    # Cross-WG ranked questions (live tally)
+    cross = (
+        db.query(ConferenceSession)
+        .filter(ConferenceSession.session_type == "cross_wg_prioritization")
+        .first()
+    )
+    cross_ranked = []
+    if cross:
+        try:
+            res = get_session_results(cross.id, db)
+            for r in res.get("results", []):
+                if (r.get("vote_type") or "").startswith("ranking"):
+                    cross_ranked.append({
+                        "question_id": r["question_id"],
+                        "text": r["text"],
+                        "wg_number": r.get("wg_number"),
+                        "avg_rank": r.get("avg_rank"),
+                        "n_votes": r.get("n_votes"),
+                    })
+            cross_ranked.sort(key=lambda r: (r["avg_rank"] is None, r["avg_rank"] or 999))
+        except Exception:
+            pass
+
+    # Per-WG advancing questions (the curated panel pool, in case the
+    # cross-WG vote hasn't happened yet)
+    per_wg_questions = []
+    for wg in db.query(WorkingGroup).order_by(WorkingGroup.number).all():
+        sess = (
+            db.query(ConferenceSession)
+            .filter(
+                ConferenceSession.wg_id == wg.id,
+                ConferenceSession.session_type == "wg_presentation",
+            )
+            .first()
+        )
+        if not sess:
+            continue
+        try:
+            qs = get_session_questions(sess.id, db).get("questions", [])
+        except Exception:
+            qs = []
+        per_wg_questions.append({
+            "wg_number": wg.number,
+            "wg_name": wg.short_name or wg.pillar,
+            "questions": [{"id": q["id"], "text": q["text"]} for q in qs],
+        })
+
+    # All breakout notes
+    notes = db.query(BreakoutNote).order_by(BreakoutNote.id).all()
+    breakout_notes = [{
+        "session_id": n.session_id,
+        "table_number": n.table_number,
+        "facilitator": n.facilitator_name,
+        "themes": n.themes,
+        "agreements": n.agreements,
+        "disagreements": n.disagreements,
+        "surprises": n.surprises,
+        "suggestions": n.suggestions,
+    } for n in notes]
+
+    # All chat messages (panel discussion threads)
+    chats = (
+        db.query(ConferenceChatMessage)
+        .filter(ConferenceChatMessage.hidden == False)  # noqa: E712
+        .order_by(ConferenceChatMessage.id)
+        .all()
+    )
+    # Attach the wg_number via session lookup
+    sess_to_wg = {
+        s.id: wgs.get(s.wg_id).number if (s.wg_id and wgs.get(s.wg_id)) else None
+        for s in db.query(ConferenceSession).all()
+    }
+    chat_messages = [{
+        "session_id": m.session_id,
+        "wg_number": sess_to_wg.get(m.session_id),
+        "body": m.body,
+        "upvotes": m.upvote_count or 0,
+    } for m in chats]
+
+    # Comments
+    comments = db.query(ConferenceComment).order_by(ConferenceComment.id).all()
+    comment_rows = [{
+        "session_id": c.session_id,
+        "wg_number": sess_to_wg.get(c.session_id),
+        "text": c.comment_text,
+        "type": c.comment_type,
+    } for c in comments]
+
+    return {
+        "cross_ranked": cross_ranked,
+        "per_wg_questions": per_wg_questions,
+        "breakout_notes": breakout_notes,
+        "chat_messages": chat_messages,
+        "comments": comment_rows,
+    }
+
+
+def _build_synthesis_prompt(inputs: dict) -> str:
+    """Compose the prompt for run_synthesis. We pass everything as a
+    single user message; system role lives in run_synthesis.
+    """
+    import json as _json
+
+    # Background context for each WG that participated
+    wg_section = "\n".join(
+        f"- WG{n}: {WG_BACKGROUND[n]}" for n in sorted(WG_BACKGROUND.keys())
+    )
+
+    # Top cross-WG questions (or per-WG pools if cross-WG hasn't run)
+    if inputs["cross_ranked"]:
+        ranked_lines = []
+        for i, q in enumerate(inputs["cross_ranked"][:21], start=1):
+            rank = f"avg_rank={q['avg_rank']:.2f}" if q.get("avg_rank") else "no votes yet"
+            ranked_lines.append(
+                f"  {i}. [WG{q.get('wg_number') or '?'}] {q['text']}  ({rank}, n={q.get('n_votes') or 0})"
+            )
+        ranked_block = "\n".join(ranked_lines)
+        ranked_header = "FINAL CROSS-WG RANKED QUESTIONS (top 21, lower avg_rank = higher priority):"
+    else:
+        # Fallback: list each WG's curated pool
+        groups = []
+        for g in inputs["per_wg_questions"]:
+            qlines = "\n".join(f"    - {q['text']}" for q in g["questions"])
+            groups.append(f"  WG{g['wg_number']} — {g['wg_name']}:\n{qlines}")
+        ranked_block = "\n\n".join(groups)
+        ranked_header = "PER-WG CURATED QUESTION POOLS (cross-WG ranking not yet recorded):"
+
+    # Breakout notes condensed
+    note_lines = []
+    for n in inputs["breakout_notes"][:200]:
+        parts = []
+        if n.get("themes"): parts.append(f"themes: {n['themes']}")
+        if n.get("agreements"): parts.append(f"agreements: {n['agreements']}")
+        if n.get("disagreements"): parts.append(f"disagreements: {n['disagreements']}")
+        if n.get("surprises"): parts.append(f"surprises: {n['surprises']}")
+        if n.get("suggestions"): parts.append(f"suggestions: {n['suggestions']}")
+        if parts:
+            note_lines.append(f"  - [session={n.get('session_id')} table={n.get('table_number')}] " + " | ".join(parts))
+    notes_block = "\n".join(note_lines) or "  (none submitted)"
+
+    # Top chat messages (>=1 upvote, else just first 80 by chronology)
+    top_chat = sorted(
+        [c for c in inputs["chat_messages"] if (c["upvotes"] or 0) > 0],
+        key=lambda c: -(c["upvotes"] or 0),
+    )[:60]
+    if not top_chat:
+        top_chat = inputs["chat_messages"][:60]
+    chat_lines = [
+        f"  - [WG{c.get('wg_number') or '?'}, ↑{c.get('upvotes') or 0}] {c['body']}"
+        for c in top_chat if (c.get('body') or '').strip()
+    ]
+    chat_block = "\n".join(chat_lines) or "  (no chat messages)"
+
+    # Comments
+    comment_lines = [
+        f"  - [WG{c.get('wg_number') or '?'}, {c.get('type')}] {c['text']}"
+        for c in inputs["comments"][:80] if (c.get('text') or '').strip()
+    ]
+    comments_block = "\n".join(comment_lines) or "  (none)"
+
+    prompt = f"""You are drafting the closing synthesis for the SAEM 2026 AI Consensus Conference, held May 21, 2026 in Atlanta. The conference produced a prioritized set of research questions for emergency medicine + AI across five working groups (WGs).
+
+# WG SCOPES (preloaded background)
+{wg_section}
+
+# {ranked_header}
+{ranked_block}
+
+# BREAKOUT NOTES from the day (table reactions + world café)
+{notes_block}
+
+# UPVOTED AUDIENCE CHAT (top messages from the panel discussions)
+{chat_block}
+
+# WRITTEN COMMENTS submitted during sessions
+{comments_block}
+
+# YOUR TASK
+Draft a closing synthesis document (700–1100 words, markdown) for the room to review live. Structure:
+
+## Top priorities (5–7 themes the room converged on)
+Group the highest-ranked questions into 5–7 thematic clusters. For each, give a 2–3-sentence framing of why this matters and what the room said about it (cite specific upvoted chat / breakout-note language when it sharpens the point — never invent quotes).
+
+## Cross-cutting themes
+What appeared across multiple WGs? Where did clinical + ethics + infrastructure converge? Surface 3–5 cross-cutting threads with concrete examples of which WGs touched them.
+
+## Tensions and unresolved questions
+Where did the room split? Mine the disagreements + surprises sections of breakout notes and the chat back-and-forth. 2–4 bullet points.
+
+## Recommendations for SAEM's next steps
+What should the planning committee carry forward from today? 4–6 concrete next steps (research priorities, working-group continuations, position-statement candidates, follow-up convenings).
+
+# RULES
+- Tone: precise, neutral, evidence-grounded — this becomes the public-facing record of the day. Read like a methodologist, not a marketer.
+- Do not invent data. If a section has thin inputs, say so explicitly (e.g. "Limited audience input on …").
+- Use clean markdown: H2 section headings, H3 sub-points where useful, short paragraphs, bullets for lists. No emojis.
+- No throat-clearing preamble. Start with the H2 "## Top priorities" heading.
+"""
+    return prompt
+
+
+class SynthesisGenerate(BaseModel):
+    pass
+
+
+@router.post("/synthesis/generate")
+async def generate_final_synthesis(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Draft the closing synthesis. Gathers cross-WG ranked questions,
+    breakout notes, upvoted chat, and comments, plus the preloaded WG
+    background framing; pipes everything to Claude and persists the
+    output. Returns the markdown synthesis.
+
+    Admin-only and may take 30-60s — surface a loading state on the
+    frontend.
+    """
+    from ..services.ai_synthesis import run_synthesis
+
+    inputs = _gather_synthesis_inputs(db)
+    prompt = _build_synthesis_prompt(inputs)
+
+    result = await run_synthesis(prompt, input_data=inputs, max_tokens=4096)
+    md = result.get("output") or ""
+
+    row = ConferenceSynthesis(
+        markdown=md,
+        model=result.get("model_version") or result.get("model"),
+        input_token_count=(result.get("usage") or {}).get("input_tokens"),
+        output_token_count=(result.get("usage") or {}).get("output_tokens"),
+        n_questions=len(inputs["cross_ranked"]),
+        n_breakout_notes=len(inputs["breakout_notes"]),
+        n_chat_messages=len(inputs["chat_messages"]),
+        n_comments=len(inputs["comments"]),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    write_audit_log(
+        db, admin.get("email", "admin"), "synthesis_generated",
+        f"id={row.id} input_tokens={row.input_token_count} output_tokens={row.output_token_count}",
+    )
+    db.commit()
+
+    _publish_day("synthesis_generated", {"id": row.id})
+
+    return {
+        "id": row.id,
+        "markdown": md,
+        "model": row.model,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "input_summary": {
+            "n_questions": row.n_questions,
+            "n_breakout_notes": row.n_breakout_notes,
+            "n_chat_messages": row.n_chat_messages,
+            "n_comments": row.n_comments,
+        },
+    }
+
+
+@router.get("/synthesis/latest")
+def get_latest_synthesis(db: Session = Depends(get_db)):
+    """Return the most recently generated synthesis, or 204 if none.
+    Public — anyone can read the synthesis once it's been drafted.
+    """
+    row = (
+        db.query(ConferenceSynthesis)
+        .order_by(ConferenceSynthesis.id.desc())
+        .first()
+    )
+    if not row:
+        return {"id": None, "markdown": None}
+    return {
+        "id": row.id,
+        "markdown": row.markdown,
+        "model": row.model,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "input_summary": {
+            "n_questions": row.n_questions,
+            "n_breakout_notes": row.n_breakout_notes,
+            "n_chat_messages": row.n_chat_messages,
+            "n_comments": row.n_comments,
+        },
+    }

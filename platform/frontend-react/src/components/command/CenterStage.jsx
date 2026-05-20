@@ -58,6 +58,7 @@ export function CenterStage({ mode, slideIndex, panelTab, onChange }) {
       {mode === 'world_cafe' && <WorldCafeActions onChange={onChange} />}
       {presentWg && <PresentActions wgNumber={presentWg} onChange={onChange} />}
       {mode === 'cross_wg' && <CrossWgActions onChange={onChange} />}
+      {mode === 'final_synthesis' && <FinalSynthesisActions />}
     </div>
   );
 }
@@ -159,6 +160,7 @@ function ModeBanner({ mode, slideIndex, panelWg }) {
     if (mode === 'table_reactions') return 'Table reactions — breakout';
     if (mode === 'world_cafe') return 'World Café — three rotations';
     if (mode === 'cross_wg') return 'Cross-WG prioritization';
+    if (mode === 'final_synthesis') return 'Final results & synthesis';
     if (mode === 'break') return 'On break';
     return mode || '—';
   })();
@@ -615,6 +617,28 @@ function TableActions({ onChange }) {
       </PrimaryAction>
       <SecondaryAction onClick={() => onChange?.({ mode: 'idle' })}>
         Return to Idle
+      </SecondaryAction>
+    </ActionRow>
+  );
+}
+
+// Wraps the projector's own Generate/Regenerate button so the chair can
+// trigger the synthesis without leaving /command. We just deep-link to
+// the projector — the actual /api/conference/synthesis/generate POST
+// lives in FinalSynthesisStage which has its own loading UI.
+function FinalSynthesisActions() {
+  return (
+    <ActionRow>
+      <PrimaryAction
+        onClick={() => window.open('/stage', '_blank', 'noopener,noreferrer')}
+        icon={ArrowRight}
+      >
+        Open projector to draft synthesis
+      </PrimaryAction>
+      <SecondaryAction
+        onClick={() => window.open('/stage?chair=1', '_blank', 'noopener,noreferrer')}
+      >
+        Open with chair controls
       </SecondaryAction>
     </ActionRow>
   );
