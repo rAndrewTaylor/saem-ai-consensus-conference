@@ -249,7 +249,7 @@ function StatBlock({ value, label, sub, accent = C.cyan, delay = 0, suffix = '' 
       style={{ borderColor: `${accent}33`, background: `${accent}0E` }}
     >
       <p
-        className="text-5xl font-bold tabular-nums sm:text-6xl lg:text-7xl"
+        className="overflow-hidden truncate text-4xl font-bold leading-none tabular-nums sm:text-5xl lg:text-6xl"
         style={{ color: accent }}
       >
         <AnimatedNumber value={value} delay={delay} suffix={suffix} />
