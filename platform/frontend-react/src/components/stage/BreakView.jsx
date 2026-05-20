@@ -71,8 +71,12 @@ export function BreakView({ panelTab, compact = false }) {
   // Opening welcome hero — used for the 7:30 AM coffee/networking slot
   // when the next agenda item is the Welcome session. Mirrors the
   // /welcome landing hero with a very large QR for arriving attendees.
+  // OpeningHero anchors its own countdown to the fixed conference start
+  // (May 21, 2026 08:00 ET) so it reads correctly during day-before
+  // previews — the generic break countdown collapses to "now" if the
+  // parsed time is already past today.
   if (isOpening && !compact) {
-    return <OpeningHero countdown={countdown} nextLabel={nextLabel} />;
+    return <OpeningHero nextLabel={nextLabel} />;
   }
 
   // Compact = embedded in /day (mobile/phone). Full = projector.
@@ -132,9 +136,34 @@ export function BreakView({ panelTab, compact = false }) {
 // Opening welcome hero — large QR + branding for the pre-conference
 // arrival period. Designed to be the FIRST thing attendees see when
 // they walk into the ballroom for the 7:30 AM coffee window.
-function OpeningHero({ countdown, nextLabel }) {
+function OpeningHero({ nextLabel }) {
   const joinUrl = `${window.location.origin}/welcome?access=ai26`;
   const [qrDataUrl, setQrDataUrl] = useState(null);
+
+  // Conference start is a fixed event: Thursday May 21, 2026 at 08:00 ET
+  // (UTC-4 during May). Hardcoding so the day-before preview reads
+  // correctly instead of resolving "8:00 AM" to today (already past) and
+  // collapsing the countdown to "now".
+  const CONFERENCE_START_MS = Date.UTC(2026, 4, 21, 12, 0, 0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  let heroCountdown = null;
+  const remaining = CONFERENCE_START_MS - now;
+  if (remaining > 0) {
+    const total = Math.floor(remaining / 1000);
+    const hours = Math.floor(total / 3600);
+    const mins = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+    heroCountdown = hours > 0
+      ? `${hours}h ${String(mins).padStart(2, '0')}m`
+      : `${mins}:${String(secs).padStart(2, '0')}`;
+  } else {
+    heroCountdown = 'now';
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -192,14 +221,14 @@ function OpeningHero({ countdown, nextLabel }) {
               </p>
             </div>
 
-            {countdown && (
+            {heroCountdown && (
               <div className="mt-8 inline-flex items-center gap-3 rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] px-6 py-4">
                 <Clock className="h-5 w-5 text-amber-300" />
                 <span className="text-sm font-semibold uppercase tracking-wider text-amber-300/80">
                   Conference starts in
                 </span>
                 <span className="font-mono text-4xl font-bold tabular-nums text-amber-200">
-                  {countdown}
+                  {heroCountdown}
                 </span>
               </div>
             )}
@@ -242,7 +271,7 @@ function OpeningHero({ countdown, nextLabel }) {
           <div className="flex items-center gap-3">
             <Coffee className="h-5 w-5 text-amber-300" />
             <span className="text-base font-semibold text-white/85 sm:text-lg">
-              Coffee &amp; networking · grab a seat near your working group
+              Coffee &amp; networking · grab a seat — we begin at 8:00 AM
             </span>
           </div>
           {nextLabel && (
