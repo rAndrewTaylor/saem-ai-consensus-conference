@@ -245,7 +245,13 @@ export function ConferenceDayPage() {
   // surface just that card — the room is watching, not browsing the
   // agenda.
   const inPresentMode = /^present:\d+$/.test(stage.mode || '');
-  const focusedMode = !isPrint && (inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode || inPresentMode);
+  // Cross-WG closing vote: same logic. Before the chair starts the
+  // session, show the cross-WG card (preview of the advancing pool).
+  // Once started, the InlineVoteCard auto-renders for the active session.
+  const inCrossWgMode = stage.mode === 'cross_wg';
+  const focusedMode = !isPrint && (
+    inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode || inPresentMode || inCrossWgMode
+  );
 
   if (loading && !data) {
     return (
@@ -336,6 +342,25 @@ export function ConferenceDayPage() {
                 panelTab={stage.panelTab}
                 bus={stage.bus}
               />
+            </SafeBoundary>
+          )}
+          {inCrossWgMode && (
+            <SafeBoundary label="CrossWg(focused)">
+              <CompactStageView
+                mode={stage.mode}
+                slideIndex={stage.slideIndex}
+                panelTab={stage.panelTab}
+                bus={stage.bus}
+              />
+              {activeSession && activeSession.session_type === 'cross_wg_prioritization' && (
+                <div className="mt-6">
+                  <InlineVoteCard
+                    session={activeSession}
+                    token={participantToken}
+                    onSubmitted={refresh}
+                  />
+                </div>
+              )}
             </SafeBoundary>
           )}
         </section>

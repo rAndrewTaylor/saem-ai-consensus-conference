@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CROSS_WG_PROMPT, PILLAR_COLORS } from '@/components/stage/panelConfig';
+import { ThemeBubbles, WgMixDonut, RankGapLollipops } from '@/components/stage/CrossWgFigures';
 
 export function CrossWgStage({ bus }) {
   const [session, setSession] = useState(null);
@@ -123,52 +124,62 @@ export function CrossWgStage({ bus }) {
       )}
 
       {combined.length > 0 && (
-        <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-          {!hasVotes && (
-            <p className="mb-2 shrink-0 text-sm text-white/55">
-              {combined.length} questions advancing from {new Set(combined.map((q) => q.wg_number).filter(Boolean)).size}{' '}
-              working groups. Audience drag-ranks on phones; live tally appears here.
-            </p>
-          )}
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-            {combined.map((q, idx) => {
-              const wgColor = PILLAR_COLORS[q.wg_number] || '#00B4D8';
-              const frac = barFraction(q.avg_rank);
-              return (
-                <div key={q.id} className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-2.5">
-                  <div className="flex items-start gap-2">
+        <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[1.35fr_1fr]">
+          {/* LEFT — full ranking list */}
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            {!hasVotes && (
+              <p className="mb-2 shrink-0 text-sm text-white/55">
+                {combined.length} questions advancing from {new Set(combined.map((q) => q.wg_number).filter(Boolean)).size}{' '}
+                working groups. Audience drag-ranks on phones; live tally appears here.
+              </p>
+            )}
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+              {combined.map((q, idx) => {
+                const wgColor = PILLAR_COLORS[q.wg_number] || '#00B4D8';
+                const frac = barFraction(q.avg_rank);
+                return (
+                  <div key={q.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
+                    <div className="flex items-start gap-2">
+                      {hasVotes && q.avg_rank != null && (
+                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold text-white"
+                              style={{ backgroundColor: `${wgColor}30` }}>
+                          {idx + 1}
+                        </span>
+                      )}
+                      {q.wg_number && (
+                        <span
+                          className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-xs font-bold"
+                          style={{ backgroundColor: `${wgColor}25`, color: wgColor }}
+                        >
+                          {q.wg_number}
+                        </span>
+                      )}
+                      <p className="min-w-0 flex-1 text-[15px] leading-snug text-white/95">{q.text}</p>
+                      {hasVotes && q.avg_rank != null && (
+                        <span className="w-12 shrink-0 text-right font-mono text-sm font-semibold text-white tabular-nums">
+                          {q.avg_rank.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
                     {hasVotes && q.avg_rank != null && (
-                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold text-white"
-                            style={{ backgroundColor: `${wgColor}30` }}>
-                        {idx + 1}
-                      </span>
-                    )}
-                    {q.wg_number && (
-                      <span
-                        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-xs font-bold"
-                        style={{ backgroundColor: `${wgColor}25`, color: wgColor }}
-                      >
-                        {q.wg_number}
-                      </span>
-                    )}
-                    <p className="min-w-0 flex-1 text-base leading-snug text-white/95">{q.text}</p>
-                    {hasVotes && q.avg_rank != null && (
-                      <span className="shrink-0 text-right">
-                        <p className="font-mono text-base font-semibold text-white">{q.avg_rank.toFixed(1)}</p>
-                      </span>
+                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.04]">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${frac * 100}%`, backgroundColor: wgColor }}
+                        />
+                      </div>
                     )}
                   </div>
-                  {hasVotes && q.avg_rank != null && (
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${frac * 100}%`, backgroundColor: wgColor }}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* RIGHT — three live figures, equal vertical share */}
+          <div className="grid min-h-0 min-w-0 grid-rows-[1.1fr_1fr_0.9fr] gap-3 overflow-hidden">
+            <ThemeBubbles rankedRows={combined} />
+            <WgMixDonut rankedRows={combined} />
+            <RankGapLollipops rankedRows={combined} />
           </div>
         </div>
       )}
