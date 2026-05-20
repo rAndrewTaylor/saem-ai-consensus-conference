@@ -344,13 +344,18 @@ export function HomePage() {
     document.getElementById('working-groups')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Conference-day banner window: from T-24h through T+12h (covers Wed
-  // evening setup through Thursday late evening). Computed once on render
-  // — the banner is a binary visibility, no need to tick.
+  // Conference-day banner: visible only on the conference date in ET.
+  // The previous T-24h window meant the banner read "Conference is live
+  // today" starting 9am ET the day before, which was confusing. Anchor
+  // to the literal calendar date in America/New_York so the copy is
+  // always accurate.
   const showDayOfBanner = useMemo(() => {
-    const start = new Date('2026-05-21T09:00:00-04:00').getTime();
-    const now = Date.now();
-    return now >= start - 24 * 60 * 60 * 1000 && now <= start + 12 * 60 * 60 * 1000;
+    const conferenceDateET = '2026-05-21';
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    return fmt.format(new Date()) === conferenceDateET;
   }, []);
 
   return (
