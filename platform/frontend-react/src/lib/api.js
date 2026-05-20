@@ -35,10 +35,14 @@ export async function api(url, { method = 'GET', body, token, params, timeoutMs 
       headers['Authorization'] = `Bearer ${adminToken}`;
     } else {
       // Prefer the participant token bound to the active WG (set on claim);
-      // fall back to whatever is in localStorage so endpoints that accept
-      // any participant token still work.
+      // fall back to the audience token (day-of QR), then any other
+      // participant token in localStorage so endpoints that accept any
+      // participant token still work.
       const activeWg = localStorage.getItem('saem_active_wg');
-      let ptoken = activeWg ? localStorage.getItem(`saem_token_wg${activeWg}`) : null;
+      let ptoken = (activeWg && activeWg !== 'audience')
+        ? localStorage.getItem(`saem_token_wg${activeWg}`)
+        : null;
+      if (!ptoken) ptoken = localStorage.getItem('saem_token_audience');
       if (!ptoken) {
         for (let i = 0; i < localStorage.length; i += 1) {
           const key = localStorage.key(i);
@@ -129,14 +133,24 @@ export async function downloadFile(url, fallbackFilename = 'download') {
 }
 
 // Token management
+// Tokens are keyed by WG number ("saem_token_wg3") for WG members, and
+// under a single "saem_token_audience" key for day-of audience members
+// who have no WG affiliation. getAnyParticipantToken / clear* sweep
+// both spaces so the audience flow is fully wired through.
 export const getToken = (wg) => localStorage.getItem(`saem_token_wg${wg}`);
 export const setToken = (wg, token) => {
+  if (wg == null) {
+    localStorage.setItem('saem_token_audience', token);
+    localStorage.setItem('saem_active_wg', 'audience');
+    return;
+  }
   localStorage.setItem(`saem_token_wg${wg}`, token);
   localStorage.setItem('saem_active_wg', String(wg));
 };
 export const getActiveWg = () => {
   const v = localStorage.getItem('saem_active_wg');
-  return v ? parseInt(v, 10) : null;
+  if (!v || v === 'audience') return null;
+  return parseInt(v, 10) || null;
 };
 export const getAnyParticipantToken = () => {
   const activeWg = getActiveWg();
@@ -144,6 +158,9 @@ export const getAnyParticipantToken = () => {
     const activeToken = getToken(activeWg);
     if (activeToken) return activeToken;
   }
+  // Audience token if the user joined via the day-of QR
+  const audienceToken = localStorage.getItem('saem_token_audience');
+  if (audienceToken) return audienceToken;
   for (let i = 0; i < localStorage.length; i += 1) {
     const key = localStorage.key(i);
     if (key && key.startsWith('saem_token_wg')) {
@@ -167,6 +184,7 @@ export const clearAllParticipantTokens = () => {
     if (key && key.startsWith('saem_token_wg')) keys.push(key);
   }
   keys.forEach((k) => localStorage.removeItem(k));
+  localStorage.removeItem('saem_token_audience');
   localStorage.removeItem('saem_active_wg');
   localStorage.removeItem('saem_lead_token');
   localStorage.removeItem('saem_admin_token');

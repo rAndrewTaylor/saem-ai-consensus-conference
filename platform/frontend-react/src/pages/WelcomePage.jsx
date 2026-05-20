@@ -55,6 +55,22 @@ export function WelcomePage() {
 
   const hasToken = useMemo(() => !!getAnyParticipantToken(), []);
 
+  // QR-scan landing: /welcome?access=ai26 means the user just walked in
+  // with the day-of code. If they aren't already signed in, route them
+  // straight to the streamlined join form — no need to click through
+  // three buttons to find the "Conference code" path. Signed-in
+  // attendees stay on /welcome so they can see the agenda + countdown.
+  useEffect(() => {
+    if (hasToken) return;
+    let access = null;
+    try {
+      access = new URLSearchParams(window.location.search).get('access');
+    } catch { /* SSR / blocked window — skip */ }
+    if (access) {
+      navigate(`/join?access=${encodeURIComponent(access)}`, { replace: true });
+    }
+  }, [navigate, hasToken]);
+
   // Tick every second for the countdown; check the auto-shift threshold.
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);

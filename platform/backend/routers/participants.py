@@ -69,7 +69,11 @@ class SharedRegister(BaseModel):
     access_token: str = Field(..., min_length=8, max_length=200)
     name: str = Field(..., min_length=1, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
-    wg_number: int = Field(..., ge=1, le=5)
+    # wg_number is OPTIONAL — audience members who join via the day-of
+    # QR have no working-group affiliation, but they still need a
+    # participant row so they can vote and chat. Drop the Field(..., 1-5)
+    # constraint and allow None.
+    wg_number: Optional[int] = Field(None, ge=1, le=5)
     role: str = Field("participant")  # restricted: wg_member | participant
 
 
@@ -289,14 +293,20 @@ def register_from_shared_link(
     if body.role not in SELF_SELECTABLE_ROLES:
         raise HTTPException(400, f"Invalid role. Choose one of: {SELF_SELECTABLE_ROLES}")
 
-    wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
-    if not wg:
-        raise HTTPException(404, "Working group not found")
+    # Optional WG. Audience attendees who scan the day-of QR have no
+    # WG affiliation, just a participant_id that lets them vote + chat.
+    wg = None
+    if body.wg_number is not None:
+        wg = db.query(WorkingGroup).filter(WorkingGroup.number == body.wg_number).first()
+        if not wg:
+            raise HTTPException(404, "Working group not found")
 
     name = sanitize_text(body.name, max_length=200)
     email = sanitize_text(body.email, max_length=200) if body.email else None
 
-    existing = _find_existing_participant(db, wg_id=wg.id, name=name, email=email)
+    existing = _find_existing_participant(
+        db, wg_id=wg.id if wg else None, name=name, email=email,
+    )
     if existing is not None:
         if not existing.claimed_at:
             existing.claimed_at = datetime.utcnow()
@@ -312,15 +322,15 @@ def register_from_shared_link(
             "name": existing.name,
             "email": existing.email,
             "role": existing.role,
-            "wg_number": wg.number,
-            "wg_name": wg.name,
-            "wg_short_name": wg.short_name,
+            "wg_number": wg.number if wg else None,
+            "wg_name": wg.name if wg else None,
+            "wg_short_name": wg.short_name if wg else None,
             "deduped": True,
         }
 
     p = Participant(
         token=_new_token(),
-        wg_id=wg.id,
+        wg_id=wg.id if wg else None,
         name=name,
         email=email,
         role=body.role,
@@ -336,9 +346,9 @@ def register_from_shared_link(
         "name": p.name,
         "email": p.email,
         "role": p.role,
-        "wg_number": wg.number,
-        "wg_name": wg.name,
-        "wg_short_name": wg.short_name,
+        "wg_number": wg.number if wg else None,
+        "wg_name": wg.name if wg else None,
+        "wg_short_name": wg.short_name if wg else None,
         "deduped": False,
     }
 

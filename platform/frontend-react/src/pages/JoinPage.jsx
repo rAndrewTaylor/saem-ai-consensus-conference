@@ -142,7 +142,9 @@ export function JoinPage() {
     toast({ message: `Welcome back, ${p.name}!`, type: 'success' });
     navigate(safeRedirect || '/welcome');
   };
-  const canSubmit = (isInviteMode ? wg !== null : wg !== null) && role;
+  // Shared-access registrations (day-of QR) don't require a WG —
+  // audience members just need a name + role to vote and chat.
+  const canSubmit = (isInviteMode ? wg !== null : true) && role;
 
   const handleSubmit = async () => {
     if (!inviteToken && !accessToken) return;
@@ -256,25 +258,31 @@ export function JoinPage() {
       <div className="pointer-events-none fixed -top-32 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#1B5E8A]/10 to-transparent blur-3xl" />
 
       <div className="relative w-full max-w-lg">
-        {/* Register / Sign in toggle */}
-        <div className="mb-5 flex items-center justify-center gap-2">
-          <button
-            onClick={() => setMode('signin')}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              mode === 'signin' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            Sign in
-          </button>
-          <button
-            onClick={() => setMode('register')}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-              mode === 'register' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
-            }`}
-          >
-            New here? Register
-          </button>
-        </div>
+        {/* Sign in / Register toggle — hidden when the user arrived via
+            an invite or the day-of conference-code link, because the
+            mode is already determined by the URL. The toggle showing
+            up looked like a CTA people had to click before they could
+            register, which was confusing. */}
+        {!isInviteMode && !isSharedMode && (
+          <div className="mb-5 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setMode('signin')}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                mode === 'signin' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => setMode('register')}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                mode === 'register' ? 'bg-white/[0.1] text-white' : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              New here? Register
+            </button>
+          </div>
+        )}
 
         {mode === 'signin' ? (
           <SignInCard
@@ -427,8 +435,30 @@ export function JoinPage() {
                     </>
                   ) : (
                     <>
-                      <label className="mb-2 block text-sm font-medium text-white/70">Working Group</label>
+                      <label className="mb-2 block text-sm font-medium text-white/70">Working Group <span className="text-white/35">(optional)</span></label>
+                      <p className="mb-2 text-[11px] text-white/40">
+                        Audience attendees can skip this — you'll still be able to vote and chat.
+                        Pick a WG only if you were on its panel.
+                      </p>
                       <div className="grid gap-2 sm:grid-cols-2">
+                        <button
+                          onClick={() => setWg(null)}
+                          className={`group flex items-start gap-2 rounded-lg border p-3 text-left transition-all ${
+                            wg === null
+                              ? 'border-amber-400/50 bg-amber-500/10'
+                              : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                            wg === null ? 'bg-amber-500 text-white' : 'bg-white/[0.08] text-white/60'
+                          }`}>
+                            ★
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white/90">Audience / no WG</p>
+                            <p className="text-[10px] text-white/40">Default — pick this if you didn't serve on a WG</p>
+                          </div>
+                        </button>
                         {WG_OPTIONS.map((opt) => (
                           <button
                             key={opt.number}
