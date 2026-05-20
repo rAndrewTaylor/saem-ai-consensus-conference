@@ -18,7 +18,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useTheme } from '@/hooks/useTheme';
-import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ExternalLink, BarChart3, Vote, ArrowRight, Sparkles, X, Copy, Monitor, CheckCircle2, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import { Play, Square, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ExternalLink, BarChart3, Vote, ArrowRight, Sparkles, X, Copy, Monitor, CheckCircle2, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 
 // Remember the chair's preferred preview size across sessions
 const PREVIEW_SIZE_KEY = 'saem_command_preview_size';
@@ -240,11 +240,9 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
       refresh();
     } catch (e) { console.error(e); }
   };
-  const togglePhase = async () => {
-    if (!session) return;
-    const next = session.phase === 'pre_discussion' ? 'post_discussion' : 'pre_discussion';
-    try { await api(`/api/conference/sessions/${session.id}/phase`, { method: 'POST', body: { phase: next } }); refresh(); } catch (e) { console.error(e); }
-  };
+  // togglePhase removed — the single-rank funnel doesn't use the
+  // pre/post phase distinction. Phase value still exists in the model
+  // but no UI surfaces it.
 
   const transition = (next) => {
     if (session?.is_active) {
@@ -254,7 +252,7 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
     onChange?.(next);
   };
 
-  // Status pill — phase + active state, in one place
+  // Status pill — just the active/closed state. Phase removed.
   const statusPill = session && (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
@@ -267,14 +265,6 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
       ) : null}
       {session.is_active ? 'Vote open' : 'Vote closed'}
-      {session.phase && (
-        <span className="text-white/55">·</span>
-      )}
-      {session.phase && (
-        <span className="font-normal capitalize text-white/75">
-          {session.phase === 'pre_discussion' ? 'pre-discussion' : 'post-discussion'}
-        </span>
-      )}
     </span>
   );
 
@@ -292,9 +282,6 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
               <BigButton onClick={stop} icon={Square} tone="rose">
                 Stop vote
               </BigButton>
-              <SecondaryAction onClick={togglePhase} icon={RotateCcw}>
-                Toggle phase → {session.phase === 'pre_discussion' ? 'Post-discussion' : 'Pre-discussion'}
-              </SecondaryAction>
             </div>
           )
         ) : (

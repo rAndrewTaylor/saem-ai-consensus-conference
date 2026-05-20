@@ -580,18 +580,11 @@ function VoteView({ sessionId, resolving, bus, accent = '#00B4D8' }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Header */}
+      {/* Header — phase pill removed (single-rank funnel, no pre/post split) */}
       <div className="mb-3 flex shrink-0 items-center gap-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-white/45">
           Live vote · audience ranking
         </p>
-        {session?.phase && (
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-            session.phase === 'pre_discussion' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'
-          }`}>
-            {session.phase === 'pre_discussion' ? 'Pre-discussion' : 'Post-discussion'}
-          </span>
-        )}
         {results?.unique_voters != null && (
           <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/65">
             {results.unique_voters} voter{results.unique_voters === 1 ? '' : 's'}
