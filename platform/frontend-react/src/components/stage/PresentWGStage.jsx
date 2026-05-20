@@ -54,6 +54,14 @@ function advanceLimitFor(wgNumber) {
   return wgNumber === 5 ? 5 : 4;
 }
 
+// Per-WG R1 question counts (active + removed) — pinned from the full
+// DB backup on 2026-05-20. The /api/surveys/results endpoint excludes
+// removed questions, so we can't derive these client-side without an
+// extra round trip. These numbers are immutable historical data.
+const WG_R1_TOTAL = { 1: 34, 2: 45, 3: 22, 4: 35, 5: 41 };
+// Per-WG R2 response rate (R2 voters / eligible). Pinned to prod state.
+const WG_R2_RESPONSE_RATE = { 1: 91, 2: 90, 3: 73, 4: 81, 5: 91 };
+
 // ────────────────────────────────────────────────────────────────────
 // Main component
 // ────────────────────────────────────────────────────────────────────
@@ -164,19 +172,22 @@ export function PresentWGStage({ wgNumber, bus }) {
     return { up, down };
   }, [allActive]);
 
-  // Process funnel
+  // Process funnel — three numbers come from data, R1-total is pinned
+  // because the surveys/results endpoint filters out removed questions.
   const funnel = useMemo(() => {
     const r2Active = allActive.length;
-    const r2Removed = (r2?.questions || []).filter((q) => q.status === 'removed').length;
-    const total = r2Active + r2Removed;
-    const panelPool = candidates?.length ?? r2Active;
+    const featured = (candidates || []).filter((q) => q.is_featured);
+    // Curated pool: prefer the chair-curated featured set. Fall back to
+    // the full candidate set if no curation exists (early dry-run state)
+    // so the slide doesn't show "0 on today's slate".
+    const panelPool = featured.length > 0 ? featured.length : (candidates?.length ?? r2Active);
     return {
-      candidates: total || null,
+      candidates: WG_R1_TOTAL[wgNumber] || (r2Active || null),
       toR2: r2Active || null,
       panelPool,
       advance: limit,
     };
-  }, [allActive, r2, candidates, limit]);
+  }, [allActive, candidates, limit, wgNumber]);
 
   // Build the slide list dynamically — skip slides with no data.
   const slides = useMemo(() => {
@@ -558,16 +569,7 @@ function CompositionStat({ value, label, accent }) {
 // By the numbers slide
 // ────────────────────────────────────────────────────────────────────
 
-function NumbersSlide({ accent, doc, wg, funnel, limit, advancing, allActive }) {
-  const totalQs = funnel.candidates ?? funnel.toR2;
-  const themesCount = doc?.themes?.length || 0;
-  // Average R2 include% across the WG's active questions
-  const avgInc = useMemo(() => {
-    const xs = allActive.filter((q) => q.r2_include_pct != null).map((q) => q.r2_include_pct);
-    if (!xs.length) return null;
-    return Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
-  }, [allActive]);
-
+function NumbersSlide({ accent, wgNumber, funnel, limit }) {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <Eyebrow tone={accent}>By the numbers</Eyebrow>
@@ -576,38 +578,39 @@ function NumbersSlide({ accent, doc, wg, funnel, limit, advancing, allActive }) 
       </H1>
       <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatBlock
-          value={totalQs || 0}
-          label="Total questions"
-          sub="Across R1 and R2"
+          value={funnel.candidates || 0}
+          label="Questions proposed"
+          sub="R1 candidate set"
           accent={accent}
           delay={0}
         />
         <StatBlock
-          value={funnel.panelPool || 0}
-          label="Curated for today"
-          sub="Chair-selected panel pool"
-          accent={C.training}
+          value={funnel.toR2 || 0}
+          label="Active going into R2"
+          sub={`${(funnel.candidates || 0) - (funnel.toR2 || 0)} retired, merged, or absorbed`}
+          accent={C.cyan}
           delay={120}
         />
         <StatBlock
-          value={limit}
-          label="Advance to cross-WG"
-          sub="Final research priorities"
-          accent={C.emerald}
+          value={funnel.panelPool || 0}
+          label="On today's panel slate"
+          sub="Curated by co-leads"
+          accent={C.training}
           delay={240}
         />
         <StatBlock
-          value={avgInc ?? 0}
+          value={WG_R2_RESPONSE_RATE[wgNumber] ?? 0}
           suffix="%"
-          label="Avg R2 include rate"
-          sub="Across all active questions"
+          label="R2 response rate"
+          sub="Of eligible WG members"
           accent={C.society}
           delay={360}
         />
       </div>
       <p className="mt-12 text-center text-sm" style={{ color: C.textMuted }}>
-        Every number is the result of {advancing.length === 5 ? '11 members' : 'a working group'} choosing
-        to deliberate together for six weeks.
+        Six weeks of asynchronous deliberation,{' '}
+        <span style={{ color: accent }}>{funnel.panelPool ?? '—'}</span> questions on today's panel,{' '}
+        <span style={{ color: C.emerald }}>{limit}</span> advancing to cross-WG.
       </p>
     </div>
   );
