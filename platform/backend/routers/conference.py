@@ -478,12 +478,17 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Session not found")
 
     if cs.session_type == "cross_wg_prioritization":
-        # If the chair has explicitly featured questions for the cross-WG
-        # round (via /cross-wg/feature), use only those. Otherwise fall
-        # back to top-N R2 questions per WG so the session still works
-        # before the funnel has been run. WG5 enters with a thematically-
-        # categorized question set and surfaces all 5; other WGs cap at 4
-        # to match the documented "top 4 per WG" advancement rule.
+        # Three-tier resolution:
+        #   1) Chair-curated `featured_in_cross_wg` — what advances after
+        #      the live WG panel votes on May 21.
+        #   2) Fallback for debugging / pre-conference: top-N from each
+        #      WG's curated `featured_in_panel` pool, ordered by pairwise.
+        #      This mirrors what the WG panels are actually voting on, so
+        #      a dry-run still produces a meaningful cross-WG slate even
+        #      before any live conference vote has been recorded.
+        #   3) Last-resort: top-N R2 questions per WG by include + importance.
+        # WG5 surfaces all 5 (thematic merge); others cap at 4 per the
+        # documented "top 4 per WG" advancement rule.
         featured = (
             db.query(Question)
             .filter(
@@ -499,15 +504,38 @@ def get_session_questions(session_id: int, db: Session = Depends(get_db)):
             questions = featured
         else:
             questions = []
+            active_statuses = [QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED]
             for wg in db.query(WorkingGroup).order_by(WorkingGroup.number).all():
                 per_wg_limit = 5 if wg.number == 5 else 4
+                # Prefer the curated panel pool — those are the questions
+                # the WG panel is actually voting on. Order by pairwise
+                # score (the strongest live-comparison signal we have
+                # until conference-day pairwise overwrites it) with
+                # R2 include% + importance as tiebreakers.
+                panel_curated = (
+                    db.query(Question)
+                    .filter(
+                        Question.wg_id == wg.id,
+                        Question.featured_in_panel == True,  # noqa: E712
+                        Question.status.in_(active_statuses),
+                    )
+                    .order_by(
+                        Question.pairwise_score.desc().nullslast(),
+                        Question.r2_include_pct.desc().nullslast(),
+                        Question.r2_importance_mean.desc().nullslast(),
+                    )
+                    .limit(per_wg_limit)
+                    .all()
+                )
+                if panel_curated:
+                    questions.extend(panel_curated)
+                    continue
+                # Last-resort: no curated panel pool → top-N R2 overall.
                 top = (
                     db.query(Question)
                     .filter(
                         Question.wg_id == wg.id,
-                        Question.status.in_([
-                            QuestionStatus.ACTIVE, QuestionStatus.REVISED, QuestionStatus.CONFIRMED
-                        ]),
+                        Question.status.in_(active_statuses),
                     )
                     .order_by(
                         Question.r2_include_pct.desc().nullslast(),
