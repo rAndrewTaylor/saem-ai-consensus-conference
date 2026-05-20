@@ -40,9 +40,30 @@ export function FinalSynthesisStage({ bus }) {
     setGenerating(true);
     setErr(null);
     try {
-      const res = await api('/api/conference/synthesis/generate', { method: 'POST' });
+      // Claude Opus on a prompt this long takes 30-90s. The default
+      // 15s api() timeout would abort before the model finishes, so
+      // we explicitly extend to 3 minutes. The backend writes to the
+      // ConferenceSynthesis table before returning, so even if the
+      // client gives up the row is durable — a refresh would pick
+      // it up via /synthesis/latest.
+      const res = await api('/api/conference/synthesis/generate', {
+        method: 'POST',
+        timeoutMs: 180000,
+      });
       setSynth(res);
     } catch (e) {
+      // If the request times out client-side but the backend kept
+      // running, the row may have landed after our abort. Pull
+      // /synthesis/latest once before surfacing the error.
+      try {
+        const latest = await api('/api/conference/synthesis/latest');
+        if (latest?.markdown) {
+          setSynth(latest);
+          return;
+        }
+      } catch {
+        /* fall through to error message */
+      }
       setErr(e?.message || 'Generation failed');
     } finally {
       setGenerating(false);
