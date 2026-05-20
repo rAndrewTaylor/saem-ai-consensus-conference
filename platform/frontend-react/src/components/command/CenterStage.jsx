@@ -156,7 +156,7 @@ function ModeBanner({ mode, slideIndex, panelWg }) {
     if (panelWg) return `Panel ${panelWg} — ${WG_NAMES[panelWg]}`;
     if (presentMatch) return `Priority Presentation · WG ${presentMatch[1]} — ${WG_NAMES[parseInt(presentMatch[1], 10)] || ''}`;
     if (mode === 'idle') return 'Idle — auto-rotating dashboard';
-    if (mode === 'welcome') return `Welcome slide ${(slideIndex || 0) + 1} of 6`;
+    if (mode === 'welcome') return `Welcome slide ${(slideIndex || 0) + 1} of ${WELCOME_SLIDE_COUNT}`;
     if (mode === 'table_reactions') return 'Table reactions — breakout';
     if (mode === 'world_cafe') return 'World Café — three rotations';
     if (mode === 'cross_wg') return 'Cross-WG prioritization';
@@ -189,15 +189,21 @@ function IdleActions({ onChange }) {
   );
 }
 
+// Keep this in sync with SLIDES.length in components/stage/WelcomeDeck.jsx.
+const WELCOME_SLIDE_COUNT = 10;
+
 function WelcomeActions({ slideIndex, onChange }) {
   const i = slideIndex || 0;
+  const max = WELCOME_SLIDE_COUNT - 1;
   return (
     <ActionRow>
       <SecondaryAction onClick={() => onChange?.({ mode: 'welcome', slide_index: Math.max(0, i - 1) })} icon={ChevronLeft}>
         Previous
       </SecondaryAction>
-      <span className="rounded-md bg-white/[0.04] px-3 py-1.5 font-mono text-xs text-white/60">{i + 1} / 6</span>
-      <SecondaryAction onClick={() => onChange?.({ mode: 'welcome', slide_index: Math.min(5, i + 1) })} icon={ChevronRight}>
+      <span className="rounded-md bg-white/[0.04] px-3 py-1.5 font-mono text-xs text-white/60">
+        {i + 1} / {WELCOME_SLIDE_COUNT}
+      </span>
+      <SecondaryAction onClick={() => onChange?.({ mode: 'welcome', slide_index: Math.min(max, i + 1) })} icon={ChevronRight}>
         Next
       </SecondaryAction>
       <PrimaryAction onClick={() => onChange?.({ mode: 'panel:1', panel_tab: 'results' })} icon={ArrowRight}>
