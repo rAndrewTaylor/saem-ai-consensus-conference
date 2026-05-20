@@ -16,7 +16,7 @@ import { api, getAnyParticipantToken } from '@/lib/api';
 import { queueSubmit } from '@/lib/offlineQueue';
 import { ClipboardList, Send, ChevronDown, ChevronUp } from 'lucide-react';
 
-export function BreakoutNotesPanel() {
+export function BreakoutNotesPanel({ focused = false }) {
   const [mode, setMode] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -103,11 +103,17 @@ export function BreakoutNotesPanel() {
 
   if (mode !== 'table_reactions') return null;
 
+  // Focused mode: render as a normal-flow card. Default: fixed-bottom drawer.
+  const wrapperCls = focused
+    ? 'rounded-2xl border border-amber-400/25 bg-amber-500/[0.04]'
+    : 'fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto border-t border-white/[0.08] bg-[#0A1628]/95 backdrop-blur';
+  const bodyOpen = focused ? true : !collapsed;
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto border-t border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
+    <div className={wrapperCls}>
       <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex w-full items-center justify-between px-4 py-2 hover:bg-white/[0.02]"
+        onClick={() => !focused && setCollapsed(!collapsed)}
+        className={`flex w-full items-center justify-between px-4 py-3 ${focused ? 'cursor-default' : 'hover:bg-white/[0.02]'}`}
       >
         <div className="flex items-center gap-2">
           <ClipboardList className="h-4 w-4 text-amber-300" />
@@ -118,10 +124,10 @@ export function BreakoutNotesPanel() {
             </span>
           )}
         </div>
-        {collapsed ? <ChevronUp className="h-4 w-4 text-white/40" /> : <ChevronDown className="h-4 w-4 text-white/40" />}
+        {!focused && (collapsed ? <ChevronUp className="h-4 w-4 text-white/40" /> : <ChevronDown className="h-4 w-4 text-white/40" />)}
       </button>
 
-      {!collapsed && (
+      {bodyOpen && (
         <div className="border-t border-white/[0.04] px-4 py-4">
           <div className="mb-3 grid grid-cols-2 gap-2">
             <Field

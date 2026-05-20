@@ -220,6 +220,15 @@ export function ConferenceDayPage() {
   const isPrint = typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('print') === '1';
 
+  // Focused-content modes — when one is active the audience phone shows
+  // ONLY the relevant interaction (chat / table notes / world café),
+  // not the full /day. Removes clutter so the only action available is
+  // the one we want them to take.
+  const inPanelMode = /^panel:\d+$/.test(stage.mode || '');
+  const inWorldCafe = currentAgenda?.kind === 'world_cafe' && stage.mode === 'table_reactions';
+  const inReactionBreakout = currentAgenda?.kind === 'reaction' && stage.mode === 'table_reactions';
+  const focusedMode = !isPrint && (inPanelMode || inWorldCafe || inReactionBreakout);
+
   if (loading && !data) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
@@ -261,18 +270,50 @@ export function ConferenceDayPage() {
         onTapVote={() => activeSession && navigate(`/vote/${activeSession.id}`)}
       />
 
-      {/* === Live stage preview — phone-friendly card, mode-aware === */}
-      <section className="mx-auto w-full max-w-2xl px-4 pt-4 sm:px-6">
-        <CompactStageView
-          mode={stage.mode}
-          slideIndex={stage.slideIndex}
-          panelTab={stage.panelTab}
-          bus={stage.bus}
-        />
-      </section>
+      {/* === Focused content — shown when display mode dictates exactly
+            one action the audience should take === */}
+      {focusedMode && (
+        <section className="mx-auto w-full max-w-2xl px-4 pt-4 sm:px-6">
+          {inPanelMode && (
+            <SafeBoundary label="AudienceChatPanel(focused)">
+              <AudienceChatPanel focused />
+            </SafeBoundary>
+          )}
+          {inWorldCafe && (
+            <SafeBoundary label="WorldCafeCard(focused)">
+              <WorldCafeCard
+                sessions={data?.sessions || []}
+                token={participantToken}
+                currentAgenda={currentAgenda}
+              />
+            </SafeBoundary>
+          )}
+          {inReactionBreakout && (
+            <SafeBoundary label="BreakoutNotesPanel(focused)">
+              <BreakoutNotesPanel focused />
+            </SafeBoundary>
+          )}
+        </section>
+      )}
+
+      {/* === Live stage preview — only when NOT focused === */}
+      {!focusedMode && (
+        <section className="mx-auto w-full max-w-2xl px-4 pt-4 sm:px-6">
+          <CompactStageView
+            mode={stage.mode}
+            slideIndex={stage.slideIndex}
+            panelTab={stage.panelTab}
+            bus={stage.bus}
+          />
+        </section>
+      )}
 
       {/* Inter-session details (agenda, contributions, QR). Auto-collapses
-          during a live segment so the stage stays the focus. */}
+          during a live segment so the stage stays the focus. Suppressed
+          entirely when the page is in a focused mode (panel chat /
+          breakout notes / world café) — those modes commandeer the
+          whole viewport so the audience has exactly one action. */}
+      {!focusedMode && (
       <details className="mx-auto w-full max-w-2xl px-4 sm:px-6" open={!inLiveSegment || forceDetailsOpen}>
         <summary className="mt-6 cursor-pointer list-none rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-2 text-sm font-medium text-white/60 hover:bg-white/[0.04]">
           Agenda · Your contributions · Join links
@@ -446,6 +487,7 @@ export function ConferenceDayPage() {
         </Card>
       </div>
       </details>
+      )}
 
       {/* Pending-sync indicator */}
       {pending > 0 && (
@@ -460,22 +502,11 @@ export function ConferenceDayPage() {
         <DemographicsPrompt token={participantToken} />
       )}
 
-      {/* Audience chat panel — only renders while the stage is in panel:N mode */}
-      <SafeBoundary label="AudienceChatPanel">
-        <AudienceChatPanel />
-      </SafeBoundary>
-
-      {/* Breakout note submission — only renders while the stage is in
-          table_reactions mode AND the current agenda step is a panel
-          reaction. During world_cafe the WorldCafeCard above handles
-          cross-WG station submissions; rendering BreakoutNotesPanel
-          here would bind all notes to WG1's session (its fallback
-          target). See P0 from the day-before audit. */}
-      {currentAgenda?.kind !== 'world_cafe' && (
-        <SafeBoundary label="BreakoutNotesPanel">
-          <BreakoutNotesPanel />
-        </SafeBoundary>
-      )}
+      {/* The focused-mode block at the top of /day now renders these
+          panels inline when the chair is in panel:N / table_reactions
+          modes. Outside of those modes, no chat/notes panel is needed —
+          the audience is looking at the agenda or the projector, not
+          submitting input. */}
     </div>
   );
 }

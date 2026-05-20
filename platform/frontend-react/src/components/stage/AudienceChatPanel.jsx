@@ -17,7 +17,7 @@ import { ArrowUp, ChevronDown, ChevronUp, Send, MessageSquare } from 'lucide-rea
 
 const REFRESH_MS = 4_000;
 
-export function AudienceChatPanel() {
+export function AudienceChatPanel({ focused = false }) {
   const [mode, setMode] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -143,11 +143,20 @@ export function AudienceChatPanel() {
 
   const wgNumber = parseInt(mode.split(':')[1], 10);
 
+  // Focused mode: full-content card (used when chat is the ONLY thing the
+  // audience phone should show during a panel). Default mode: fixed-bottom
+  // drawer that overlays the rest of /day's content.
+  const wrapperCls = focused
+    ? 'rounded-2xl border border-[#48CAE4]/25 bg-[#00B4D8]/[0.04]'
+    : 'fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#0A1628]/95 backdrop-blur';
+  const collapsibleOpen = focused ? true : !collapsed;
+  const innerMaxH = focused ? 'max-h-[60vh]' : 'max-h-72';
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#0A1628]/95 backdrop-blur">
+    <div className={wrapperCls}>
       <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-white/[0.02]"
+        onClick={() => !focused && setCollapsed(!collapsed)}
+        className={`flex w-full items-center justify-between px-4 py-3 text-left ${focused ? 'cursor-default' : 'hover:bg-white/[0.02]'}`}
       >
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-[#48CAE4]" />
@@ -156,10 +165,10 @@ export function AudienceChatPanel() {
             {messages.length}
           </span>
         </div>
-        {collapsed ? <ChevronUp className="h-4 w-4 text-white/40" /> : <ChevronDown className="h-4 w-4 text-white/40" />}
+        {!focused && (collapsed ? <ChevronUp className="h-4 w-4 text-white/40" /> : <ChevronDown className="h-4 w-4 text-white/40" />)}
       </button>
 
-      {!collapsed && (
+      {collapsibleOpen && (
         <div className="border-t border-white/[0.04] px-4 py-3">
           {/* Input */}
           <div className="flex gap-2">
@@ -193,7 +202,7 @@ export function AudienceChatPanel() {
           </div>
 
           {/* Messages */}
-          <ul className="mt-3 max-h-72 space-y-1.5 overflow-y-auto">
+          <ul className={`mt-3 ${innerMaxH} space-y-1.5 overflow-y-auto`}>
             {messages.length === 0 && (
               <li className="text-xs text-white/40">No messages yet — be the first.</li>
             )}
