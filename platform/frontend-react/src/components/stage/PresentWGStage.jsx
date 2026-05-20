@@ -1,37 +1,62 @@
 /**
- * Projector view for the 2:50 PM Priority Presentations slot.
+ * Per-WG Priority Presentation — slide deck.
  *
- * Designed as a scrollable, top-to-bottom deck — one section per
- * minute of the co-lead's 5-7 minute window. Each section combines a
- * data viz with a one-line key takeaway so the audience can both
- * skim the screen and follow the talk.
+ * Rewritten 2026-05-20 from a single scrollable page to a 10-12 slide
+ * deck modeled on WelcomeDeck. Each WG co-lead drives their own deck
+ * via ←/→ during the 2:50 PM Priority Presentation slot. The audience
+ * phone view (CompactPresent) is unchanged — it always shows the
+ * advancing-question list.
  *
- * Sections:
- *   1. WG identity (refresh)
- *   2. Process funnel ("how we got to these 4")
- *   3. Morning vote receipt (which 4 advanced, by how much)
- *   4. The 4 advancing questions in depth (uses SUMMARY_DOCS rationale)
- *   5. R1 → R2 deliberation shifts
- *   6. Closing band w/ cross-cutting themes + handoff to cross-WG vote
- *
- * Audience phones get a leaner CompactPresent in CompactStageView.
+ * Slide order:
+ *   0. Title — WG identity + animated mini-network background
+ *   1. Mission — subtitle + background paragraph + key stats
+ *   2. By the numbers — composition stats (R2 active, panel pool, etc.)
+ *   3. The funnel — questions through R1 → R2 → panel → advancing
+ *   4. Morning vote receipt (skipped if no votes recorded yet)
+ *   5..N. One slide per advancing question with pain/expansion/impact
+ *   N+1. R1 → R2 deliberation shifts (skipped if no shifts)
+ *   N+2. Cross-cutting themes
+ *   N+3. Closing handoff to cross-WG vote
  */
 
-import { createElement, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   ArrowRight, ArrowUpRight, ArrowDownRight,
-  Target, Layers, BarChart3, Sparkles,
-  TrendingUp, ChevronsDown, Network,
+  ChevronsDown, Network, Target, TrendingUp,
+  BarChart3, Sparkles, Layers,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PILLAR_COLORS, WG_LABELS } from '@/components/stage/panelConfig';
 import { SUMMARY_DOCS } from '@/pages/WorkingGroupsSummaryPage';
 
-// How many advance per WG (WG5 fields all 5 themed Qs)
+// ── Color tokens (shared with WelcomeDeck visually) ─────────────────
+const C = {
+  bg: '#0A1628',
+  card: '#0E1E35',
+  border: 'rgba(255,255,255,0.08)',
+  borderLight: 'rgba(255,255,255,0.04)',
+  text: '#F8FAFC',
+  textSec: 'rgba(248,250,252,0.72)',
+  textMuted: 'rgba(248,250,252,0.42)',
+  cyan: '#48CAE4',
+  cyanDeep: '#00B4D8',
+  training: '#A78BFA',
+  self: '#34D399',
+  society: '#FBBF24',
+  emerald: '#10b981',
+  rose: '#fb7185',
+};
+
+// WG5 advances all 5 themed questions; others cap at 4.
 function advanceLimitFor(wgNumber) {
   return wgNumber === 5 ? 5 : 4;
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Main component
+// ────────────────────────────────────────────────────────────────────
 
 export function PresentWGStage({ wgNumber, bus }) {
   const [wg, setWg] = useState(null);
@@ -39,9 +64,14 @@ export function PresentWGStage({ wgNumber, bus }) {
   const [crossWgCandidates, setCrossWgCandidates] = useState(null);
   const [r2, setR2] = useState(null);
   const [voteResults, setVoteResults] = useState(null);
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  // Reset to slide 0 whenever the chair switches between WGs so the
+  // deck doesn't open mid-presentation on the wrong index.
+  useEffect(() => setSlideIndex(0), [wgNumber]);
 
   // Fetch every data source independently so a 500 on one leg doesn't
-  // blank the whole slide. Each section guards its own data.
+  // blank the whole deck.
   useEffect(() => {
     if (!wgNumber) return undefined;
     let cancelled = false;
@@ -68,7 +98,6 @@ export function PresentWGStage({ wgNumber, bus }) {
         id: q.id || q.question_id,
       })));
       setR2(results?.__error ? null : (results || null));
-      // Find the WG's morning wg_presentation session and pull its results
       const sessList = Array.isArray(sessions) ? sessions : [];
       const sess = sessList.find(
         (s) => s.wg_number === wgNumber && s.session_type === 'wg_presentation'
@@ -83,7 +112,7 @@ export function PresentWGStage({ wgNumber, bus }) {
     return () => { cancelled = true; };
   }, [wgNumber, bus]);
 
-  const accent = PILLAR_COLORS[wgNumber] || '#00B4D8';
+  const accent = PILLAR_COLORS[wgNumber] || C.cyan;
   const doc = (SUMMARY_DOCS || []).find((d) => d.wg === wgNumber);
   const limit = advanceLimitFor(wgNumber);
 
@@ -92,8 +121,7 @@ export function PresentWGStage({ wgNumber, bus }) {
     [r2],
   );
 
-  // Advancing = the cross-WG slate when it has been generated; otherwise
-  // fall back to the chair-curated panel pool / top R2 questions.
+  // Advancing slate: cross-WG curated set if available, else panel pool top-N.
   const advancing = useMemo(() => {
     const source = crossWgCandidates?.length ? crossWgCandidates : candidates;
     if (!source) return [];
@@ -110,7 +138,7 @@ export function PresentWGStage({ wgNumber, bus }) {
       .slice(0, limit);
   }, [candidates, crossWgCandidates, limit]);
 
-  // Morning vote tally — sort by avg_rank ascending (lower = better).
+  // Morning vote tally
   const morningRanking = useMemo(() => {
     const rows = (voteResults?.questions || voteResults?.results || [])
       .filter((r) => r.avg_rank != null || r.points != null || r.importance_mean != null);
@@ -121,15 +149,13 @@ export function PresentWGStage({ wgNumber, bus }) {
     });
   }, [voteResults]);
 
-  // Biggest R1 → R2 importance movers
+  // R1 → R2 shifts
   const shifts = useMemo(() => {
     const withShift = allActive
       .filter((q) => q.r1_importance_mean != null && q.r2_importance_mean != null)
       .map((q) => ({
-        id: q.id,
-        text: q.text,
-        r1: q.r1_importance_mean,
-        r2: q.r2_importance_mean,
+        id: q.id, text: q.text,
+        r1: q.r1_importance_mean, r2: q.r2_importance_mean,
         delta: q.r2_importance_mean - q.r1_importance_mean,
       }));
     const up = [...withShift].sort((a, b) => b.delta - a.delta).slice(0, 3);
@@ -138,7 +164,7 @@ export function PresentWGStage({ wgNumber, bus }) {
     return { up, down };
   }, [allActive]);
 
-  // Process funnel numbers — pull what we know; gaps fall back gracefully.
+  // Process funnel
   const funnel = useMemo(() => {
     const r2Active = allActive.length;
     const r2Removed = (r2?.questions || []).filter((q) => q.status === 'removed').length;
@@ -152,210 +178,361 @@ export function PresentWGStage({ wgNumber, bus }) {
     };
   }, [allActive, r2, candidates, limit]);
 
+  // Build the slide list dynamically — skip slides with no data.
+  const slides = useMemo(() => {
+    const list = [];
+    list.push((p) => <TitleSlide {...p} />);
+    list.push((p) => <MissionSlide {...p} />);
+    list.push((p) => <NumbersSlide {...p} />);
+    list.push((p) => <FunnelSlide {...p} />);
+    if (morningRanking.length > 0) list.push((p) => <MorningVoteSlide {...p} />);
+    advancing.forEach((q, i) => {
+      list.push((p) => <QuestionSlide {...p} question={q} index={i + 1} total={advancing.length} />);
+    });
+    if (shifts.up.length > 0 || shifts.down.length > 0) {
+      list.push((p) => <ShiftsSlide {...p} />);
+    }
+    if (doc?.themes && doc.themes.length > 0) {
+      list.push((p) => <ThemesSlide {...p} />);
+    }
+    list.push((p) => <ClosingSlide {...p} />);
+    return list;
+  }, [advancing, doc, morningRanking, shifts]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        setSlideIndex((i) => Math.min(slides.length - 1, i + 1));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setSlideIndex((i) => Math.max(0, i - 1));
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setSlideIndex(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        setSlideIndex(slides.length - 1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [slides.length]);
+
   if (candidates === null) {
     return <Skeleton className="h-full w-full rounded-2xl" />;
   }
 
-  const friendlyName = WG_LABELS[wgNumber] || doc?.title || wg?.name || `Working Group ${wgNumber}`;
-  const subtitle = doc?.subtitle || '';
-  const background = doc?.background || (wg?.scope || '').split('.').slice(0, 2).join('.');
-  const pillar = wg?.pillar || '';
+  const idx = Math.max(0, Math.min(slides.length - 1, slideIndex));
+  const Slide = slides[idx];
+
+  const context = {
+    wgNumber, wg, doc, accent, limit,
+    advancing, morningRanking, shifts, funnel, allActive,
+  };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#0A1628] text-white">
-      {/* Eyebrow strip so the audience always knows what slot this is */}
-      <div
-        className="sticky top-0 z-10 border-b border-white/[0.06] px-8 py-2 backdrop-blur-md sm:px-12"
-        style={{ backgroundColor: 'rgba(0, 180, 216, 0.10)' }}
-      >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-300">
-          Priority presentation · WG {wgNumber}
-          {pillar ? ` · ${pillar} pillar` : ''} · co-lead presenting now
-        </p>
-      </div>
+    <div className="relative h-full w-full overflow-hidden" style={{ background: C.bg }}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -24 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute inset-0 flex items-center justify-center px-12 py-12 sm:px-16"
+        >
+          <Slide {...context} />
+        </motion.div>
+      </AnimatePresence>
 
-      <div className="mx-auto max-w-7xl space-y-8 px-8 py-8 sm:px-12">
-        {/* Section 1 — WG identity */}
-        <SectionShell tone={accent}>
-          <SectionHeader icon={Sparkles} eyebrow="The working group" title={friendlyName} accent={accent} />
-          {subtitle && (
-            <p className="mt-2 text-2xl font-semibold leading-snug" style={{ color: accent }}>
-              {subtitle}
-            </p>
-          )}
-          {background && (
-            <p className="mt-4 max-w-5xl text-lg leading-relaxed text-white/72">
-              {background}
-            </p>
-          )}
-          <div className="mt-6 grid grid-cols-3 gap-4">
-            <CompositionStat
-              value={funnel.toR2 ?? '—'}
-              label="R2 questions on the table"
-              accent={accent}
-            />
-            <CompositionStat
-              value={funnel.panelPool ?? '—'}
-              label="On today's panel slate"
-              accent={accent}
-            />
-            <CompositionStat
-              value={limit}
-              label="Advancing to cross-WG"
-              accent="#10b981"
-            />
-          </div>
-        </SectionShell>
-
-        {/* Section 2 — Process funnel */}
-        <SectionShell tone="#6366F1">
-          <SectionHeader icon={ChevronsDown} eyebrow="The journey" title="How we got to these 4" accent="#6366F1" />
-          <FunnelFigure funnel={funnel} accent={accent} />
-          <Takeaway
-            text="These 4 are the refined output of weeks of WG deliberation, not a cold pick. Your job in the cross-WG vote is to weigh them against the 16 others advancing from WG1–5."
-            tone="indigo"
+      {/* Progress dots */}
+      <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setSlideIndex(i)}
+            className="h-1 rounded-full transition-all duration-300"
+            style={{
+              width: i === idx ? 36 : 6,
+              background: i === idx ? accent : 'rgba(255,255,255,0.18)',
+              cursor: 'pointer',
+            }}
+            aria-label={`Slide ${i + 1}`}
           />
-        </SectionShell>
-
-        {/* Section 3 — Morning vote receipt */}
-        <SectionShell tone="#f59e0b">
-          <SectionHeader icon={BarChart3} eyebrow="The receipt" title="What this morning's audience said" accent="#f59e0b" />
-          {morningRanking.length === 0 ? (
-            <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/[0.06] p-4 text-amber-200">
-              Morning vote tally isn't recorded for this session yet.
-              {' '}
-              <span className="text-amber-100/70">
-                The 4 advancing questions below are this WG's chair-curated panel pool.
-              </span>
-            </p>
-          ) : (
-            <MorningVoteFigure rows={morningRanking} advancingIds={new Set(advancing.map((q) => q.id || q.question_id))} />
-          )}
-          {morningRanking.length > 0 && (
-            <Takeaway
-              text={(() => {
-                const top = morningRanking.slice(0, limit);
-                const next = morningRanking[limit];
-                if (!next || top.length < limit) return 'Top 4 emerged with a clear gap above the rest.';
-                const topAvg = top.reduce((s, r) => s + (r.avg_rank || 0), 0) / top.length;
-                const gap = (next.avg_rank || 0) - topAvg;
-                if (Math.abs(gap) < 0.3) {
-                  return 'Top 4 were tight — the next question was within striking distance. Worth giving the close-miss a look in the cross-WG round.';
-                }
-                return `The top ${limit} were clearly preferred — average rank ${topAvg.toFixed(1)} vs ${next.avg_rank.toFixed(1)} for the next question, a ${gap.toFixed(1)}-rank gap.`;
-              })()}
-              tone="amber"
-            />
-          )}
-        </SectionShell>
-
-        {/* Section 4 — The 4 advancing questions, in depth */}
-        <SectionShell tone={accent}>
-          <SectionHeader icon={Target} eyebrow="Advancing to cross-WG" title={`The ${limit} questions on your closing rank`} accent={accent} />
-          {advancing.length === 0 ? (
-            <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/[0.06] p-6 text-amber-200">
-              No questions are flagged for the cross-WG vote yet.
-            </p>
-          ) : (
-            <ol className="mt-6 space-y-4">
-              {advancing.map((q, i) => {
-                // Merge in doc.questions rationale where text matches
-                const docMatch = doc?.questions?.find(
-                  (dq) => dq.prompt && q.text && dq.prompt.slice(0, 40).toLowerCase() === q.text.slice(0, 40).toLowerCase(),
-                ) || doc?.questions?.[i];
-                return (
-                  <AdvancingQuestionCard
-                    key={q.id || q.question_id}
-                    index={i + 1}
-                    question={q}
-                    rationale={docMatch}
-                    accent={accent}
-                  />
-                );
-              })}
-            </ol>
-          )}
-        </SectionShell>
-
-        {/* Section 5 — R1 → R2 shifts */}
-        {(shifts.up.length > 0 || shifts.down.length > 0) && (
-          <SectionShell tone="#10b981">
-            <SectionHeader icon={TrendingUp} eyebrow="Deliberation in motion" title="Where minds changed between R1 and R2" accent="#10b981" />
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              <ShiftColumn title="Warmed to" items={shifts.up} tone="emerald" />
-              <ShiftColumn title="Cooled on" items={shifts.down} tone="rose" />
-            </div>
-            <Takeaway
-              text="The WG materially shifted its mind on several questions during deliberation — evidence of real engagement, not rubber-stamping."
-              tone="emerald"
-            />
-          </SectionShell>
-        )}
-
-        {/* Section 6 — Cross-cutting themes + closing CTA */}
-        {doc?.themes && doc.themes.length > 0 && (
-          <SectionShell tone="#A78BFA">
-            <SectionHeader icon={Network} eyebrow="Cross-cutting threads" title="Themes that echo across the day" accent="#A78BFA" />
-            <div className="mt-6 grid gap-3 lg:grid-cols-3">
-              {doc.themes.map((theme) => (
-                <div
-                  key={theme.title}
-                  className="rounded-2xl border border-purple-400/20 bg-purple-500/[0.05] p-4"
-                >
-                  <h3 className="text-base font-bold text-white">{theme.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-white/65">{theme.body}</p>
-                </div>
-              ))}
-            </div>
-          </SectionShell>
-        )}
+        ))}
       </div>
 
-      {/* Closing band — sticky to the bottom of scroll */}
-      <div className="mt-4 border-t border-emerald-400/25 bg-emerald-500/[0.06] px-8 py-5 sm:px-12">
-        <div className="mx-auto flex max-w-7xl items-center gap-4">
-          <ArrowRight className="h-6 w-6 text-emerald-300" />
-          <p className="text-xl text-white/85 sm:text-2xl">
-            <strong className="font-bold text-white">Next:</strong>{' '}
-            rank all {wgNumber === 5 ? 21 : 21} advancing questions across WG1–5 in the cross-WG vote.
-          </p>
-        </div>
+      {/* Slide counter + WG strip */}
+      <div
+        className="absolute bottom-5 left-8 z-20 font-mono text-xs"
+        style={{ color: C.textMuted }}
+      >
+        WG {wgNumber} · {WG_LABELS[wgNumber]}
+      </div>
+      <div
+        className="absolute bottom-5 right-8 z-20 font-mono text-xs"
+        style={{ color: C.textMuted }}
+      >
+        {String(idx + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Subcomponents
-// ---------------------------------------------------------------------------
+// ────────────────────────────────────────────────────────────────────
+// Reusable primitives
+// ────────────────────────────────────────────────────────────────────
 
-function SectionShell({ tone, children }) {
+function H1({ children, className = '', size = 'xl', color }) {
+  const sizes = {
+    hero: 'text-7xl sm:text-8xl lg:text-9xl',
+    xl: 'text-5xl sm:text-6xl lg:text-7xl',
+    lg: 'text-4xl sm:text-5xl lg:text-6xl',
+    md: 'text-3xl sm:text-4xl lg:text-5xl',
+  };
   return (
-    <section
-      className="rounded-3xl border p-6 sm:p-8"
-      style={{ borderColor: `${tone}30`, backgroundColor: `${tone}0A` }}
+    <h1
+      className={`font-bold tracking-tight leading-[1.05] ${sizes[size]} ${className}`}
+      style={{ color: color || C.text }}
     >
       {children}
-    </section>
+    </h1>
   );
 }
 
-function SectionHeader({ icon, eyebrow, title, accent }) {
+function Eyebrow({ children, tone = C.cyan }) {
   return (
-    <div className="flex items-start gap-4">
-      <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-        style={{ backgroundColor: `${accent}25`, color: accent }}
-      >
-        {createElement(icon, { className: 'h-6 w-6' })}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.3em]" style={{ color: accent }}>
-          {eyebrow}
+    <p
+      className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.32em]"
+      style={{ color: tone }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function AnimatedNumber({ value, duration = 1200, suffix = '', delay = 0 }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-10%' });
+  useEffect(() => {
+    if (!inView) return;
+    let raf;
+    const timeoutId = setTimeout(() => {
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setDisplay(Math.round((value || 0) * eased));
+        if (t < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, delay);
+    return () => {
+      clearTimeout(timeoutId);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [inView, value, duration, delay]);
+  return (
+    <span ref={ref} className="font-mono tabular-nums">
+      {(display || 0).toLocaleString()}
+      {suffix}
+    </span>
+  );
+}
+
+function StatBlock({ value, label, sub, accent, delay = 0, suffix = '' }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: delay / 1000, ease: 'easeOut' }}
+      className="rounded-2xl border p-5 sm:p-6"
+      style={{ borderColor: `${accent}33`, background: `${accent}0E` }}
+    >
+      <p className="text-5xl font-bold tabular-nums sm:text-6xl lg:text-7xl" style={{ color: accent }}>
+        <AnimatedNumber value={value} delay={delay} suffix={suffix} />
+      </p>
+      <p className="mt-3 text-sm font-semibold uppercase tracking-wider" style={{ color: C.text }}>
+        {label}
+      </p>
+      {sub && (
+        <p className="mt-1 text-xs" style={{ color: C.textMuted }}>
+          {sub}
         </p>
-        <h2 className="mt-1 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-          {title}
+      )}
+    </motion.div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Title slide — animated background
+// ────────────────────────────────────────────────────────────────────
+
+function TitleBackground({ accent }) {
+  const canvasRef = useRef(null);
+  const rafRef = useRef();
+  const reduced = useRef(false);
+
+  useEffect(() => {
+    reduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Concentric rings + drifting particles, accent-colored
+    const N = 60;
+    const nodes = Array.from({ length: N }, () => ({
+      x: Math.random(), y: Math.random(),
+      vx: (Math.random() - 0.5) * 0.0006,
+      vy: (Math.random() - 0.5) * 0.0006,
+      r: 0.8 + Math.random() * 1.6,
+      phase: Math.random() * Math.PI * 2,
+    }));
+
+    function draw(now) {
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      // Center glow
+      const cx = w / 2, cy = h * 0.4;
+      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.55);
+      grd.addColorStop(0, `${accent}1A`);
+      grd.addColorStop(1, `${accent}00`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, w, h);
+
+      // Concentric rings
+      for (let r = 80; r < Math.max(w, h); r += 80) {
+        ctx.strokeStyle = `${accent}10`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + Math.sin(now / 2000) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Particles
+      for (const n of nodes) {
+        if (!reduced.current) {
+          n.x += n.vx; n.y += n.vy;
+          if (n.x < 0 || n.x > 1) n.vx *= -1;
+          if (n.y < 0 || n.y > 1) n.vy *= -1;
+        }
+        const px = n.x * w, py = n.y * h;
+        const pulse = 0.7 + 0.3 * Math.sin(now / 800 + n.phase);
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.35 * pulse;
+        ctx.beginPath();
+        ctx.arc(px, py, n.r * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      if (!reduced.current) rafRef.current = requestAnimationFrame(draw);
+    }
+
+    resize();
+    rafRef.current = requestAnimationFrame(draw);
+    window.addEventListener('resize', resize);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('resize', resize);
+    };
+  }, [accent]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      aria-hidden="true"
+    />
+  );
+}
+
+function TitleSlide({ wgNumber, wg, doc, accent }) {
+  const friendlyName = WG_LABELS[wgNumber] || doc?.title || wg?.name || `Working Group ${wgNumber}`;
+  const coLeads = doc?.meta?.replace(/^Co-leads:\s*/i, '').split(/[·,]/).map((s) => s.trim()).filter(Boolean) || [];
+  const pillar = wg?.pillar || doc?.questions?.[0]?.pillar || '';
+
+  return (
+    <div className="relative h-full w-full">
+      <TitleBackground accent={accent} />
+      <div className="relative flex h-full flex-col items-center justify-center text-center">
+        <Eyebrow tone={accent}>
+          Priority Presentation · WG {wgNumber}{pillar ? ` · ${pillar} pillar` : ''}
+        </Eyebrow>
+        <H1 size="hero" className="mt-8">
+          <span style={{ color: accent }}>WG {wgNumber}</span>
+        </H1>
+        <h2
+          className="mt-3 max-w-5xl text-4xl font-semibold leading-tight sm:text-5xl"
+          style={{ color: C.text }}
+        >
+          {friendlyName}
         </h2>
+        {doc?.subtitle && (
+          <p
+            className="mt-6 max-w-3xl text-xl sm:text-2xl"
+            style={{ color: C.textSec }}
+          >
+            {doc.subtitle}
+          </p>
+        )}
+        {coLeads.length > 0 && (
+          <div
+            className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-sm"
+            style={{ color: C.textMuted }}
+          >
+            {coLeads.map((cl, i) => (
+              <span key={cl}>
+                {i > 0 && <span style={{ color: C.borderLight, marginRight: '1rem' }}>·</span>}
+                {cl}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Mission slide
+// ────────────────────────────────────────────────────────────────────
+
+function MissionSlide({ doc, accent, wg, funnel, limit }) {
+  const background = doc?.background || (wg?.scope || '').split('.').slice(0, 2).join('.');
+  return (
+    <div className="mx-auto w-full max-w-6xl">
+      <Eyebrow tone={accent}>The mission</Eyebrow>
+      {doc?.subtitle && (
+        <H1 size="lg" className="mt-8" color={C.text}>
+          {doc.subtitle}.
+        </H1>
+      )}
+      {background && (
+        <p
+          className="mt-8 max-w-5xl text-xl leading-relaxed sm:text-2xl"
+          style={{ color: C.textSec }}
+        >
+          {background}
+        </p>
+      )}
+      <div className="mt-12 grid grid-cols-3 gap-5">
+        <CompositionStat value={funnel.toR2 ?? '—'} label="R2 questions" accent={accent} />
+        <CompositionStat value={funnel.panelPool ?? '—'} label="On today's slate" accent={accent} />
+        <CompositionStat value={limit} label="Advance to cross-WG" accent={C.emerald} />
       </div>
     </div>
   );
@@ -364,225 +541,423 @@ function SectionHeader({ icon, eyebrow, title, accent }) {
 function CompositionStat({ value, label, accent }) {
   return (
     <div
-      className="rounded-2xl border px-4 py-4"
-      style={{ borderColor: `${accent}30`, backgroundColor: `${accent}0E` }}
+      className="rounded-2xl border px-5 py-5"
+      style={{ borderColor: `${accent}30`, background: `${accent}0E` }}
     >
-      <p className="font-mono text-5xl font-bold tabular-nums text-white sm:text-6xl">
-        {value}
+      <p className="font-mono text-5xl font-bold tabular-nums sm:text-6xl" style={{ color: accent }}>
+        {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
       </p>
-      <p className="mt-1 text-xs uppercase tracking-wider text-white/50 sm:text-sm">
+      <p className="mt-2 text-xs uppercase tracking-wider sm:text-sm" style={{ color: C.text }}>
         {label}
       </p>
     </div>
   );
 }
 
-function FunnelFigure({ funnel, accent }) {
-  const stages = [
-    { n: funnel.candidates, label: 'Candidates after WG kickoff', tone: '#94a3b8' },
-    { n: funnel.toR2, label: 'Cleared R1 → advanced to R2', tone: '#60a5fa' },
-    { n: funnel.panelPool, label: "Today's panel slate", tone: accent },
-    { n: funnel.advance, label: 'Advance to cross-WG closing vote', tone: '#10b981' },
-  ];
+// ────────────────────────────────────────────────────────────────────
+// By the numbers slide
+// ────────────────────────────────────────────────────────────────────
+
+function NumbersSlide({ accent, doc, wg, funnel, limit, advancing, allActive }) {
+  const totalQs = funnel.candidates ?? funnel.toR2;
+  const themesCount = doc?.themes?.length || 0;
+  // Average R2 include% across the WG's active questions
+  const avgInc = useMemo(() => {
+    const xs = allActive.filter((q) => q.r2_include_pct != null).map((q) => q.r2_include_pct);
+    if (!xs.length) return null;
+    return Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
+  }, [allActive]);
+
   return (
-    <div className="mt-6 flex flex-col items-center gap-2">
-      {stages.map((s, i) => (
-        <div key={i} className="flex w-full flex-col items-center">
-          <div
-            className="flex w-full items-center justify-between rounded-2xl border px-6 py-4"
-            style={{
-              maxWidth: `${100 - i * 12}%`,
-              borderColor: `${s.tone}45`,
-              backgroundColor: `${s.tone}12`,
-            }}
-          >
-            <span className="font-mono text-4xl font-bold tabular-nums text-white sm:text-5xl">
-              {s.n ?? '—'}
-            </span>
-            <span className="ml-4 text-right text-sm text-white/65 sm:text-base">
-              {s.label}
-            </span>
-          </div>
-          {i < stages.length - 1 && (
-            <ChevronsDown className="my-1 h-4 w-4 text-white/30" />
-          )}
-        </div>
-      ))}
+    <div className="mx-auto w-full max-w-7xl">
+      <Eyebrow tone={accent}>By the numbers</Eyebrow>
+      <H1 size="lg" className="mt-6">
+        What this WG built before today.
+      </H1>
+      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatBlock
+          value={totalQs || 0}
+          label="Total questions"
+          sub="Across R1 and R2"
+          accent={accent}
+          delay={0}
+        />
+        <StatBlock
+          value={funnel.panelPool || 0}
+          label="Curated for today"
+          sub="Chair-selected panel pool"
+          accent={C.training}
+          delay={120}
+        />
+        <StatBlock
+          value={limit}
+          label="Advance to cross-WG"
+          sub="Final research priorities"
+          accent={C.emerald}
+          delay={240}
+        />
+        <StatBlock
+          value={avgInc ?? 0}
+          suffix="%"
+          label="Avg R2 include rate"
+          sub="Across all active questions"
+          accent={C.society}
+          delay={360}
+        />
+      </div>
+      <p className="mt-12 text-center text-sm" style={{ color: C.textMuted }}>
+        Every number is the result of {advancing.length === 5 ? '11 members' : 'a working group'} choosing
+        to deliberate together for six weeks.
+      </p>
     </div>
   );
 }
 
-function MorningVoteFigure({ rows, advancingIds }) {
-  // Horizontal bars driven by avg_rank (lower = better, so invert for length)
-  const visible = rows.slice(0, 10);
+// ────────────────────────────────────────────────────────────────────
+// Funnel slide
+// ────────────────────────────────────────────────────────────────────
+
+function FunnelSlide({ funnel, accent, limit }) {
+  const stages = [
+    { n: funnel.candidates ?? 0, label: 'Candidates after kickoff', sub: 'R1 question set', tone: C.textMuted },
+    { n: funnel.toR2 ?? 0, label: 'Advanced through R1', sub: 'R2 active question set', tone: C.cyan },
+    { n: funnel.panelPool ?? 0, label: "Today's panel slate", sub: 'Curated by co-leads', tone: accent },
+    { n: limit, label: 'Advance to cross-WG vote', sub: 'Top by audience ranking', tone: C.emerald },
+  ];
+  return (
+    <div className="mx-auto w-full max-w-5xl">
+      <Eyebrow tone={accent}>The journey</Eyebrow>
+      <H1 size="lg" className="mt-6">
+        How we got to{' '}
+        <span style={{ color: accent }} className="font-mono">{limit}</span>.
+      </H1>
+      <div className="mt-10 flex flex-col items-center gap-2">
+        {stages.map((s, i) => {
+          const width = 100 - i * 14;
+          return (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.45, delay: 0.15 + i * 0.13, ease: 'easeOut' }}
+              className="flex w-full justify-center"
+            >
+              <div
+                className="flex items-center gap-6 rounded-2xl border px-6 py-4 sm:px-8 sm:py-5"
+                style={{
+                  width: `${width}%`,
+                  borderColor: `${s.tone}50`,
+                  background: `${s.tone}10`,
+                  boxShadow: `0 0 32px ${s.tone}1A`,
+                }}
+              >
+                <span
+                  className="shrink-0 font-mono text-5xl font-bold tabular-nums sm:text-6xl"
+                  style={{ color: s.tone }}
+                >
+                  <AnimatedNumber value={s.n} delay={200 + i * 130} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-lg font-bold sm:text-xl" style={{ color: C.text }}>
+                    {s.label}
+                  </p>
+                  <p className="text-xs sm:text-sm" style={{ color: C.textMuted }}>
+                    {s.sub}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+      <p className="mt-10 text-center text-sm" style={{ color: C.textMuted }}>
+        Each step is a refinement — the items that didn't advance still shaped the ones that did.
+      </p>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Morning vote slide
+// ────────────────────────────────────────────────────────────────────
+
+function MorningVoteSlide({ morningRanking, advancing, accent, limit }) {
+  const visible = morningRanking.slice(0, 10);
+  const advancingIds = new Set(advancing.map((q) => q.id || q.question_id));
   const maxRank = Math.max(...visible.map((r) => r.avg_rank || 1));
   const minRank = Math.min(...visible.map((r) => r.avg_rank || 1));
   const span = Math.max(0.5, maxRank - minRank);
   return (
-    <div className="mt-6 space-y-2.5">
-      {visible.map((r, i) => {
-        const qid = r.question_id ?? r.id;
-        const isAdvancing = advancingIds.has(qid);
-        const tone = isAdvancing ? '#10b981' : 'rgba(148, 163, 184, 0.7)';
-        // Inverted: best rank = longest bar
-        const width = r.avg_rank != null
-          ? Math.max(8, 100 - ((r.avg_rank - minRank) / span) * 70)
-          : 50;
-        return (
-          <div key={qid} className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3">
-            <span
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-sm font-bold ${
-                isAdvancing ? 'bg-emerald-500/25 text-emerald-200' : 'bg-white/[0.06] text-white/55'
-              }`}
+    <div className="mx-auto w-full max-w-6xl">
+      <Eyebrow tone={accent}>The receipt</Eyebrow>
+      <H1 size="lg" className="mt-6">
+        What this morning's room said.
+      </H1>
+      <div className="mt-10 space-y-2">
+        {visible.map((r, i) => {
+          const qid = r.question_id ?? r.id;
+          const adv = advancingIds.has(qid);
+          const tone = adv ? C.emerald : 'rgba(148, 163, 184, 0.7)';
+          const width = r.avg_rank != null
+            ? Math.max(8, 100 - ((r.avg_rank - minRank) / span) * 70)
+            : 50;
+          return (
+            <motion.div
+              key={qid}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.35, delay: 0.1 + i * 0.04 }}
+              className="grid grid-cols-[2.25rem_minmax(0,1fr)_5.5rem] items-center gap-3 rounded-xl border px-4 py-2.5"
+              style={{ borderColor: C.borderLight, background: C.card }}
             >
-              {i + 1}
-            </span>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="min-w-0 flex-1 truncate text-sm text-white/85 sm:text-base">
-                  {r.text || r.question_text}
-                </p>
-                {isAdvancing && (
-                  <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200">
-                    ✓ advances
-                  </span>
-                )}
-              </div>
-              <div
-                className="mt-1.5 h-1.5 overflow-hidden rounded-full"
-                style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}
+              <span
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-sm font-bold"
+                style={{
+                  background: adv ? `${C.emerald}28` : 'rgba(255,255,255,0.04)',
+                  color: adv ? C.emerald : C.textMuted,
+                }}
               >
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${width}%`, backgroundColor: tone }}
-                />
+                {i + 1}
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="min-w-0 flex-1 truncate text-sm sm:text-base" style={{ color: C.text }}>
+                    {r.text || r.question_text}
+                  </p>
+                  {adv && (
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                      style={{ background: `${C.emerald}20`, color: C.emerald }}
+                    >
+                      ✓ advances
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${width}%` }}
+                    transition={{ duration: 0.7, delay: 0.2 + i * 0.05 }}
+                    className="h-full rounded-full"
+                    style={{ background: tone }}
+                  />
+                </div>
               </div>
-            </div>
-            <span className="shrink-0 font-mono text-sm text-white/60">
-              {r.avg_rank != null ? `rank ${r.avg_rank.toFixed(2)}` : '—'}
-            </span>
+              <span className="text-right font-mono text-xs" style={{ color: C.textMuted }}>
+                {r.avg_rank != null ? `rank ${r.avg_rank.toFixed(2)}` : '—'}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+      {(() => {
+        const top = morningRanking.slice(0, limit);
+        const next = morningRanking[limit];
+        if (!next || top.length < limit) return null;
+        const topAvg = top.reduce((s, r) => s + (r.avg_rank || 0), 0) / top.length;
+        const gap = (next.avg_rank || 0) - topAvg;
+        const tight = Math.abs(gap) < 0.3;
+        return (
+          <div
+            className="mt-8 rounded-xl border-l-4 px-5 py-3"
+            style={{
+              borderColor: tight ? C.society : C.emerald,
+              background: tight ? `${C.society}10` : `${C.emerald}10`,
+            }}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: tight ? C.society : C.emerald }}>
+              Key takeaway
+            </p>
+            <p className="mt-1 text-base" style={{ color: C.text }}>
+              {tight
+                ? `Top ${limit} were tight — the next question was within striking distance. Worth a look in the cross-WG round.`
+                : `The top ${limit} were clearly preferred — avg rank ${topAvg.toFixed(1)} vs ${next.avg_rank.toFixed(1)} for the next question, a ${gap.toFixed(1)}-rank gap.`}
+            </p>
           </div>
         );
-      })}
+      })()}
     </div>
   );
 }
 
-function AdvancingQuestionCard({ index, question, rationale, accent }) {
+// ────────────────────────────────────────────────────────────────────
+// One slide per advancing question
+// ────────────────────────────────────────────────────────────────────
+
+function QuestionSlide({ question, index, total, doc, accent }) {
+  // Match SUMMARY_DOCS rationale by 40-char prefix, then positional fallback.
+  const rationale = useMemo(() => {
+    const direct = doc?.questions?.find(
+      (dq) => dq.prompt && question.text &&
+        dq.prompt.slice(0, 40).toLowerCase() === question.text.slice(0, 40).toLowerCase(),
+    );
+    return direct || doc?.questions?.[index - 1];
+  }, [doc, question, index]);
+
   const delta = (question.r1_importance_mean != null && question.r2_importance_mean != null)
     ? question.r2_importance_mean - question.r1_importance_mean
     : null;
+
   return (
-    <li
-      className="rounded-2xl border p-5"
-      style={{ borderColor: `${accent}35`, backgroundColor: `${accent}0E` }}
-    >
-      <div className="flex items-start gap-5">
-        <span
-          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full font-mono text-2xl font-bold tabular-nums"
-          style={{ backgroundColor: `${accent}30`, color: accent }}
-        >
-          {index}
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="flex items-baseline justify-between">
+        <Eyebrow tone={accent}>Advancing question {index} of {total}</Eyebrow>
+        <span className="font-mono text-xs" style={{ color: C.textMuted }}>
+          {question.text ? `Q${question.id ?? question.question_id ?? ''}` : ''}
         </span>
-        <div className="min-w-0 flex-1">
-          {rationale?.title && (
-            <p className="text-sm font-semibold uppercase tracking-wide text-white/55">
-              {rationale.title}
-            </p>
-          )}
-          <p className="mt-1 text-xl leading-snug text-white/95 sm:text-2xl">
-            {question.text}
-          </p>
-
-          {/* Stat strip */}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/55">
-            {question.r2_include_pct != null && (
-              <span>
-                <span className="font-mono font-semibold text-white/80">
-                  {Math.round(question.r2_include_pct)}%
-                </span>{' '}
-                include
-              </span>
-            )}
-            {question.r2_importance_mean != null && (
-              <span>
-                importance{' '}
-                <span className="font-mono font-semibold text-white/80">
-                  {question.r2_importance_mean.toFixed(1)}
-                </span>
-              </span>
-            )}
-            {delta != null && Math.abs(delta) >= 0.15 && (
-              <span
-                className={`inline-flex items-center gap-1 font-mono font-semibold ${
-                  delta > 0 ? 'text-emerald-300' : 'text-rose-300'
-                }`}
-              >
-                {delta > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                {delta > 0 ? '+' : ''}{delta.toFixed(1)} vs R1
-              </span>
-            )}
-          </div>
-
-          {/* Rationale grid from SUMMARY_DOCS */}
-          {(rationale?.pain || rationale?.expansion || rationale?.impact) && (
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {rationale?.pain && (
-                <RationaleBlock label="Pain point" body={rationale.pain} />
-              )}
-              {rationale?.expansion && (
-                <RationaleBlock label="What it unlocks" body={rationale.expansion} />
-              )}
-              {rationale?.impact && (
-                <RationaleBlock label="Anticipated impact" body={rationale.impact} />
-              )}
-            </div>
-          )}
-        </div>
       </div>
-    </li>
+      {rationale?.title && (
+        <p
+          className="mt-6 text-sm font-bold uppercase tracking-wider"
+          style={{ color: C.textMuted }}
+        >
+          {rationale.title}
+        </p>
+      )}
+      <h2
+        className="mt-2 max-w-5xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl"
+        style={{ color: C.text }}
+      >
+        {question.text}
+      </h2>
+
+      {/* Stat strip */}
+      <div className="mt-6 flex flex-wrap items-center gap-4 text-base" style={{ color: C.textSec }}>
+        {question.r2_include_pct != null && (
+          <span className="rounded-full border px-3 py-1 font-mono" style={{ borderColor: `${accent}30` }}>
+            <span style={{ color: accent }} className="font-bold">{Math.round(question.r2_include_pct)}%</span>{' '}
+            <span style={{ color: C.textMuted }}>include</span>
+          </span>
+        )}
+        {question.r2_importance_mean != null && (
+          <span className="rounded-full border px-3 py-1 font-mono" style={{ borderColor: `${accent}30` }}>
+            <span style={{ color: C.textMuted }}>importance</span>{' '}
+            <span style={{ color: accent }} className="font-bold">{question.r2_importance_mean.toFixed(1)}</span>
+          </span>
+        )}
+        {question.pairwise_score != null && question.pairwise_score > 0 && (
+          <span className="rounded-full border px-3 py-1 font-mono" style={{ borderColor: `${accent}30` }}>
+            <span style={{ color: C.textMuted }}>pairwise</span>{' '}
+            <span style={{ color: accent }} className="font-bold">{Math.round(question.pairwise_score)}</span>
+          </span>
+        )}
+        {delta != null && Math.abs(delta) >= 0.15 && (
+          <span
+            className="inline-flex items-center gap-1 font-mono font-bold"
+            style={{ color: delta > 0 ? C.emerald : C.rose }}
+          >
+            {delta > 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+            {delta > 0 ? '+' : ''}{delta.toFixed(1)} vs R1
+          </span>
+        )}
+      </div>
+
+      {/* Rationale grid */}
+      {(rationale?.pain || rationale?.expansion || rationale?.impact) && (
+        <div className="mt-10 grid gap-4 lg:grid-cols-3">
+          {rationale?.pain && <RationaleBlock label="Pain point" body={rationale.pain} accent={accent} />}
+          {rationale?.expansion && <RationaleBlock label="What it unlocks" body={rationale.expansion} accent={accent} />}
+          {rationale?.impact && <RationaleBlock label="Anticipated impact" body={rationale.impact} accent={accent} />}
+        </div>
+      )}
+    </div>
   );
 }
 
-function RationaleBlock({ label, body }) {
+function RationaleBlock({ label, body, accent }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">{label}</p>
-      <p className="mt-1 text-sm leading-relaxed text-white/65">{body}</p>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.2 }}
+      className="rounded-2xl border p-5"
+      style={{ borderColor: `${accent}25`, background: `${accent}08` }}
+    >
+      <p
+        className="text-[10px] font-bold uppercase tracking-[0.25em]"
+        style={{ color: accent }}
+      >
+        {label}
+      </p>
+      <p className="mt-3 text-base leading-relaxed lg:text-lg" style={{ color: C.text }}>
+        {body}
+      </p>
+    </motion.div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// R1 → R2 shifts slide
+// ────────────────────────────────────────────────────────────────────
+
+function ShiftsSlide({ shifts, accent }) {
+  return (
+    <div className="mx-auto w-full max-w-6xl">
+      <Eyebrow tone={accent}>Deliberation in motion</Eyebrow>
+      <H1 size="lg" className="mt-6">
+        Where the WG <span style={{ color: accent }}>changed its mind</span>{' '}
+        between R1 and R2.
+      </H1>
+      <div className="mt-10 grid gap-5 lg:grid-cols-2">
+        <ShiftColumn title="Warmed to" items={shifts.up} tone={C.emerald} />
+        <ShiftColumn title="Cooled on" items={shifts.down} tone={C.rose} />
+      </div>
+      <div
+        className="mt-10 rounded-xl border-l-4 px-5 py-3"
+        style={{ borderColor: C.emerald, background: `${C.emerald}10` }}
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: C.emerald }}>
+          Key takeaway
+        </p>
+        <p className="mt-1 text-base" style={{ color: C.text }}>
+          The WG materially shifted its mind on several questions during deliberation — evidence
+          of real engagement, not rubber-stamping.
+        </p>
+      </div>
     </div>
   );
 }
 
 function ShiftColumn({ title, items, tone }) {
-  if (!items?.length) return null;
-  const toneMap = {
-    emerald: { color: '#34d399', bg: 'rgba(16, 185, 129, 0.10)', border: 'rgba(16, 185, 129, 0.30)' },
-    rose:    { color: '#fb7185', bg: 'rgba(248, 113, 113, 0.10)', border: 'rgba(248, 113, 113, 0.30)' },
-  };
-  const t = toneMap[tone] || toneMap.emerald;
-  const Icon = tone === 'rose' ? ArrowDownRight : ArrowUpRight;
+  if (!items?.length) {
+    return (
+      <div
+        className="rounded-2xl border p-5"
+        style={{ borderColor: `${tone}30`, background: `${tone}08`, opacity: 0.4 }}
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: tone }}>
+          {title}
+        </p>
+        <p className="mt-3 text-sm" style={{ color: C.textMuted }}>
+          No shifts in this direction.
+        </p>
+      </div>
+    );
+  }
+  const Icon = tone === C.rose ? ArrowDownRight : ArrowUpRight;
   return (
     <div
-      className="rounded-2xl border p-4"
-      style={{ borderColor: t.border, backgroundColor: t.bg }}
+      className="rounded-2xl border p-5"
+      style={{ borderColor: `${tone}40`, background: `${tone}0E` }}
     >
       <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4" style={{ color: t.color }} />
-        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: t.color }}>
+        <Icon className="h-5 w-5" style={{ color: tone }} />
+        <p className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: tone }}>
           {title}
         </p>
       </div>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-4 space-y-3">
         {items.map((q) => (
           <li key={q.id} className="flex items-start gap-3">
-            <span className="shrink-0 font-mono text-sm font-bold" style={{ color: t.color }}>
+            <span className="shrink-0 font-mono text-base font-bold tabular-nums" style={{ color: tone }}>
               {q.delta > 0 ? '+' : ''}{q.delta.toFixed(1)}
             </span>
-            <p className="min-w-0 flex-1 text-sm leading-snug text-white/85 line-clamp-2">
+            <p className="min-w-0 flex-1 text-sm leading-snug line-clamp-3" style={{ color: C.text }}>
               {q.text}
             </p>
-            <span className="shrink-0 font-mono text-xs text-white/45">
-              {q.r1.toFixed(1)} → <span className="font-bold text-white/80">{q.r2.toFixed(1)}</span>
+            <span className="shrink-0 font-mono text-xs" style={{ color: C.textMuted }}>
+              {q.r1.toFixed(1)} →{' '}
+              <span className="font-bold" style={{ color: C.text }}>{q.r2.toFixed(1)}</span>
             </span>
           </li>
         ))}
@@ -591,23 +966,74 @@ function ShiftColumn({ title, items, tone }) {
   );
 }
 
-function Takeaway({ text, tone = 'cyan' }) {
-  const toneMap = {
-    cyan:    { color: '#7dd3fc', border: 'rgba(125, 211, 252, 0.30)', bg: 'rgba(125, 211, 252, 0.08)' },
-    amber:   { color: '#fcd34d', border: 'rgba(252, 211, 77, 0.30)',  bg: 'rgba(252, 211, 77, 0.08)' },
-    emerald: { color: '#34d399', border: 'rgba(52, 211, 153, 0.30)',  bg: 'rgba(52, 211, 153, 0.08)' },
-    indigo:  { color: '#a5b4fc', border: 'rgba(165, 180, 252, 0.30)', bg: 'rgba(165, 180, 252, 0.08)' },
-  };
-  const t = toneMap[tone] || toneMap.cyan;
+// ────────────────────────────────────────────────────────────────────
+// Cross-cutting themes slide
+// ────────────────────────────────────────────────────────────────────
+
+function ThemesSlide({ doc, accent }) {
   return (
-    <div
-      className="mt-5 rounded-xl border-l-4 px-4 py-3"
-      style={{ borderColor: t.color, backgroundColor: t.bg }}
-    >
-      <p className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: t.color }}>
-        Key takeaway
-      </p>
-      <p className="mt-1 text-base text-white/85 sm:text-lg">{text}</p>
+    <div className="mx-auto w-full max-w-6xl">
+      <Eyebrow tone={accent}>Cross-cutting threads</Eyebrow>
+      <H1 size="lg" className="mt-6">
+        The themes that echo across this WG.
+      </H1>
+      <div className="mt-10 grid gap-5 lg:grid-cols-3">
+        {(doc?.themes || []).map((theme, i) => (
+          <motion.div
+            key={theme.title}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.2 + i * 0.12 }}
+            className="rounded-2xl border p-6"
+            style={{ borderColor: `${accent}30`, background: `${accent}08` }}
+          >
+            <div
+              className="mb-4 h-1 w-12 rounded-full"
+              style={{ background: accent }}
+            />
+            <h3 className="text-lg font-bold leading-snug" style={{ color: C.text }}>
+              {theme.title}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: C.textSec }}>
+              {theme.body}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Closing slide
+// ────────────────────────────────────────────────────────────────────
+
+function ClosingSlide({ accent, limit, doc, wgNumber }) {
+  return (
+    <div className="mx-auto w-full max-w-5xl text-center">
+      <Eyebrow tone={accent}>What happens next</Eyebrow>
+      <H1 size="xl" className="mt-8">
+        Rank these <span className="font-mono">{limit}</span> against{' '}
+        the other <span className="font-mono">{wgNumber === 5 ? 16 : 17}</span> — and{' '}
+        <span style={{ color: accent }}>shape the agenda.</span>
+      </H1>
+      {doc?.callToAction && (
+        <p
+          className="mx-auto mt-10 max-w-3xl text-lg leading-relaxed"
+          style={{ color: C.textSec }}
+        >
+          {doc.callToAction}
+        </p>
+      )}
+      <div
+        className="mx-auto mt-12 inline-flex items-center gap-3 rounded-2xl border px-6 py-4"
+        style={{ borderColor: `${C.emerald}40`, background: `${C.emerald}10` }}
+      >
+        <ArrowRight className="h-6 w-6" style={{ color: C.emerald }} />
+        <p className="text-xl sm:text-2xl" style={{ color: C.text }}>
+          Cross-WG ranking opens after the last priority presentation.
+        </p>
+      </div>
     </div>
   );
 }
