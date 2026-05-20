@@ -10,7 +10,7 @@
  * Audience phones see chat input on /day; this stage is the projection.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { api } from '@/lib/api';
