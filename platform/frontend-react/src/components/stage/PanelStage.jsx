@@ -581,24 +581,48 @@ function VoteView({ sessionId, resolving, bus, accent = '#00B4D8' }) {
   }
   if (!results) return <Skeleton className="h-64 w-full rounded-2xl" />;
 
-  const allRows = (results?.questions || results?.results || []);
-  // The conference funnel is a single drag-rank — once voting starts at
-  // least one row has avg_rank. Once we see that, filter to ranking-only
-  // so old R2 importance scores don't compete for screen space with
-  // weirdly-different bar widths and decimal formats. Before voting opens
-  // we show everything as a preview list.
-  const hasRanking = allRows.some((r) => r.avg_rank != null);
-  const rows = hasRanking ? allRows.filter((r) => r.avg_rank != null) : allRows;
+  // The curated pool is the source of truth for what the audience is
+  // ranking. Pull session.questions (always the curated set) and join
+  // any matching vote rows from /results onto it. This guarantees every
+  // curated question is visible on the leaderboard — even ones that
+  // haven't been ranked yet, which would otherwise silently disappear.
+  const pool = session?.questions || [];
+  const voteRows = results?.results || [];
+  const rankByQid = new Map();
+  const impByQid = new Map();
+  for (const r of voteRows) {
+    const qid = r.question_id || r.id;
+    if (r.avg_rank != null) rankByQid.set(qid, r);
+    else if (r.importance_mean != null) impByQid.set(qid, r);
+  }
+  const rows = pool.map((q) => {
+    const rk = rankByQid.get(q.id);
+    const im = impByQid.get(q.id);
+    return {
+      id: q.id,
+      question_id: q.id,
+      text: q.text,
+      wg_number: q.wg_number,
+      avg_rank: rk?.mean ?? rk?.avg_rank ?? null,
+      importance_mean: im?.importance_mean ?? im?.mean ?? null,
+      n_votes: (rk?.n_votes ?? 0) || (im?.n_votes ?? 0),
+    };
+  });
 
-  // If we have session questions but no votes yet, show the question list as a preview
-  const preview = rows.length === 0 ? (session?.questions || []) : [];
+  // Pool empty = chair hasn't curated this panel's question set yet.
+  const noPool = pool.length === 0;
 
-  // Sort: ranking (lower = better) when present, else importance.
+  // Sort: ranking (lower = better) when present. Unranked rows always
+  // sink to the bottom in their original pool order so the audience sees
+  // "here's everyone, here's where the live order sits".
   const sortedRows = [...rows].sort((a, b) => {
-    if (a.avg_rank != null && b.avg_rank != null) return a.avg_rank - b.avg_rank;
+    const ar = a.avg_rank, br = b.avg_rank;
+    if (ar != null && br != null) return ar - br;
+    if (ar != null) return -1;
+    if (br != null) return 1;
     return (b.importance_mean || 0) - (a.importance_mean || 0);
   });
-  const advancingIds = new Set(sortedRows.slice(0, ADVANCING_PER_WG).map((r) => r.question_id || r.id));
+  const advancingIds = new Set(sortedRows.slice(0, ADVANCING_PER_WG).map((r) => r.id));
 
   // One denominator for the leaderboard's progress bar so widths are
   // visually comparable. When ranking, the longest bar = rank 1 (top);
@@ -620,18 +644,13 @@ function VoteView({ sessionId, resolving, bus, accent = '#00B4D8' }) {
         )}
       </div>
 
-      {preview.length > 0 && (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <p className="mb-3 text-xs text-white/40">
-            Vote not yet started — audience will see these {preview.length} questions:
+      {noPool && (
+        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] p-6">
+          <p className="text-sm font-semibold text-amber-200">No panel pool curated yet</p>
+          <p className="mt-1 text-xs text-white/55">
+            Open the chair's Panel Pool curator on /command and pick the 6–8 questions
+            the audience will rank. They'll appear here as soon as you save.
           </p>
-          <div className="space-y-2">
-            {preview.slice(0, 10).map((q) => (
-              <div key={q.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <p className="text-sm text-white/85">{q.text}</p>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

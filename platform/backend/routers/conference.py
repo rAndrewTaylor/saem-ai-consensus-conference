@@ -810,7 +810,20 @@ def get_session_results(session_id: int, db: Session = Depends(get_db)):
     if not cs:
         raise HTTPException(404, "Session not found")
 
-    votes = db.query(ConferenceVote).filter(ConferenceVote.session_id == session_id).all()
+    # The curated pool is the source of truth for what the audience is
+    # actually voting on. The vote table can contain stale pre-conference
+    # R2 importance votes for questions that were NOT promoted into the
+    # panel pool — those would otherwise show up in the live leaderboard
+    # alongside today's ranking votes and confuse the room.
+    pool_ids = {int(q["id"]) for q in get_session_questions(session_id, db)["questions"]}
+
+    votes = (
+        db.query(ConferenceVote)
+        .filter(ConferenceVote.session_id == session_id)
+        .all()
+    )
+    if pool_ids:
+        votes = [v for v in votes if v.question_id in pool_ids]
     comments = db.query(ConferenceComment).filter(ConferenceComment.session_id == session_id).all()
     breakout_notes = db.query(BreakoutNote).filter(BreakoutNote.session_id == session_id).all()
 
