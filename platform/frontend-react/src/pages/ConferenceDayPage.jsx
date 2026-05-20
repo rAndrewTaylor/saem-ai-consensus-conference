@@ -234,7 +234,13 @@ export function ConferenceDayPage() {
   const inPanelMode = /^panel:\d+$/.test(stage.mode || '');
   const inReactionBreakout = stage.mode === 'table_reactions';
   const inWorldCafe = stage.mode === 'world_cafe';
-  const focusedMode = !isPrint && (inPanelMode || inWorldCafe || inReactionBreakout);
+  // Break mode is its own thin focused state: show the BreakView
+  // (countdown / opening hero) plus the participant's contributions
+  // summary. Suppress the agenda / panels / world café / join links
+  // grid below — when the room is "go get coffee", a wall of cards is
+  // the wrong cue.
+  const inBreakMode = stage.mode === 'break';
+  const focusedMode = !isPrint && (inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode);
 
   if (loading && !data) {
     return (
@@ -299,6 +305,23 @@ export function ConferenceDayPage() {
             <SafeBoundary label="BreakoutNotesPanel(focused)">
               <BreakoutNotesPanel focused />
             </SafeBoundary>
+          )}
+          {inBreakMode && (
+            <>
+              <SafeBoundary label="BreakView(focused)">
+                <CompactStageView
+                  mode={stage.mode}
+                  slideIndex={stage.slideIndex}
+                  panelTab={stage.panelTab}
+                  bus={stage.bus}
+                />
+              </SafeBoundary>
+              {contrib?.signed_in && (contrib.total_votes + contrib.total_comments) > 0 && (
+                <div className="mt-6">
+                  <MyContributions contrib={contrib} sessions={data?.sessions || []} />
+                </div>
+              )}
+            </>
           )}
         </section>
       )}
