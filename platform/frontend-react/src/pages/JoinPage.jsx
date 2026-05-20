@@ -228,8 +228,11 @@ export function JoinPage() {
                     ? 'Please use the official join link from your email to access registration.'
                     : (
                       <>
-                        Registration is tied to your invited working group, so we use a personal
-                        email link or a conference-day QR code to get you in.
+                        Two ways in: working-group members use the personal link from their
+                        SAEM invite email, and day-of attendees scan the conference QR code
+                        (or visit{' '}
+                        <span className="font-mono text-amber-200/80">/welcome?access=ai26</span>)
+                        — no working group required.
                         <br />
                         <span className="mt-2 inline-block text-white/45">
                           Check your email for the SAEM invite, or scan the QR code at the
