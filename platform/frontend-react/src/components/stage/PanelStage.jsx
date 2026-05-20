@@ -424,12 +424,14 @@ function useAutoScroll(ref, deps = []) {
     const el = ref.current;
     if (!el) return undefined;
     let rafId;
-    let paused = Date.now() + 2500;   // 2.5s read time at the top
-    const PX_PER_SEC = 18;            // gentle scroll speed
-    const PAUSE_END_MS = 3500;        // pause at the bottom before looping
-    let lastTs = null;
+    let cancelled = false;
+    let paused = Date.now() + 1500;   // 1.5s read time at the top
+    const PX_PER_SEC = 40;            // visibly cycling, not crawling
+    const PAUSE_END_MS = 2000;        // brief pause at the bottom
 
+    let lastTs = null;
     const tick = (ts) => {
+      if (cancelled) return;
       if (lastTs == null) lastTs = ts;
       const dt = ts - lastTs;
       lastTs = ts;
@@ -442,9 +444,9 @@ function useAutoScroll(ref, deps = []) {
           paused = now + PAUSE_END_MS;
           // Snap back after the pause and start over from the top
           setTimeout(() => {
-            if (!el) return;
+            if (cancelled || !el) return;
             el.scrollTop = 0;
-            paused = Date.now() + 2500;
+            paused = Date.now() + 1500;
             lastTs = null;
           }, PAUSE_END_MS);
         } else {
@@ -454,7 +456,7 @@ function useAutoScroll(ref, deps = []) {
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    return () => { cancelled = true; cancelAnimationFrame(rafId); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
