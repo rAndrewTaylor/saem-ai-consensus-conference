@@ -83,7 +83,19 @@ export async function api(url, { method = 'GET', body, token, params, timeoutMs 
     let detail = `Error ${res.status}`;
     try {
       const json = await res.json();
-      detail = json.detail || detail;
+      // FastAPI 422 validation errors come back as detail=[{msg, loc, ...}].
+      // The old code passed that array straight to Error(...) which
+      // stringified to "[object Object]". Flatten to a readable message.
+      if (Array.isArray(json.detail)) {
+        const msgs = json.detail
+          .map((e) => (typeof e === 'string' ? e : (e?.msg || JSON.stringify(e))))
+          .filter(Boolean);
+        if (msgs.length) detail = msgs.join('; ');
+      } else if (typeof json.detail === 'string') {
+        detail = json.detail;
+      } else if (json.detail) {
+        detail = json.detail.msg || JSON.stringify(json.detail);
+      }
     } catch {
       /* response was not JSON; keep the status-derived detail */
     }

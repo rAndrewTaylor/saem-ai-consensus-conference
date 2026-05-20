@@ -33,10 +33,21 @@ def _shared_join_token() -> str:
     return (os.environ.get("SHARED_JOIN_TOKEN") or "").strip()
 
 
+# Hardcoded day-of conference code. Printed on the projector + QR; we
+# always accept it as a valid shared-join token even when no env var
+# is configured, so the room never gets locked out by a Railway secret
+# typo. The env-var path stays for back-office / longer rotating codes.
+DAY_OF_ACCESS_CODE = "ai26"
+
+
 def _is_valid_shared_join_token(token: str) -> bool:
-    configured = _shared_join_token()
     provided = (token or "").strip()
-    if not configured or not provided:
+    if not provided:
+        return False
+    if secrets.compare_digest(DAY_OF_ACCESS_CODE, provided):
+        return True
+    configured = _shared_join_token()
+    if not configured:
         return False
     return secrets.compare_digest(configured, provided)
 
@@ -66,7 +77,11 @@ class InviteRegister(BaseModel):
 
 
 class SharedRegister(BaseModel):
-    access_token: str = Field(..., min_length=8, max_length=200)
+    # min_length=3 (was 8) so the human-facing conference code "ai26"
+    # passes Pydantic. Cryptographic strength comes from the equality
+    # check against SHARED_JOIN_TOKEN / the hardcoded day-of code
+    # downstream — not from string-length validation.
+    access_token: str = Field(..., min_length=3, max_length=200)
     name: str = Field(..., min_length=1, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
     # wg_number is OPTIONAL — audience members who join via the day-of
@@ -265,8 +280,6 @@ def register_from_invite(
 @router.get("/shared-access/validate")
 def validate_shared_access(token: str):
     """Validate whether a shared join token is currently accepted."""
-    if not _shared_join_token():
-        raise HTTPException(403, "Shared join link is not configured")
     if not _is_valid_shared_join_token(token):
         raise HTTPException(403, "Invalid shared join link")
     return {"ok": True}
@@ -286,8 +299,6 @@ def register_from_shared_link(
     accounts in production (people fall back to the shared link when their
     invite link breaks; without dedup each attempt is a fresh account).
     """
-    if not _shared_join_token():
-        raise HTTPException(403, "Shared join link is not configured")
     if not _is_valid_shared_join_token(body.access_token):
         raise HTTPException(403, "Invalid shared join link")
     if body.role not in SELF_SELECTABLE_ROLES:
