@@ -1981,8 +1981,8 @@ What appeared across multiple WGs? Where did clinical + ethics + infrastructure 
 ## Tensions and unresolved questions
 Where did the room split? Mine the disagreements + surprises sections of breakout notes and the chat back-and-forth. 2–4 bullet points.
 
-## Recommendations for SAEM's next steps
-What should the planning committee carry forward from today? 4–6 concrete next steps (research priorities, working-group continuations, position-statement candidates, follow-up convenings).
+## What's next
+Keep this brief — 2–3 short bullets, no roadmap. The planning committee will write up the consensus, share the dataset, and explore a few directions (e.g. follow-on papers per WG, light-touch research-network collaborations to take on the top priorities, and a reconvening at next year's SAEM). Frame these as possibilities the committee is considering, not commitments.
 
 # RULES
 - Tone: precise, neutral, evidence-grounded — this becomes the public-facing record of the day. Read like a methodologist, not a marketer.

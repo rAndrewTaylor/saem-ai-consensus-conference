@@ -138,51 +138,56 @@ export function SummaryStage({ bus }) {
             </div>
           </div>
 
-          {/* RIGHT — Next steps from synthesis */}
+          {/* RIGHT — Brief "what's next" — kept understated on purpose. */}
           <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] p-5">
-            <div className="mb-2 flex shrink-0 items-baseline justify-between">
+            <div className="mb-3 flex shrink-0 items-baseline justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-200">
-                Next steps for SAEM
+                What's next
               </p>
               <p className="text-[10px] text-amber-300/60">
-                {synth ? 'from closing synthesis' : 'awaiting synthesis'}
+                directions the planning committee is exploring
               </p>
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-              {!synth && (
-                <p className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-4 text-sm text-white/65">
-                  Generate the closing synthesis on the 4:05 PM step and its
-                  "Recommendations for SAEM's next steps" section will surface here.
-                </p>
+              {nextSteps.length > 0 ? (
+                nextSteps.slice(0, 3).map((step, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.04] p-3"
+                  >
+                    <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-300/80" />
+                    <p
+                      className="flex-1 text-sm leading-snug text-white/90"
+                      dangerouslySetInnerHTML={{ __html: inlineBold(step) }}
+                    />
+                  </div>
+                ))
+              ) : (
+                <>
+                  <NextBullet>Write up the consensus and share the dataset.</NextBullet>
+                  <NextBullet>Follow-on papers from each working group.</NextBullet>
+                  <NextBullet>Explore light-touch research networks to take on the top priorities — and reconvene at next year's SAEM.</NextBullet>
+                </>
               )}
-              {synth && nextSteps.length === 0 && (
-                <p className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-4 text-sm text-white/65">
-                  The synthesis was generated, but no "Next steps" section was found.
-                  Open the projector view at 4:05 PM to regenerate.
-                </p>
-              )}
-              {nextSteps.map((step, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-500/[0.04] p-3"
-                >
-                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-                  <p
-                    className="flex-1 text-sm leading-snug text-white/95"
-                    dangerouslySetInnerHTML={{ __html: inlineBold(step) }}
-                  />
-                </div>
-              ))}
             </div>
 
             <p className="mt-3 shrink-0 text-[11px] leading-snug text-amber-200/65">
               <Sparkles className="mr-1 inline h-3 w-3" />
-              The full synthesis is on /reports — and will be in your inbox tomorrow.
+              Full synthesis lands in your inbox — possibilities, not commitments.
             </p>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function NextBullet({ children }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.04] p-3">
+      <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-300/80" />
+      <p className="flex-1 text-sm leading-snug text-white/90">{children}</p>
     </div>
   );
 }
