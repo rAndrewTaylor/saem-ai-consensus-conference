@@ -129,8 +129,12 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
           Starts with 3 static prompts; as AI-promoted prompts arrive from
           the chat, the oldest static prompt is dropped and the new AI one
           takes the third slot. Maximum 3 visible at any time so the
-          projector never overflows the strip vertically. */}
-      {(prompts.length > 0 || aiPrompts.length > 0) && (() => {
+          projector never overflows the strip vertically.
+
+          Hidden during the Live Vote tab so the full leaderboard +
+          advancing-to-cross-WG sidebar can fit on one screen without
+          auto-scrolling. Returns on the Results / Comparison tabs. */}
+      {effectivePanelTab !== 'vote' && (prompts.length > 0 || aiPrompts.length > 0) && (() => {
         // Build a combined list with chronological order: static prompts
         // come first (initial seed), AI prompts append. Take the last 3.
         const combined = [
@@ -461,12 +465,16 @@ function useAutoScroll(ref, deps = []) {
   }, deps);
 }
 
-// Left column of the live vote view: scrolling leaderboard of every
-// question in this panel's pool. Auto-scrolls when the list is taller
-// than the column so audience at the back sees every entry without
-// chair input.
+// Left column of the live vote view: full leaderboard of every question
+// in this panel's pool. Designed to fit ~10 rows without scrolling now
+// that the prompts strip is hidden on this tab. Rows are kept compact
+// — single-line clamp on the question text, stats + bar on the same
+// flex row as the rank chip — so the projector can show the whole pool
+// at a glance from the back of the ballroom.
 function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, maxImp }) {
   const scrollRef = useRef(null);
+  // Auto-scroll only kicks in if rows actually overflow (long pools).
+  // For the standard ~10-question pool there's nothing to scroll.
   useAutoScroll(scrollRef, [sortedRows.length]);
   return (
     <div
@@ -478,10 +486,10 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, 
           Full ranking
         </p>
         <p className="text-[10px] text-white/35">
-          auto-scrolls
+          {sortedRows.length} question{sortedRows.length === 1 ? '' : 's'}
         </p>
       </div>
-      <div ref={scrollRef} className="flex-1 space-y-1.5 overflow-y-auto pr-1">
+      <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto pr-1">
         {sortedRows.map((r, idx) => {
           const qid = r.question_id || r.id;
           const denom = r.points != null ? maxPts : r.avg_rank != null ? maxRank : r.importance_mean != null ? maxImp : 1;
@@ -490,15 +498,15 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, 
           return (
             <div
               key={qid}
-              className="rounded-xl border p-2.5"
+              className="rounded-lg border px-2 py-1.5"
               style={{
                 borderColor: advancing ? 'rgba(16, 185, 129, 0.35)' : 'rgba(255,255,255,0.06)',
                 backgroundColor: advancing ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255,255,255,0.02)',
               }}
             >
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-center gap-2">
                 <span
-                  className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold"
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold"
                   style={{
                     backgroundColor: advancing ? 'rgba(16, 185, 129, 0.25)' : `${accent}25`,
                     color: advancing ? '#34d399' : accent,
@@ -506,22 +514,18 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, 
                 >
                   {idx + 1}
                 </span>
-                <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/90 line-clamp-3">
+                <p className="min-w-0 flex-1 truncate text-[13px] leading-tight text-white/90">
                   {r.text || r.question_text}
                 </p>
+                <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/55">
+                  {r.avg_rank != null
+                    ? Number(r.avg_rank).toFixed(2)
+                    : r.importance_mean != null
+                    ? Number(r.importance_mean).toFixed(1)
+                    : ''}
+                </span>
               </div>
-              <div className="mt-2 flex items-center gap-3 pl-8 text-[10px] text-white/50">
-                {r.avg_rank != null && (
-                  <span>rank <span className="font-mono text-white">{Number(r.avg_rank).toFixed(2)}</span></span>
-                )}
-                {r.importance_mean != null && r.avg_rank == null && (
-                  <span>imp <span className="font-mono text-white">{Number(r.importance_mean).toFixed(1)}</span></span>
-                )}
-                {r.n_votes != null && (
-                  <span>n=<span className="font-mono text-white">{r.n_votes}</span></span>
-                )}
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.04]">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
