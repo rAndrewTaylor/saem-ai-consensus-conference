@@ -70,24 +70,34 @@ function MiniStat({ value, label }) {
 
 // ---- Welcome -------------------------------------------------------------
 
+// Mirror of the 10-slide deck in components/stage/WelcomeDeck.jsx —
+// keep in sync. Each entry has a title and a one-line hint so phones
+// see what slot they're watching while the projector renders the
+// animated full-screen version.
 const WELCOME_SLIDE_TITLES = [
-  'Welcome',
-  'Why we\'re here',
-  'Two rounds. Five working groups.',
-  'How today flows',
-  'Your phone is the room',
-  'Thank you',
+  { title: 'AI Consensus Conference', hint: 'Welcome — the 10-year research agenda for AI in EM.' },
+  { title: 'Why we\'re here', hint: 'AI is already in the ED. What we study next is up to us.' },
+  { title: 'By the numbers', hint: '74 experts · 177 questions · 1,310 R2 responses · 5,962 pairwise.' },
+  { title: 'Five working groups', hint: 'Technology · Training · Self · Society.' },
+  { title: 'The methodology', hint: 'Modified Delphi + AI synthesis + pairwise ranking.' },
+  { title: 'The funnel', hint: 'From 177 candidates to 10 final priorities.' },
+  { title: 'Cross-pollination', hint: '24 cross-WG question pairs at sim ≥ 0.55.' },
+  { title: 'Today\'s flow', hint: '8 hours, 5 panels, one agenda.' },
+  { title: 'How to participate', hint: 'Scan the QR. Your phone is the room.' },
+  { title: 'Thank you', hint: 'To the 74 working-group members who built this.' },
 ];
 
 function CompactWelcome({ slideIndex }) {
   const idx = Math.max(0, Math.min(WELCOME_SLIDE_TITLES.length - 1, slideIndex));
+  const slide = WELCOME_SLIDE_TITLES[idx];
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+    <div className="rounded-2xl border border-[#48CAE4]/25 bg-gradient-to-br from-[#0C2340] to-[#0E1E35] p-5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#48CAE4]">
-        Slide {idx + 1} of {WELCOME_SLIDE_TITLES.length}
+        Slide {idx + 1} of {WELCOME_SLIDE_TITLES.length} · Welcome
       </p>
-      <h2 className="mt-1 text-xl font-bold text-white">{WELCOME_SLIDE_TITLES[idx]}</h2>
-      <p className="mt-2 text-xs text-white/50">Watch the projector for the slides</p>
+      <h2 className="mt-1 text-xl font-bold text-white">{slide.title}</h2>
+      <p className="mt-2 text-sm text-white/65 leading-relaxed">{slide.hint}</p>
+      <p className="mt-3 text-[11px] text-white/40">↑ Watch the projector — full visuals there.</p>
     </div>
   );
 }
