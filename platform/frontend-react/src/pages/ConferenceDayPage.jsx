@@ -581,13 +581,25 @@ function InlineVoteCard({ session, token, onSubmitted }) {
     : session.phase === 'post_discussion' ? 'Post-discussion vote'
     : session.phase?.replace(/_/g, ' ') || '';
 
-  // Reset submission state when the session changes phase (pre → post).
-  // Each phase produces its own vote_type record server-side, so a
-  // participant who voted pre-discussion should be invited to re-rank
-  // post-discussion instead of staying on the "Submitted ✓" screen.
+  // One vote per session. The lock is keyed on the participant token so a
+  // shared device can't be used to vote for someone else after they
+  // submitted. localStorage survives page refresh; backend also rejects a
+  // second submission, so this is defence in depth (and lets the UI flip
+  // to the "thanks for voting" state without a round-trip).
+  const lockKey = token ? `voted:${session.id}:${token.slice(-12)}` : null;
+
+  // Reset submission state when the session changes phase (pre → post)
+  // and re-check the lock for the new (session.id, token) pair. If the
+  // user has already voted in this session+token, snap the card to the
+  // locked thank-you state on mount.
   useEffect(() => {
-    setSubmitted(false);
-  }, [session.id, session.phase]);
+    if (!lockKey) { setSubmitted(false); return; }
+    try {
+      setSubmitted(window.localStorage.getItem(lockKey) === '1');
+    } catch {
+      setSubmitted(false);
+    }
+  }, [session.id, session.phase, lockKey]);
 
   useEffect(() => {
     if (!token) { setQuestions([]); return; }
@@ -617,13 +629,28 @@ function InlineVoteCard({ session, token, onSubmitted }) {
         kind: 'ranking',
       });
       setSubmitted(true);
+      if (lockKey) {
+        try { window.localStorage.setItem(lockKey, '1'); } catch { /* private mode */ }
+      }
       toast({
         message: res?.queued ? 'Ranking queued (will sync when online)' : 'Ranking submitted ✓',
         type: 'success',
       });
       onSubmitted && onSubmitted();
     } catch (e) {
-      toast({ message: e.message || 'Submit failed', type: 'error' });
+      // Backend rejects a second submission with 409. Treat that as "you
+      // already voted" and flip the card to the locked state — the lock
+      // got out of sync (different device, cleared storage), but the
+      // vote is recorded server-side.
+      if (e?.status === 409) {
+        setSubmitted(true);
+        if (lockKey) {
+          try { window.localStorage.setItem(lockKey, '1'); } catch { /* private mode */ }
+        }
+        toast({ message: 'You already voted in this session.', type: 'info' });
+      } else {
+        toast({ message: e?.message || 'Submit failed', type: 'error' });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -684,18 +711,8 @@ function InlineVoteCard({ session, token, onSubmitted }) {
           </p>
         )}
 
-        {token && questions && questions.length > 0 && submitted && (
-          <div className="mt-4 rounded-lg bg-emerald-500/15 p-3 text-sm text-emerald-200">
-            <CheckCircle2 className="mr-1 inline h-4 w-4" />
-            Submitted. You can update your vote at any time while the session is open.
-            <Button
-              variant="ghost" size="sm"
-              className="ml-3 text-emerald-200"
-              onClick={() => setSubmitted(false)}
-            >
-              Edit vote
-            </Button>
-          </div>
+        {token && submitted && (
+          <SubmittedConfirmation session={session} />
         )}
 
         {token && questions && questions.length > 0 && !submitted && !isCross && (
@@ -747,7 +764,7 @@ function InlineVoteCard({ session, token, onSubmitted }) {
           </div>
         )}
 
-        {!isCross && (
+        {!isCross && !submitted && (
           <button
             onClick={() => navigate(`/vote/${session.id}`)}
             className="mt-3 block w-full text-center text-[11px] text-white/40 hover:text-white/70"
@@ -756,6 +773,40 @@ function InlineVoteCard({ session, token, onSubmitted }) {
           </button>
         )}
       </div>
+    </MotionDiv>
+  );
+}
+
+
+// Locked thank-you screen shown after a participant submits their
+// ranking. One-vote-per-session is enforced server-side too (409 on
+// re-submit) — this is the corresponding visual: a clear "your vote is
+// in, sit tight" state with no Edit button so the audience doesn't
+// keep mashing rerank.
+function SubmittedConfirmation({ session }) {
+  return (
+    <MotionDiv
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="mt-4 overflow-hidden rounded-2xl border border-emerald-400/40 bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-emerald-600/15 px-5 py-6 text-center"
+    >
+      <MotionDiv
+        initial={{ scale: 0, rotate: -20 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ delay: 0.1, type: 'spring', stiffness: 240, damping: 14 }}
+        className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/30"
+      >
+        <CheckCircle2 className="h-8 w-8 text-emerald-200" strokeWidth={2.5} />
+      </MotionDiv>
+      <h3 className="text-lg font-bold text-emerald-50">Your vote is in.</h3>
+      <p className="mt-1 text-sm text-emerald-100/85">
+        Thanks for ranking — results will appear on the projector as the room finishes voting.
+      </p>
+      <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-200">
+        <Lock className="h-3 w-3" />
+        One vote per session
+      </p>
     </MotionDiv>
   );
 }

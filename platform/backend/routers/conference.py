@@ -571,6 +571,23 @@ def submit_ranking(
     _validate_session_question_ids(session_id, db, vote.rankings.keys())
 
     vote_type = f"ranking_{cs.phase}"
+
+    # One ranking per participant per session. The chair's funnel is a
+    # single drag-rank — no re-vote after submission. Reject so the
+    # frontend can show a "you already voted" message instead of silently
+    # overwriting the prior ballot.
+    already_voted = (
+        db.query(ConferenceVote)
+        .filter(
+            ConferenceVote.session_id == session_id,
+            ConferenceVote.participant_id == participant.id,
+            ConferenceVote.vote_type == vote_type,
+        )
+        .first()
+    )
+    if already_voted:
+        raise HTTPException(409, "You have already submitted a ranking for this session.")
+
     new_votes = [
         ConferenceVote(
             session_id=session_id,
