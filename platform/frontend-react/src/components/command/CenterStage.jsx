@@ -18,7 +18,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useTheme } from '@/hooks/useTheme';
-import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ExternalLink, BarChart3, Vote, Repeat, ArrowRight, Sparkles, X, Copy, Monitor, CheckCircle2, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import { Play, Square, RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ExternalLink, BarChart3, Vote, ArrowRight, Sparkles, X, Copy, Monitor, CheckCircle2, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 
 // Remember the chair's preferred preview size across sessions
 const PREVIEW_SIZE_KEY = 'saem_command_preview_size';
@@ -220,12 +220,25 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
 
   const start = async () => {
     if (!session) return;
-    try { await api(`/api/conference/sessions/${session.id}/start`, { method: 'POST' }); refresh(); } catch (e) { console.error(e); }
+    try {
+      await api(`/api/conference/sessions/${session.id}/start`, { method: 'POST' });
+      // Auto-flip the projector to the Live Vote view when the audience
+      // starts voting. PanelStage already overrides to vote-view while a
+      // session is active, but persisting panel_tab='vote' keeps the
+      // chair UI's tab indicator in sync with what's on screen.
+      onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'vote' });
+      refresh();
+    } catch (e) { console.error(e); }
   };
   const stop = async () => {
     if (!session) return;
     if (!window.confirm('Stop the current vote? Audience phones will lock out further submissions.')) return;
-    try { await api(`/api/conference/sessions/${session.id}/stop`, { method: 'POST' }); refresh(); } catch (e) { console.error(e); }
+    try {
+      await api(`/api/conference/sessions/${session.id}/stop`, { method: 'POST' });
+      // Vote over → show results
+      onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'results' });
+      refresh();
+    } catch (e) { console.error(e); }
   };
   const togglePhase = async () => {
     if (!session) return;
@@ -308,12 +321,14 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
         </ActionRow>
       </SectionGroup>
 
-      {/* 3. PROJECTOR TAB — what's displayed on the screen. Small. */}
+      {/* 3. PROJECTOR TAB — what's displayed on the screen. Small.
+            Auto-flips to Live Vote when a vote is started; chair can
+            override here. Pre/Post comparison tab removed in the
+            single-rank funnel — there's nothing to compare. */}
       <SectionGroup title="Projector view">
         <ActionRow>
           <TabBtn active={panelTab === 'results'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'results' })} icon={BarChart3}>Results</TabBtn>
           <TabBtn active={panelTab === 'vote'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'vote' })} icon={Vote}>Live Vote</TabBtn>
-          <TabBtn active={panelTab === 'comparison'} onClick={() => onChange?.({ mode: `panel:${wgNumber}`, panel_tab: 'comparison' })} icon={Repeat}>Pre/Post</TabBtn>
         </ActionRow>
       </SectionGroup>
 
