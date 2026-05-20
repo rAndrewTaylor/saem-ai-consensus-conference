@@ -284,7 +284,7 @@ export function Round2ReportPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Trophy className="h-4 w-4 text-amber-400" />
-                Pairwise leaderboard (top 10)
+                Pairwise leaderboard (top {pairLeaders.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">

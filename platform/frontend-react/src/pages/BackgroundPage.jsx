@@ -481,9 +481,10 @@ function AcknowledgmentsSection() {
         <strong className="text-white/85">CORD</strong>,{' '}
         <strong className="text-white/85">ABEM</strong>, and the{' '}
         <strong className="text-white/85">UVA Department of Emergency Medicine</strong>.
-        The 50+ working-group members and co-leads donating evenings and
-        weekends since April are the reason this exists. Special thanks to
-        Hope Duncan for project management and to the planning committee
+        The 74 invited working-group members — 63 of whom responded in
+        Round 2 (85%) — and the co-leads donating evenings and weekends
+        since April are the reason this exists. Special thanks to Hope
+        Duncan for project management and to the planning committee
         liaisons (Andy Muck, Tom Hartka, Matt Trowbridge, Moira Smith) for
         carrying the WGs.
       </p>
