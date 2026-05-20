@@ -472,14 +472,31 @@ function useAutoScroll(ref, deps = []) {
 // — single-line clamp on the question text, stats + bar on the same
 // flex row as the rank chip — so the projector can show the whole pool
 // at a glance from the back of the ballroom.
-function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, maxImp }) {
+function FullRankingColumn({ accent, sortedRows, advancingIds, maxRank, maxImp }) {
   const scrollRef = useRef(null);
   // Auto-scroll only kicks in if rows actually overflow (long pools).
   // For the standard ~10-question pool there's nothing to scroll.
   useAutoScroll(scrollRef, [sortedRows.length]);
+
+  // Pick ONE axis for the whole leaderboard so all bars are visually
+  // comparable. If any row has avg_rank, treat the whole pool as a
+  // ranking display (lower rank value → wider bar; invert via
+  // maxRank - rank + 1). Otherwise fall back to importance.
+  const useRank = sortedRows.some((r) => r.avg_rank != null);
+
+  const valueFor = (r) => {
+    if (useRank) return Math.max(0, maxRank - (r.avg_rank ?? maxRank) + 1);
+    return r.importance_mean || 0;
+  };
+  const denom = useRank ? maxRank : maxImp;
+  const scoreLabel = (r) => {
+    if (useRank) return r.avg_rank != null ? Number(r.avg_rank).toFixed(1) : '—';
+    return r.importance_mean != null ? Number(r.importance_mean).toFixed(1) : '—';
+  };
+
   return (
     <div
-      className="flex min-h-0 flex-col rounded-2xl border p-3"
+      className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border p-3"
       style={{ borderColor: `${accent}25`, backgroundColor: `${accent}08` }}
     >
       <div className="mb-2 flex shrink-0 items-baseline justify-between">
@@ -487,15 +504,15 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, 
           Full ranking
         </p>
         <p className="text-[10px] text-white/35">
-          {sortedRows.length} question{sortedRows.length === 1 ? '' : 's'}
+          {sortedRows.length} question{sortedRows.length === 1 ? '' : 's'} · {useRank ? 'avg rank' : 'importance'}
         </p>
       </div>
       <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto pr-1">
         {sortedRows.map((r, idx) => {
           const qid = r.question_id || r.id;
-          const denom = r.points != null ? maxPts : r.avg_rank != null ? maxRank : r.importance_mean != null ? maxImp : 1;
-          const val = r.points || r.importance_mean || (maxRank - (r.avg_rank || 0) + 1);
           const advancing = advancingIds.has(qid);
+          const val = valueFor(r);
+          const width = denom > 0 ? Math.min(100, (val / denom) * 100) : 0;
           return (
             <div
               key={qid}
@@ -518,19 +535,15 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, 
                 <p className="min-w-0 flex-1 truncate text-[13px] leading-tight text-white/90">
                   {r.text || r.question_text}
                 </p>
-                <span className="shrink-0 font-mono text-[10px] tabular-nums text-white/55">
-                  {r.avg_rank != null
-                    ? Number(r.avg_rank).toFixed(2)
-                    : r.importance_mean != null
-                    ? Number(r.importance_mean).toFixed(1)
-                    : ''}
+                <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-white/55">
+                  {scoreLabel(r)}
                 </span>
               </div>
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.04]">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
-                    width: `${Math.min(100, (val / denom) * 100)}%`,
+                    width: `${width}%`,
                     backgroundColor: advancing ? '#10b981' : accent,
                   }}
                 />
@@ -568,22 +581,30 @@ function VoteView({ sessionId, resolving, bus, accent = '#00B4D8' }) {
   }
   if (!results) return <Skeleton className="h-64 w-full rounded-2xl" />;
 
-  const rows = (results?.questions || results?.results || []);
+  const allRows = (results?.questions || results?.results || []);
+  // The conference funnel is a single drag-rank — once voting starts at
+  // least one row has avg_rank. Once we see that, filter to ranking-only
+  // so old R2 importance scores don't compete for screen space with
+  // weirdly-different bar widths and decimal formats. Before voting opens
+  // we show everything as a preview list.
+  const hasRanking = allRows.some((r) => r.avg_rank != null);
+  const rows = hasRanking ? allRows.filter((r) => r.avg_rank != null) : allRows;
+
   // If we have session questions but no votes yet, show the question list as a preview
   const preview = rows.length === 0 ? (session?.questions || []) : [];
 
-  // Sort by the most relevant axis: ranking (lower = better) when present,
-  // else points/importance (higher = better). Top 4 advance to cross-WG.
+  // Sort: ranking (lower = better) when present, else importance.
   const sortedRows = [...rows].sort((a, b) => {
     if (a.avg_rank != null && b.avg_rank != null) return a.avg_rank - b.avg_rank;
-    if (a.points != null && b.points != null) return (b.points || 0) - (a.points || 0);
     return (b.importance_mean || 0) - (a.importance_mean || 0);
   });
   const advancingIds = new Set(sortedRows.slice(0, ADVANCING_PER_WG).map((r) => r.question_id || r.id));
 
+  // One denominator for the leaderboard's progress bar so widths are
+  // visually comparable. When ranking, the longest bar = rank 1 (top);
+  // we invert so "lower rank value = wider bar".
   const maxRank = Math.max(1, ...rows.map((r) => r.avg_rank || 0));
   const maxImp = Math.max(1, ...rows.map((r) => r.importance_mean || 0));
-  const maxPts = Math.max(1, ...rows.map((r) => r.points || 0));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -615,66 +636,71 @@ function VoteView({ sessionId, resolving, bus, accent = '#00B4D8' }) {
       )}
 
       {rows.length > 0 && (
-        // Two-column layout: full leaderboard on the left, the top-4
-        // "Advancing to cross-WG" panel on the right. Audience sees both
-        // the live ordering AND which questions are currently winning a
-        // spot in the closing round.
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+        // Stacked layout: "Advancing to cross-WG" strip on top (always
+        // visible — what the audience cares about most), then the full
+        // leaderboard beneath. Avoids the side-by-side grid that was
+        // letting long question text push the sidebar off the right edge
+        // at projector scale.
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <AdvancingStrip sortedRows={sortedRows} unique_voters={results?.unique_voters || 0} />
           <FullRankingColumn
             accent={accent}
             sortedRows={sortedRows}
             advancingIds={advancingIds}
-            maxPts={maxPts}
             maxRank={maxRank}
             maxImp={maxImp}
           />
-
-          {/* Advancing-to-cross-WG sidebar */}
-          <div
-            className="flex min-h-0 flex-col rounded-2xl border p-3"
-            style={{ borderColor: 'rgba(16, 185, 129, 0.35)', backgroundColor: 'rgba(16, 185, 129, 0.06)' }}
-          >
-            <div className="mb-2 flex shrink-0 items-baseline justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
-                Advancing to cross-WG
-              </p>
-              <p className="font-mono text-[10px] text-white/40">
-                top {ADVANCING_PER_WG}
-              </p>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-              {sortedRows.slice(0, ADVANCING_PER_WG).map((r, idx) => {
-                const qid = r.question_id || r.id;
-                return (
-                  <div
-                    key={qid}
-                    className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.04] p-3"
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/25 font-mono text-sm font-bold text-emerald-200">
-                        {idx + 1}
-                      </span>
-                      <p className="min-w-0 flex-1 text-sm leading-snug text-white/95 line-clamp-4">
-                        {r.text || r.question_text}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-              {sortedRows.length < ADVANCING_PER_WG && (
-                Array.from({ length: ADVANCING_PER_WG - sortedRows.length }).map((_, i) => (
-                  <div key={`empty-${i}`} className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] p-3">
-                    <p className="text-xs text-white/30">Slot {sortedRows.length + i + 1} — open</p>
-                  </div>
-                ))
-              )}
-            </div>
-            <p className="mt-3 shrink-0 text-[10px] leading-snug text-white/45">
-              {results?.unique_voters || 0} of audience have ranked. Order updates live as votes come in.
-            </p>
-          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Horizontal "Advancing to cross-WG" strip — top 4 (or 5 for WG5) cards
+// in one row above the full leaderboard. Always-visible so the audience
+// knows what's currently winning a spot in the closing round.
+function AdvancingStrip({ sortedRows, unique_voters }) {
+  const top = sortedRows.slice(0, ADVANCING_PER_WG);
+  const empties = Math.max(0, ADVANCING_PER_WG - top.length);
+  return (
+    <div
+      className="shrink-0 rounded-2xl border p-3"
+      style={{ borderColor: 'rgba(16, 185, 129, 0.35)', backgroundColor: 'rgba(16, 185, 129, 0.06)' }}
+    >
+      <div className="mb-2 flex shrink-0 items-baseline justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+          Advancing to cross-WG — top {ADVANCING_PER_WG}
+        </p>
+        <p className="font-mono text-[10px] text-white/45">
+          {unique_voters} {unique_voters === 1 ? 'voter' : 'voters'} · live
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {top.map((r, idx) => {
+          const qid = r.question_id || r.id;
+          return (
+            <div
+              key={qid}
+              className="flex items-start gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/[0.05] p-2.5"
+            >
+              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/30 font-mono text-xs font-bold text-emerald-200">
+                {idx + 1}
+              </span>
+              <p className="min-w-0 flex-1 text-[12px] leading-snug text-white/95 line-clamp-3">
+                {r.text || r.question_text}
+              </p>
+            </div>
+          );
+        })}
+        {Array.from({ length: empties }).map((_, i) => (
+          <div
+            key={`empty-${i}`}
+            className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] p-2.5"
+          >
+            <p className="text-[11px] text-white/30">Slot {top.length + i + 1} — open</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
