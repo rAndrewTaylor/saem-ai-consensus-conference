@@ -159,8 +159,14 @@ function CompactPresent({ wgNumber, bus }) {
   const [candidates, setCandidates] = useState(null);
   useEffect(() => {
     if (!wgNumber) return;
-    api(`/api/conference/panel/${wgNumber}/candidates`)
-      .then((d) => setCandidates(d?.questions || []))
+    api('/api/conference/cross-wg/candidates')
+      .then((d) => {
+        const group = (d?.groups || []).find((g) => g.wg_number === wgNumber);
+        setCandidates((group?.candidates || []).map((q) => ({
+          ...q,
+          id: q.id || q.question_id,
+        })));
+      })
       .catch(() => setCandidates([]));
   }, [wgNumber, bus]);
 
@@ -169,6 +175,9 @@ function CompactPresent({ wgNumber, bus }) {
   const advanceLimit = wgNumber === 5 ? 5 : 4;
   const advancing = (candidates || []).slice().sort((a, b) => {
     if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
+    if (a.avg_rank != null && b.avg_rank != null) return a.avg_rank - b.avg_rank;
+    if (a.avg_rank != null) return -1;
+    if (b.avg_rank != null) return 1;
     return (b.r2_include_pct ?? 0) - (a.r2_include_pct ?? 0);
   }).slice(0, advanceLimit);
 
@@ -195,7 +204,7 @@ function CompactPresent({ wgNumber, bus }) {
         {candidates === null && <p className="text-xs text-white/40">Loading…</p>}
         {candidates !== null && advancing.length === 0 && (
           <p className="rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 text-xs text-amber-200">
-            Co-lead hasn't curated the panel pool yet — chair can auto-feature top 4 from /command.
+            No advancing questions yet — chair can auto-feature top 4 from /command.
           </p>
         )}
         {advancing.map((q, i) => (
@@ -249,7 +258,10 @@ function CompactCrossWg({ bus }) {
   }, [bus]);
 
   const rows = (results?.questions || results?.results || []).slice(0, 8);
-  const maxPts = Math.max(1, ...rows.map((r) => r.points || 0));
+  const ranks = rows.map((r) => r.avg_rank).filter((v) => v != null);
+  const maxRank = Math.max(1, ...ranks);
+  const minRank = Math.min(...(ranks.length ? ranks : [1]));
+  const rankSpan = Math.max(0.5, maxRank - minRank);
 
   return (
     <div className="rounded-2xl border border-amber-400/20 bg-amber-500/[0.04] p-5">
@@ -270,10 +282,20 @@ function CompactCrossWg({ bus }) {
                     </span>
                   )}
                   <p className="min-w-0 flex-1 text-xs leading-snug text-white/85 line-clamp-2">{q.text || q.question_text}</p>
-                  <span className="shrink-0 font-mono text-xs font-semibold text-white">{q.points || 0}</span>
+                  <span className="shrink-0 font-mono text-xs font-semibold text-white">
+                    {q.avg_rank != null ? q.avg_rank.toFixed(1) : ''}
+                  </span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
-                  <div className="h-full rounded-full" style={{ width: `${((q.points || 0) / maxPts) * 100}%`, backgroundColor: c }} />
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: q.avg_rank != null
+                        ? `${Math.max(8, 100 - ((q.avg_rank - minRank) / rankSpan) * 70)}%`
+                        : '8%',
+                      backgroundColor: c,
+                    }}
+                  />
                 </div>
               </div>
             );

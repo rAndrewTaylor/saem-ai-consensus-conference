@@ -17,7 +17,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useStageDisplay } from '@/components/stage/StageView';
-import { DayTimeline, modeForAgendaItem } from '@/components/command/DayTimeline';
+import { DayTimeline } from '@/components/command/DayTimeline';
 import { CenterStage } from '@/components/command/CenterStage';
 import { LiveSignal } from '@/components/command/LiveSignal';
 import { PriorityPresentationLinks } from '@/components/command/PriorityPresentationLinks';
@@ -69,10 +69,6 @@ export function CommandPage() {
   })();
 
   // Cycle helper for the 2:50 PM presentation slot (mode = 'present:N').
-  const presentWgNumber = (() => {
-    const m = /^present:(\d+)$/.exec(stage.mode || '');
-    return m ? parseInt(m[1], 10) : null;
-  })();
   const goPresentWG = (n) => {
     if (n < 1 || n > 5) return;
     stage.setDisplay({ mode: `present:${n}` });

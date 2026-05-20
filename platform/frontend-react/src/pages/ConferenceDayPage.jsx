@@ -465,10 +465,17 @@ export function ConferenceDayPage() {
         <AudienceChatPanel />
       </SafeBoundary>
 
-      {/* Breakout note submission — only renders while the stage is in table_reactions mode */}
-      <SafeBoundary label="BreakoutNotesPanel">
-        <BreakoutNotesPanel />
-      </SafeBoundary>
+      {/* Breakout note submission — only renders while the stage is in
+          table_reactions mode AND the current agenda step is a panel
+          reaction. During world_cafe the WorldCafeCard above handles
+          cross-WG station submissions; rendering BreakoutNotesPanel
+          here would bind all notes to WG1's session (its fallback
+          target). See P0 from the day-before audit. */}
+      {currentAgenda?.kind !== 'world_cafe' && (
+        <SafeBoundary label="BreakoutNotesPanel">
+          <BreakoutNotesPanel />
+        </SafeBoundary>
+      )}
     </div>
   );
 }

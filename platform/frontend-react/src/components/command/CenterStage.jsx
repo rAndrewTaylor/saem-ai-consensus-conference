@@ -31,6 +31,8 @@ const WG_NAMES = {
 export function CenterStage({ mode, slideIndex, panelTab, onChange }) {
   const panelMatch = /^panel:(\d+)$/.exec(mode || '');
   const panelWg = panelMatch ? parseInt(panelMatch[1], 10) : null;
+  const presentMatch = /^present:(\d+)$/.exec(mode || '');
+  const presentWg = presentMatch ? parseInt(presentMatch[1], 10) : null;
 
   return (
     <div className="flex h-full flex-col gap-3">
@@ -40,6 +42,7 @@ export function CenterStage({ mode, slideIndex, panelTab, onChange }) {
       {mode === 'welcome' && <WelcomeActions slideIndex={slideIndex} onChange={onChange} />}
       {panelWg && <PanelActions wgNumber={panelWg} panelTab={panelTab} onChange={onChange} />}
       {mode === 'table_reactions' && <TableActions onChange={onChange} />}
+      {presentWg && <PresentActions wgNumber={presentWg} onChange={onChange} />}
       {mode === 'cross_wg' && <CrossWgActions onChange={onChange} />}
     </div>
   );
@@ -464,14 +467,67 @@ function TableActions({ onChange }) {
   );
 }
 
-function CrossWgActions({ onChange }) {
+function PresentActions({ wgNumber, onChange }) {
   return (
     <div className="space-y-2">
       <CrossWgFunnel />
       <ActionRow>
-        <PrimaryAction onClick={() => onChange?.({ mode: 'idle' })} icon={ArrowRight}>
+        <SecondaryAction
+          onClick={() => onChange?.({ mode: `present:${Math.max(1, wgNumber - 1)}` })}
+          icon={ChevronLeft}
+        >
+          Previous WG
+        </SecondaryAction>
+        {wgNumber < 5 ? (
+          <PrimaryAction onClick={() => onChange?.({ mode: `present:${wgNumber + 1}` })} icon={ChevronRight}>
+            Next WG presentation
+          </PrimaryAction>
+        ) : (
+          <PrimaryAction onClick={() => onChange?.({ mode: 'cross_wg' })} icon={ArrowRight}>
+            Move to Cross-WG vote
+          </PrimaryAction>
+        )}
+      </ActionRow>
+    </div>
+  );
+}
+
+function CrossWgActions({ onChange }) {
+  const [session, setSession] = useState(null);
+  const refresh = useCallback(() => {
+    api('/api/conference/sessions').then((sessions) => {
+      const match = (sessions || []).find((s) => s.session_type === 'cross_wg_prioritization');
+      setSession(match || null);
+    }).catch(() => setSession(null));
+  }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const start = async () => {
+    if (!session) return;
+    try { await api(`/api/conference/sessions/${session.id}/start`, { method: 'POST' }); refresh(); } catch (e) { console.error(e); }
+  };
+  const stop = async () => {
+    if (!session) return;
+    if (!window.confirm('Stop the cross-WG vote? Audience phones will lock out further submissions.')) return;
+    try { await api(`/api/conference/sessions/${session.id}/stop`, { method: 'POST' }); refresh(); } catch (e) { console.error(e); }
+  };
+
+  return (
+    <div className="space-y-2">
+      <CrossWgFunnel />
+      <ActionRow>
+        {session && !session.is_active && (
+          <PrimaryAction onClick={start} icon={Play}>Start Cross-WG vote</PrimaryAction>
+        )}
+        {session?.is_active && (
+          <DangerAction onClick={stop} icon={Square}>Stop Cross-WG vote</DangerAction>
+        )}
+        {!session && (
+          <span className="text-xs text-amber-200">Create the cross-WG session before this block.</span>
+        )}
+        <SecondaryAction onClick={() => onChange?.({ mode: 'idle' })} icon={ArrowRight}>
           Close conference → Idle
-        </PrimaryAction>
+        </SecondaryAction>
       </ActionRow>
     </div>
   );

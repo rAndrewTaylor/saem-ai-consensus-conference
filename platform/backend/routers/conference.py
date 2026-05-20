@@ -756,9 +756,11 @@ def get_session_results(session_id: int, db: Session = Depends(get_db)):
     for key, data in results.items():
         values = data["values"]
         q = db.query(Question).get(data["question_id"])
-        aggregated.append({
+        row = {
             "question_id": data["question_id"],
+            "id": data["question_id"],
             "question_text": q.text if q else None,
+            "text": q.text if q else None,
             "wg_id": q.wg_id if q else None,
             "wg_number": wg_id_to_number.get(q.wg_id) if q else None,
             "vote_type": data["vote_type"],
@@ -768,7 +770,14 @@ def get_session_results(session_id: int, db: Session = Depends(get_db)):
             "sum": round(sum(values), 1),
             "min": min(values),
             "max": max(values),
-        })
+        }
+        if "ranking" in data["vote_type"]:
+            row["avg_rank"] = row["mean"]
+        elif data["vote_type"] == "importance":
+            row["importance_mean"] = row["mean"]
+        elif data["vote_type"] == "point_allocation":
+            row["points"] = row["sum"]
+        aggregated.append(row)
 
     # Sort by mean for rankings, by sum for allocations
     aggregated.sort(key=lambda x: x["mean"] if "ranking" in x["vote_type"] else -x["sum"])
@@ -787,12 +796,19 @@ def get_session_results(session_id: int, db: Session = Depends(get_db)):
             "type": c.comment_type,
         } for c in comments],
         "breakout_notes": [{
-            "table": bn.table_number,
-            "facilitator": bn.facilitator_name,
+            # Use the same field names the model uses (and the frontend
+            # expects): table_number, facilitator_name. The old shape
+            # ("table"/"facilitator", missing id + surprises) made every
+            # projector card render blank — see TableReactionsStage.
+            "id": bn.id,
+            "table_number": bn.table_number,
+            "facilitator_name": bn.facilitator_name,
             "themes": bn.themes,
             "agreements": bn.agreements,
             "disagreements": bn.disagreements,
             "suggestions": bn.suggestions,
+            "surprises": bn.surprises,
+            "created_at": bn.created_at.isoformat() if bn.created_at else None,
         } for bn in breakout_notes],
     }
 
@@ -1160,7 +1176,12 @@ def cross_wg_candidates(db: Session = Depends(get_db)):
                     continue
                 suggested.append({
                     "question_id": q.id,
+                    "id": q.id,
                     "text": q.text,
+                    "r2_include_pct": q.r2_include_pct,
+                    "r2_importance_mean": q.r2_importance_mean,
+                    "r1_include_pct": q.r1_include_pct,
+                    "r1_importance_mean": q.r1_importance_mean,
                     "avg_rank": float(r.avg_rank) if r.avg_rank is not None else None,
                     "n_voters": int(r.n or 0),
                     "is_featured": bool(q.featured_in_cross_wg),
@@ -1185,7 +1206,12 @@ def cross_wg_candidates(db: Session = Depends(get_db)):
             suggested = [
                 {
                     "question_id": q.id,
+                    "id": q.id,
                     "text": q.text,
+                    "r2_include_pct": q.r2_include_pct,
+                    "r2_importance_mean": q.r2_importance_mean,
+                    "r1_include_pct": q.r1_include_pct,
+                    "r1_importance_mean": q.r1_importance_mean,
                     "avg_rank": None,
                     "n_voters": 0,
                     "is_featured": bool(q.featured_in_cross_wg),

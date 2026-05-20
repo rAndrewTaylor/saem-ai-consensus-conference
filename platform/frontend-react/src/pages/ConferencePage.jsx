@@ -41,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { useParticipantToken } from '@/hooks/useParticipantToken';
 import { api } from '@/lib/api';
+import { subscribeSSE } from '@/lib/sseSubscribe';
 import { queueSubmit } from '@/lib/offlineQueue';
 import { cn } from '@/lib/utils';
 import { BreakoutNotesPanel } from '@/components/stage/BreakoutNotesPanel';
@@ -173,37 +174,45 @@ export function ConferencePage() {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) return undefined;
 
-    const url = new URL(`/api/events/${sessionId}`, window.location.origin);
-    const es = new EventSource(url.toString());
-    sseRef.current = es;
-
-    es.onopen = () => setSseConnected(true);
-    es.onerror = () => setSseConnected(false);
-
-    // Backend now emits all events as default "message" with `data.event`
-    // in the payload. Filter for vote_update / session_stopped / phase_changed.
-    es.onmessage = (e) => {
-      let data;
-      try { data = JSON.parse(e.data); } catch { return; }
-      if (data?.event === 'vote_update') {
+    // Two channels:
+    //  1. Per-session channel — carries vote_update (live voter counter)
+    //  2. Day channel — carries session_stopped + phase_changed when chair
+    //     drives state. The per-session channel does NOT emit these, so we
+    //     have to listen here too or the page never flips to "Closed".
+    // Both use the resilient subscribeSSE wrapper so a venue-wifi blip
+    // doesn't silently kill the subscription.
+    const stopSession = subscribeSSE(`/api/events/${sessionId}`, (data) => {
+      if (data?.event === 'connected') {
+        setSseConnected(true);
+      } else if (data?.event === 'vote_update') {
         setVoterCount(data.voter_count ?? ((prev) => prev + 1));
-      } else if (data?.event === 'session_stopped') {
+      }
+    }, {
+      onError: () => setSseConnected(false),
+    });
+
+    // useParams() gives sessionId as a string; backend events carry it
+    // as an int. Compare loosely so the filter actually matches.
+    const sessionIdNum = parseInt(sessionId, 10);
+    const stopDay = subscribeSSE('/api/events/day', (data) => {
+      if (data?.event === 'session_stopped' && data?.session_id === sessionIdNum) {
         setSessionStopped(true);
-      } else if (data?.event === 'phase_changed') {
+      } else if (data?.event === 'phase_changed' && data?.session_id === sessionIdNum) {
         // Reload questions list on phase flip so post-discussion vote
         // can re-rank against current question set.
         fetchQuestions();
       }
-    };
+    });
 
     return () => {
-      es.close();
+      stopSession();
+      stopDay();
       sseRef.current = null;
       setSseConnected(false);
     };
-  }, [sessionId]);
+  }, [sessionId, fetchQuestions]);
 
   // ---------------------------------------------------------------------------
   // Ranking handler

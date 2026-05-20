@@ -17,7 +17,7 @@
  * Audience phones get a leaner CompactPresent in CompactStageView.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { createElement, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight, ArrowUpRight, ArrowDownRight,
   Target, Layers, BarChart3, Sparkles,
@@ -36,6 +36,7 @@ function advanceLimitFor(wgNumber) {
 export function PresentWGStage({ wgNumber, bus }) {
   const [wg, setWg] = useState(null);
   const [candidates, setCandidates] = useState(null);
+  const [crossWgCandidates, setCrossWgCandidates] = useState(null);
   const [r2, setR2] = useState(null);
   const [voteResults, setVoteResults] = useState(null);
 
@@ -48,9 +49,10 @@ export function PresentWGStage({ wgNumber, bus }) {
       try { return await api(url); } catch (e) { return { __error: e }; }
     };
     (async () => {
-      const [wgs, panel, results, sessions] = await Promise.all([
+      const [wgs, panel, crossWg, results, sessions] = await Promise.all([
         safe('/api/surveys/working-groups'),
         safe(`/api/conference/panel/${wgNumber}/candidates`),
+        safe('/api/conference/cross-wg/candidates'),
         safe(`/api/surveys/results/${wgNumber}/round_2`),
         safe('/api/conference/sessions'),
       ]);
@@ -58,6 +60,13 @@ export function PresentWGStage({ wgNumber, bus }) {
       const wgsList = Array.isArray(wgs) ? wgs : [];
       setWg(wgsList.find((w) => w?.wg_number === wgNumber) || null);
       setCandidates(panel?.__error ? [] : (panel?.questions || []));
+      const crossGroup = crossWg?.__error
+        ? null
+        : (crossWg?.groups || []).find((g) => g.wg_number === wgNumber);
+      setCrossWgCandidates((crossGroup?.candidates || []).map((q) => ({
+        ...q,
+        id: q.id || q.question_id,
+      })));
       setR2(results?.__error ? null : (results || null));
       // Find the WG's morning wg_presentation session and pull its results
       const sessList = Array.isArray(sessions) ? sessions : [];
@@ -83,16 +92,23 @@ export function PresentWGStage({ wgNumber, bus }) {
     [r2],
   );
 
-  // Advancing = featured if any, else top R2 include%/importance
+  // Advancing = the cross-WG slate when it has been generated; otherwise
+  // fall back to the chair-curated panel pool / top R2 questions.
   const advancing = useMemo(() => {
-    if (!candidates) return [];
-    const featured = candidates.filter((q) => q.is_featured);
-    const pool = featured.length > 0 ? featured : candidates;
+    const source = crossWgCandidates?.length ? crossWgCandidates : candidates;
+    if (!source) return [];
+    const featured = source.filter((q) => q.is_featured);
+    const pool = featured.length > 0 ? featured : source;
     return [...pool]
-      .sort((a, b) => (b.r2_include_pct ?? 0) - (a.r2_include_pct ?? 0)
-                   || (b.r2_importance_mean ?? 0) - (a.r2_importance_mean ?? 0))
+      .sort((a, b) => {
+        if (a.avg_rank != null && b.avg_rank != null) return a.avg_rank - b.avg_rank;
+        if (a.avg_rank != null) return -1;
+        if (b.avg_rank != null) return 1;
+        return (b.r2_include_pct ?? 0) - (a.r2_include_pct ?? 0)
+          || (b.r2_importance_mean ?? 0) - (a.r2_importance_mean ?? 0);
+      })
       .slice(0, limit);
-  }, [candidates, limit]);
+  }, [candidates, crossWgCandidates, limit]);
 
   // Morning vote tally — sort by avg_rank ascending (lower = better).
   const morningRanking = useMemo(() => {
@@ -213,7 +229,7 @@ export function PresentWGStage({ wgNumber, bus }) {
               </span>
             </p>
           ) : (
-            <MorningVoteFigure rows={morningRanking} advancingIds={new Set(advancing.map((q) => q.id))} accent={accent} />
+            <MorningVoteFigure rows={morningRanking} advancingIds={new Set(advancing.map((q) => q.id || q.question_id))} />
           )}
           {morningRanking.length > 0 && (
             <Takeaway
@@ -249,7 +265,7 @@ export function PresentWGStage({ wgNumber, bus }) {
                 ) || doc?.questions?.[i];
                 return (
                   <AdvancingQuestionCard
-                    key={q.id}
+                    key={q.id || q.question_id}
                     index={i + 1}
                     question={q}
                     rationale={docMatch}
@@ -324,14 +340,14 @@ function SectionShell({ tone, children }) {
   );
 }
 
-function SectionHeader({ icon: Icon, eyebrow, title, accent }) {
+function SectionHeader({ icon, eyebrow, title, accent }) {
   return (
     <div className="flex items-start gap-4">
       <div
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
         style={{ backgroundColor: `${accent}25`, color: accent }}
       >
-        <Icon className="h-6 w-6" />
+        {createElement(icon, { className: 'h-6 w-6' })}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-semibold uppercase tracking-[0.3em]" style={{ color: accent }}>
@@ -396,7 +412,7 @@ function FunnelFigure({ funnel, accent }) {
   );
 }
 
-function MorningVoteFigure({ rows, advancingIds, accent }) {
+function MorningVoteFigure({ rows, advancingIds }) {
   // Horizontal bars driven by avg_rank (lower = better, so invert for length)
   const visible = rows.slice(0, 10);
   const maxRank = Math.max(...visible.map((r) => r.avg_rank || 1));

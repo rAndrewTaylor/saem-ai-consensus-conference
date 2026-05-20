@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * Mode-driven stage content, reusable across:
  *   - /stage  (full-bleed projector view)
@@ -14,6 +15,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { subscribeSSE } from '@/lib/sseSubscribe';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IdleCarousel } from '@/components/stage/IdleCarousel';
 import { WelcomeDeck } from '@/components/stage/WelcomeDeck';
@@ -53,32 +55,33 @@ export function useStageDisplay(isAdmin) {
   }, []);
 
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const es = new EventSource(SSE_URL);
-    esRef.current = es;
-    es.addEventListener('message', (evt) => {
-      try {
-        const data = JSON.parse(evt.data);
-        if (data?.event === 'display_mode_changed') {
-          setMode(data.mode);
-          setSlideIndex(data.slide_index ?? null);
-          setPanelTab(data.panel_tab ?? null);
-        } else if (
-          data?.event === 'chat_message_new' ||
-          data?.event === 'chat_upvote_changed' ||
-          data?.event === 'chat_message_hidden' ||
-          data?.event === 'chat_message_unhidden' ||
-          data?.event === 'vote_cast' ||
-          data?.event === 'session_started' ||
-          data?.event === 'session_stopped' ||
-          data?.event === 'phase_changed' ||
-          data?.event === 'ai_prompts_changed'
-        ) {
-          setBus((b) => b + 1);
-        }
-      } catch { /* malformed */ }
+    if (typeof EventSource === 'undefined') return undefined;
+    // useStageDisplay drives the projector AND every audience phone —
+    // its SSE failing silently is the worst-case bug, so route through
+    // subscribeSSE which retries on permanent close (Railway/Cloudflare
+    // sometimes 502-and-stay-closed on wifi blips).
+    const stop = subscribeSSE(SSE_URL, (data) => {
+      if (data?.event === 'display_mode_changed') {
+        setMode(data.mode);
+        setSlideIndex(data.slide_index ?? null);
+        setPanelTab(data.panel_tab ?? null);
+      } else if (
+        data?.event === 'chat_message_new' ||
+        data?.event === 'chat_upvote_changed' ||
+        data?.event === 'chat_message_hidden' ||
+        data?.event === 'chat_message_unhidden' ||
+        data?.event === 'vote_cast' ||
+        data?.event === 'session_started' ||
+        data?.event === 'session_stopped' ||
+        data?.event === 'phase_changed' ||
+        data?.event === 'ai_prompts_changed' ||
+        data?.event === 'cross_wg_features_changed' ||
+        data?.event === 'cross_wg_changed'
+      ) {
+        setBus((b) => b + 1);
+      }
     });
-    return () => { try { es.close(); } catch {} };
+    return stop;
   }, []);
 
   const setDisplay = useCallback(async (patch) => {

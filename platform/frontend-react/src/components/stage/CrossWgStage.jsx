@@ -30,13 +30,14 @@ export function CrossWgStage({ bus }) {
       .then((sessions) => {
         const match = (sessions || []).find((s) => s.session_type === 'cross_wg_prioritization');
         setSession(match || null);
+        if (!match) setLoading(false);
       })
-      .catch(() => {});
+      .catch(() => setLoading(false));
   }, [bus]);
 
   // Load the question pool (featured set or fallback)
   useEffect(() => {
-    if (!session) { setLoading(false); return; }
+    if (!session) return;
     api(`/api/conference/sessions/${session.id}/questions`)
       .then((d) => setQuestions(d?.questions || []))
       .catch(() => setQuestions([]));
@@ -44,7 +45,7 @@ export function CrossWgStage({ bus }) {
 
   // Load live tally
   useEffect(() => {
-    if (!session) { setLoading(false); return; }
+    if (!session) return;
     api(`/api/conference/results/${session.id}`)
       .then((r) => setResults(r))
       .catch(() => setResults(null))

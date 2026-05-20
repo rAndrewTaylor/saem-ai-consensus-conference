@@ -178,6 +178,13 @@ export function StageFollowOrchestrator() {
       } else if (mode === 'cross_wg') {
         scheduleNav('/day#cross-wg', 1500,
           'Closing round — back to agenda.');
+      } else if (/^present:(\d+)$/.test(mode || '')) {
+        const wg = mode.split(':')[1];
+        scheduleNav('/day', 1500,
+          `Priority presentation for WG ${wg} — back to agenda.`);
+      } else if (mode === 'break') {
+        // Bring everyone to the agenda so they see the break countdown
+        scheduleNav('/day', 1500, 'On break — see countdown.');
       } else if (mode === 'idle' || mode === 'welcome') {
         // Quietly return mid-vote users to the agenda
         if (/^\/vote\//.test(location.pathname)) {
