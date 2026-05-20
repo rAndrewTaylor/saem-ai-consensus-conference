@@ -240,7 +240,12 @@ export function ConferenceDayPage() {
   // grid below — when the room is "go get coffee", a wall of cards is
   // the wrong cue.
   const inBreakMode = stage.mode === 'break';
-  const focusedMode = !isPrint && (inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode);
+  // Priority presentation (2:50 PM): co-lead is at the podium walking
+  // through the WG's top-4 advancing questions. Audience phone should
+  // surface just that card — the room is watching, not browsing the
+  // agenda.
+  const inPresentMode = /^present:\d+$/.test(stage.mode || '');
+  const focusedMode = !isPrint && (inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode || inPresentMode);
 
   if (loading && !data) {
     return (
@@ -322,6 +327,16 @@ export function ConferenceDayPage() {
                 </div>
               )}
             </>
+          )}
+          {inPresentMode && (
+            <SafeBoundary label="PresentWG(focused)">
+              <CompactStageView
+                mode={stage.mode}
+                slideIndex={stage.slideIndex}
+                panelTab={stage.panelTab}
+                bus={stage.bus}
+              />
+            </SafeBoundary>
           )}
         </section>
       )}
