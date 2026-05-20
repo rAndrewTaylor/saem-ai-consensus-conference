@@ -30,6 +30,8 @@ export function CompactStageView({ mode, slideIndex, panelTab, bus }) {
   if (mode === 'world_cafe') return <CompactWorldCafe bus={bus} />;
   if (mode === 'cross_wg') return <CompactCrossWg bus={bus} />;
   if (mode === 'final_synthesis') return <CompactSynthesis bus={bus} />;
+  if (mode === 'summary') return <CompactSummary bus={bus} />;
+  if (mode === 'adjourn') return <CompactAdjourn />;
   if (mode === 'break') return <BreakView panelTab={panelTab} compact />;
   return null;
 }
@@ -289,6 +291,110 @@ function CompactSynthesis({ bus }) {
       )}
     </div>
   );
+}
+
+// Phone version of Summary & next steps. Pulls the latest synthesis +
+// top cross-WG ranks so the audience can read the closing recap while
+// they pack up. Read-only — no chair controls.
+function CompactSummary({ bus }) {
+  const [synth, setSynth] = useState(null);
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    api('/api/conference/synthesis/latest').then((d) => {
+      if (!cancelled) setSynth(d?.markdown ? d : null);
+    }).catch(() => {});
+    api('/api/conference/sessions').then(async (sessions) => {
+      const cross = (sessions || []).find((s) => s.session_type === 'cross_wg_prioritization');
+      if (!cross) return;
+      try {
+        const r = await api(`/api/conference/results/${cross.id}`);
+        if (cancelled) return;
+        const top = (r?.results || [])
+          .filter((x) => (x.vote_type || '').startsWith('ranking') && x.avg_rank != null)
+          .sort((a, b) => a.avg_rank - b.avg_rank)
+          .slice(0, 5);
+        setRows(top);
+      } catch { /* keep empty */ }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [bus]);
+
+  const nextSteps = parseNextStepsCompact(synth?.markdown);
+
+  return (
+    <div className="rounded-2xl border border-amber-400/30 bg-amber-500/[0.04] p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">Closing reflection</p>
+      <h2 className="mt-1 text-base font-bold text-white">Summary &amp; next steps</h2>
+
+      {rows.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-cyan-300/85">Top priorities</p>
+          <div className="mt-2 space-y-1.5">
+            {rows.map((r, i) => {
+              const c = PILLAR_COLORS[r.wg_number] || '#48CAE4';
+              return (
+                <div key={r.question_id || r.id} className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-2">
+                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-[10px] font-bold"
+                        style={{ backgroundColor: `${c}25`, color: c }}>
+                    {i + 1}
+                  </span>
+                  <p className="flex-1 text-xs leading-snug text-white/90 line-clamp-3">{r.text || r.question_text}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {nextSteps.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">Next steps</p>
+          <ul className="mt-2 space-y-1.5">
+            {nextSteps.map((s, i) => (
+              <li key={i} className="rounded-lg border border-amber-400/20 bg-amber-500/[0.04] p-2 text-xs text-white/85">
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!rows.length && !nextSteps.length && (
+        <p className="mt-2 text-xs text-white/55">Summary appears once the chair runs the closing synthesis.</p>
+      )}
+    </div>
+  );
+}
+
+function CompactAdjourn() {
+  return (
+    <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/[0.10] to-cyan-500/[0.05] p-5 text-center">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">SAEM 2026</p>
+      <h2 className="mt-2 text-xl font-bold text-white">Thank you.</h2>
+      <p className="mt-2 text-sm text-white/65">
+        Watch your inbox for the full synthesis and dataset. Safe travels home.
+      </p>
+    </div>
+  );
+}
+
+function parseNextStepsCompact(md) {
+  if (!md) return [];
+  const lines = md.split(/\r?\n/);
+  let inSection = false;
+  const items = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (/^##\s+/i.test(line)) {
+      inSection = /next\s+step|recommendation/i.test(line.replace(/^##\s+/, ''));
+      continue;
+    }
+    if (!inSection) continue;
+    const m = line.match(/^[-*]\s+(.+)$/);
+    if (m) items.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1'));
+  }
+  return items.slice(0, 4);
 }
 
 // Fallback shown only on non-focused pages — the audience phone in

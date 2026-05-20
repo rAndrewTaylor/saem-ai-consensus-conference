@@ -26,6 +26,8 @@ import { BreakView } from '@/components/stage/BreakView';
 import { PresentWGStage } from '@/components/stage/PresentWGStage';
 import { WorldCafeStage } from '@/components/stage/WorldCafeStage';
 import { FinalSynthesisStage } from '@/components/stage/FinalSynthesisStage';
+import { SummaryStage } from '@/components/stage/SummaryStage';
+import { AdjournStage } from '@/components/stage/AdjournStage';
 
 const SSE_URL = '/api/events/day';
 
@@ -145,6 +147,8 @@ export function StageView({ mode, slideIndex, panelTab, bus, isAdmin, onChange, 
       {mode === 'world_cafe' && <WorldCafeStage />}
       {mode === 'cross_wg' && <CrossWgStage bus={bus} />}
       {mode === 'final_synthesis' && <FinalSynthesisStage bus={bus} />}
+      {mode === 'summary' && <SummaryStage bus={bus} />}
+      {mode === 'adjourn' && <AdjournStage />}
       {mode === 'break' && <BreakView panelTab={panelTab} compact={compact} />}
       {presentWgNumber && <PresentWGStage wgNumber={presentWgNumber} bus={bus} />}
     </div>

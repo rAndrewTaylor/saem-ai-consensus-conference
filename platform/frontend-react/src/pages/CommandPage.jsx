@@ -62,6 +62,8 @@ export function CommandPage() {
     if (stage.mode === 'world_cafe') return { label: 'World Café', color: 'bg-emerald-500/20 text-emerald-300' };
     if (stage.mode === 'cross_wg') return { label: 'Cross-WG vote', color: 'bg-purple-500/20 text-purple-300' };
     if (stage.mode === 'final_synthesis') return { label: 'Closing synthesis', color: 'bg-amber-500/20 text-amber-200' };
+    if (stage.mode === 'summary') return { label: 'Summary & next steps', color: 'bg-amber-500/20 text-amber-200' };
+    if (stage.mode === 'adjourn') return { label: 'Adjourned', color: 'bg-slate-500/20 text-slate-200' };
     if (stage.mode === 'break') return { label: 'On break', color: 'bg-slate-500/20 text-slate-200' };
     const presentMatch = /^present:(\d+)$/.exec(stage.mode || '');
     if (presentMatch) {

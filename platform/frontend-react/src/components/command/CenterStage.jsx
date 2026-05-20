@@ -59,6 +59,8 @@ export function CenterStage({ mode, slideIndex, panelTab, onChange }) {
       {presentWg && <PresentActions wgNumber={presentWg} onChange={onChange} />}
       {mode === 'cross_wg' && <CrossWgActions onChange={onChange} />}
       {mode === 'final_synthesis' && <FinalSynthesisActions />}
+      {mode === 'summary' && <SummaryActions onChange={onChange} />}
+      {mode === 'adjourn' && <AdjournActions onChange={onChange} />}
     </div>
   );
 }
@@ -161,6 +163,8 @@ function ModeBanner({ mode, slideIndex, panelWg }) {
     if (mode === 'world_cafe') return 'World Café — three rotations';
     if (mode === 'cross_wg') return 'Cross-WG prioritization';
     if (mode === 'final_synthesis') return 'Final results & synthesis';
+    if (mode === 'summary') return 'Summary & next steps';
+    if (mode === 'adjourn') return 'Adjourn — thank you';
     if (mode === 'break') return 'On break';
     return mode || '—';
   })();
@@ -624,6 +628,29 @@ function TableActions({ onChange }) {
       <SecondaryAction onClick={() => onChange?.({ mode: 'idle' })}>
         Return to Idle
       </SecondaryAction>
+    </ActionRow>
+  );
+}
+
+function SummaryActions({ onChange }) {
+  return (
+    <ActionRow>
+      <PrimaryAction onClick={() => onChange?.({ mode: 'adjourn' })} icon={ArrowRight}>
+        End → Adjourn
+      </PrimaryAction>
+      <SecondaryAction onClick={() => onChange?.({ mode: 'final_synthesis' })}>
+        Back to synthesis
+      </SecondaryAction>
+    </ActionRow>
+  );
+}
+
+function AdjournActions({ onChange }) {
+  return (
+    <ActionRow>
+      <PrimaryAction onClick={() => onChange?.({ mode: 'idle' })} icon={ArrowRight}>
+        Conference closed — return to idle
+      </PrimaryAction>
     </ActionRow>
   );
 }

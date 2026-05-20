@@ -252,9 +252,14 @@ export function ConferenceDayPage() {
   // Final synthesis (4:05 PM): audience phone shows the same closing
   // markdown the projector is rendering — focused, no agenda below.
   const inFinalSynthMode = stage.mode === 'final_synthesis';
+  // Summary & next steps (4:35 PM) and Adjourn (5:00 PM): same focused
+  // pattern — phone shows the closing card, nothing else.
+  const inSummaryMode = stage.mode === 'summary';
+  const inAdjournMode = stage.mode === 'adjourn';
   const focusedMode = !isPrint && (
     inPanelMode || inWorldCafe || inReactionBreakout || inBreakMode
     || inPresentMode || inCrossWgMode || inFinalSynthMode
+    || inSummaryMode || inAdjournMode
   );
 
   if (loading && !data) {
@@ -369,6 +374,16 @@ export function ConferenceDayPage() {
           )}
           {inFinalSynthMode && (
             <SafeBoundary label="FinalSynthesis(focused)">
+              <CompactStageView
+                mode={stage.mode}
+                slideIndex={stage.slideIndex}
+                panelTab={stage.panelTab}
+                bus={stage.bus}
+              />
+            </SafeBoundary>
+          )}
+          {(inSummaryMode || inAdjournMode) && (
+            <SafeBoundary label="Closing(focused)">
               <CompactStageView
                 mode={stage.mode}
                 slideIndex={stage.slideIndex}

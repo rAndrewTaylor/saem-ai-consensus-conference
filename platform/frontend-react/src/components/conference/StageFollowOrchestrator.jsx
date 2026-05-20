@@ -184,6 +184,12 @@ export function StageFollowOrchestrator() {
       } else if (mode === 'final_synthesis') {
         scheduleNav('/day', 1500,
           'Closing synthesis — back to agenda.');
+      } else if (mode === 'summary') {
+        scheduleNav('/day', 1500,
+          'Closing summary — back to agenda.');
+      } else if (mode === 'adjourn') {
+        scheduleNav('/day', 1500,
+          'Conference adjourned — thank you.');
       } else if (/^present:(\d+)$/.test(mode || '')) {
         const wg = mode.split(':')[1];
         scheduleNav('/day', 1500,
