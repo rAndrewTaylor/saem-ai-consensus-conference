@@ -14,10 +14,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { api, getAnyParticipantToken } from '@/lib/api';
 import { queueSubmit } from '@/lib/offlineQueue';
-import { ClipboardList, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardList, Send, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { REACTION_BLOCKS } from '@/components/stage/TableReactionsStage';
 
 export function BreakoutNotesPanel({ focused = false }) {
   const [mode, setMode] = useState(null);
+  const [block, setBlock] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -37,14 +39,21 @@ export function BreakoutNotesPanel({ focused = false }) {
   // Listen for display-mode changes
   useEffect(() => {
     let cancelled = false;
-    api('/api/conference/display-mode').then((d) => { if (!cancelled) setMode(d?.mode || 'idle'); }).catch(() => {});
+    api('/api/conference/display-mode').then((d) => {
+      if (cancelled) return;
+      setMode(d?.mode || 'idle');
+      setBlock(d?.panel_tab || null);
+    }).catch(() => {});
     if (typeof EventSource !== 'undefined') {
       const es = new EventSource('/api/events/day');
       esRef.current = es;
       es.addEventListener('message', (evt) => {
         try {
           const data = JSON.parse(evt.data);
-          if (data?.event === 'display_mode_changed') setMode(data.mode);
+          if (data?.event === 'display_mode_changed') {
+            setMode(data.mode);
+            setBlock(data.panel_tab || null);
+          }
         } catch {
           /* ignore malformed keepalive/proxy events */
         }
@@ -129,6 +138,41 @@ export function BreakoutNotesPanel({ focused = false }) {
 
       {bodyOpen && (
         <div className="border-t border-white/[0.04] px-4 py-4">
+          {(() => {
+            const meta = block && REACTION_BLOCKS[block];
+            if (!meta) return null;
+            return (
+              <div
+                className="mb-4 rounded-xl border p-3"
+                style={{
+                  borderColor: `${meta.accent}40`,
+                  backgroundColor: `${meta.accent}10`,
+                }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" style={{ color: meta.accent }} />
+                  <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: meta.accent }}>
+                    Discuss at your table — {meta.label}
+                  </p>
+                </div>
+                <p className="mt-1 text-[11px] text-white/45">{meta.subtitle}</p>
+                <ol className="mt-2 space-y-1.5">
+                  {meta.prompts.map((p, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span
+                        className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-bold"
+                        style={{ backgroundColor: `${meta.accent}35`, color: meta.accent }}
+                      >
+                        {i + 1}
+                      </span>
+                      <p className="text-[13px] leading-snug text-white/90">{p}</p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            );
+          })()}
+
           <div className="mb-3 grid grid-cols-2 gap-2">
             <Field
               label="Table #"

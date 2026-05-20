@@ -139,7 +139,7 @@ export function StageView({ mode, slideIndex, panelTab, bus, isAdmin, onChange, 
           onTabChange={(t) => isAdmin && onChange?.({ mode: `panel:${panelWgNumber}`, panel_tab: t })}
         />
       )}
-      {mode === 'table_reactions' && <TableReactionsStage bus={bus} />}
+      {mode === 'table_reactions' && <TableReactionsStage bus={bus} block={panelTab} />}
       {mode === 'cross_wg' && <CrossWgStage bus={bus} />}
       {mode === 'break' && <BreakView panelTab={panelTab} compact={compact} />}
       {presentWgNumber && <PresentWGStage wgNumber={presentWgNumber} bus={bus} />}

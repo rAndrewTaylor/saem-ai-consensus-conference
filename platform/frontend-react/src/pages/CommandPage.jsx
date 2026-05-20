@@ -91,6 +91,12 @@ export function CommandPage() {
         ? `${nextItem.time}${nextItem.title ? ' · ' + nextItem.title : ''}`
         : '';
       payload = { mode: 'break', panel_tab: next || null };
+    } else if (mode === 'table_reactions' && item?.block) {
+      // Reactions blocks differ between the post-WG1+2 ("technology")
+      // and post-WG3+4 ("people") breakouts. Encoding the block in
+      // panel_tab lets the projector + audience phones show the
+      // theme-specific prompt + history of which panels just ran.
+      payload = { mode: 'table_reactions', panel_tab: item.block };
     } else {
       payload = { mode };
     }
