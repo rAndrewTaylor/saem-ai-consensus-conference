@@ -27,6 +27,7 @@ export function CompactStageView({ mode, slideIndex, panelTab, bus }) {
   if (mode === 'idle') return <CompactIdle bus={bus} />;
   if (mode === 'welcome') return <CompactWelcome slideIndex={slideIndex || 0} />;
   if (mode === 'table_reactions') return <CompactTables bus={bus} />;
+  if (mode === 'world_cafe') return <CompactWorldCafe bus={bus} />;
   if (mode === 'cross_wg') return <CompactCrossWg bus={bus} />;
   if (mode === 'break') return <BreakView panelTab={panelTab} compact />;
   return null;
@@ -237,6 +238,21 @@ function CompactTables() {
       <h2 className="mt-1 text-base font-bold text-white">Table reactions</h2>
       <p className="mt-2 text-xs text-white/55">
         Discuss with your table. Facilitators: submit your notes from the form below.
+      </p>
+    </div>
+  );
+}
+
+// Fallback shown only on non-focused pages — the audience phone in
+// /day shows the dedicated WorldCafeCard via focused mode instead.
+function CompactWorldCafe() {
+  return (
+    <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.04] p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300">World Café</p>
+      <h2 className="mt-1 text-base font-bold text-white">Three 20-minute rotations</h2>
+      <p className="mt-2 text-xs text-white/55">
+        Visit at least two stations outside your home WG. Tap your current station
+        on the World Café card below and submit notes before you rotate.
       </p>
     </div>
   );

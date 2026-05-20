@@ -25,7 +25,7 @@ export function LiveSignal({ mode, bus }) {
   // Auto-switch tab based on stage mode
   useEffect(() => {
     if (/^panel:\d+$/.test(mode || '')) setTab('chat');
-    else if (mode === 'table_reactions') setTab('notes');
+    else if (mode === 'table_reactions' || mode === 'world_cafe') setTab('notes');
     else if (mode === 'cross_wg') setTab('vote');
   }, [mode]);
 

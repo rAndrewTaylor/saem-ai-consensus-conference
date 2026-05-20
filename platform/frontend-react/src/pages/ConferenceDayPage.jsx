@@ -224,9 +224,16 @@ export function ConferenceDayPage() {
   // ONLY the relevant interaction (chat / table notes / world café),
   // not the full /day. Removes clutter so the only action available is
   // the one we want them to take.
+  //
+  // Anchored on stage.mode (what the chair selected), NOT on the
+  // clock-derived currentAgenda. The clock fallback was unreliable
+  // during day-before testing, after sessions drifted, and for any
+  // participant whose device clock was off — leaving the phone stuck
+  // on the projector preview instead of the form they need to fill out.
+  // The chair's selection is always the source of truth.
   const inPanelMode = /^panel:\d+$/.test(stage.mode || '');
-  const inWorldCafe = currentAgenda?.kind === 'world_cafe' && stage.mode === 'table_reactions';
-  const inReactionBreakout = currentAgenda?.kind === 'reaction' && stage.mode === 'table_reactions';
+  const inReactionBreakout = stage.mode === 'table_reactions';
+  const inWorldCafe = stage.mode === 'world_cafe';
   const focusedMode = !isPrint && (inPanelMode || inWorldCafe || inReactionBreakout);
 
   if (loading && !data) {
@@ -284,7 +291,7 @@ export function ConferenceDayPage() {
               <WorldCafeCard
                 sessions={data?.sessions || []}
                 token={participantToken}
-                currentAgenda={currentAgenda}
+                isLive={inWorldCafe}
               />
             </SafeBoundary>
           )}
@@ -428,7 +435,7 @@ export function ConferenceDayPage() {
         <WorldCafeCard
           sessions={data.sessions || []}
           token={participantToken}
-          currentAgenda={currentAgenda}
+          isLive={inWorldCafe}
         />
 
         {/* Agenda timeline */}
@@ -995,7 +1002,7 @@ function QRDisplay({ url, label }) {
 // World Café — five station picker. Surfaces during the 1:30 PM agenda
 // step. Each station collects free-text input that goes into the
 // breakout_notes table for that station's WG session.
-function WorldCafeCard({ sessions, token, currentAgenda }) {
+function WorldCafeCard({ sessions, token, isLive = false }) {
   const toast = useToast();
   const [station, setStation] = useState(null);
   const [tableNum, setTableNum] = useState('');
@@ -1009,7 +1016,7 @@ function WorldCafeCard({ sessions, token, currentAgenda }) {
     [sessions],
   );
 
-  const isWorldCafeNow = currentAgenda?.kind === 'world_cafe';
+  const isWorldCafeNow = isLive;
   if (wgSessions.length === 0) return null;
 
   const handleSubmit = async () => {

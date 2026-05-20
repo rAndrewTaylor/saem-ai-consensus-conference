@@ -55,6 +55,7 @@ export function CenterStage({ mode, slideIndex, panelTab, onChange }) {
       {mode === 'welcome' && <WelcomeActions slideIndex={slideIndex} onChange={onChange} />}
       {panelWg && <PanelActions wgNumber={panelWg} panelTab={panelTab} onChange={onChange} />}
       {mode === 'table_reactions' && <TableActions onChange={onChange} />}
+      {mode === 'world_cafe' && <WorldCafeActions onChange={onChange} />}
       {presentWg && <PresentActions wgNumber={presentWg} onChange={onChange} />}
       {mode === 'cross_wg' && <CrossWgActions onChange={onChange} />}
     </div>
@@ -156,6 +157,7 @@ function ModeBanner({ mode, slideIndex, panelWg }) {
     if (mode === 'idle') return 'Idle — auto-rotating dashboard';
     if (mode === 'welcome') return `Welcome slide ${(slideIndex || 0) + 1} of 6`;
     if (mode === 'table_reactions') return 'Table reactions — breakout';
+    if (mode === 'world_cafe') return 'World Café — three rotations';
     if (mode === 'cross_wg') return 'Cross-WG prioritization';
     if (mode === 'break') return 'On break';
     return mode || '—';
@@ -610,6 +612,19 @@ function TableActions({ onChange }) {
     <ActionRow>
       <PrimaryAction onClick={() => onChange?.({ mode: 'panel:1', panel_tab: 'results' })} icon={ArrowRight}>
         Back to Panel 1
+      </PrimaryAction>
+      <SecondaryAction onClick={() => onChange?.({ mode: 'idle' })}>
+        Return to Idle
+      </SecondaryAction>
+    </ActionRow>
+  );
+}
+
+function WorldCafeActions({ onChange }) {
+  return (
+    <ActionRow>
+      <PrimaryAction onClick={() => onChange?.({ mode: 'break', panel_tab: '2:30 PM · Break' })} icon={ArrowRight}>
+        End café · go to break
       </PrimaryAction>
       <SecondaryAction onClick={() => onChange?.({ mode: 'idle' })}>
         Return to Idle

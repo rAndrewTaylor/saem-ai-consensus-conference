@@ -1019,6 +1019,9 @@ function LiveNowPanel() {
   } else if (mode === 'table_reactions') {
     headline = 'Table reactions';
     subline = 'Breakout tables responding to the panel.';
+  } else if (mode === 'world_cafe') {
+    headline = 'World Café';
+    subline = 'Three 20-minute rotations across the WG stations.';
   } else if (mode === 'cross_wg') {
     headline = 'Cross-WG consensus';
     subline = 'Closing ranked vote across all five working groups.';

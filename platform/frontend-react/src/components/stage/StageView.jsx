@@ -24,6 +24,7 @@ import { TableReactionsStage } from '@/components/stage/TableReactionsStage';
 import { CrossWgStage } from '@/components/stage/CrossWgStage';
 import { BreakView } from '@/components/stage/BreakView';
 import { PresentWGStage } from '@/components/stage/PresentWGStage';
+import { WorldCafeStage } from '@/components/stage/WorldCafeStage';
 
 const SSE_URL = '/api/events/day';
 
@@ -140,6 +141,7 @@ export function StageView({ mode, slideIndex, panelTab, bus, isAdmin, onChange, 
         />
       )}
       {mode === 'table_reactions' && <TableReactionsStage bus={bus} block={panelTab} />}
+      {mode === 'world_cafe' && <WorldCafeStage />}
       {mode === 'cross_wg' && <CrossWgStage bus={bus} />}
       {mode === 'break' && <BreakView panelTab={panelTab} compact={compact} />}
       {presentWgNumber && <PresentWGStage wgNumber={presentWgNumber} bus={bus} />}

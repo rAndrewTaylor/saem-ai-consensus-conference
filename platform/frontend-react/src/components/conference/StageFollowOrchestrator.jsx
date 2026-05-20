@@ -173,8 +173,11 @@ export function StageFollowOrchestrator() {
         scheduleNav(`/day#panel-${wg}`, 1500,
           `Panel ${wg} is live — opening agenda.`);
       } else if (mode === 'table_reactions') {
+        scheduleNav('/day', 1500,
+          'Table reactions — back to agenda.');
+      } else if (mode === 'world_cafe') {
         scheduleNav('/day#world-cafe', 1500,
-          'Breakout starting — back to agenda.');
+          'World Café starting — back to agenda.');
       } else if (mode === 'cross_wg') {
         scheduleNav('/day#cross-wg', 1500,
           'Closing round — back to agenda.');

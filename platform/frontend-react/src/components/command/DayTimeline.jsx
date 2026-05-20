@@ -46,7 +46,8 @@ export function modeForAgendaItem(item) {
   if (!item) return 'idle';
   if (item.kind === 'welcome') return 'welcome';
   if (item.kind === 'panel' && item.wg) return `panel:${item.wg}`;
-  if (item.kind === 'reaction' || item.kind === 'world_cafe') return 'table_reactions';
+  if (item.kind === 'reaction') return 'table_reactions';
+  if (item.kind === 'world_cafe') return 'world_cafe';
   if (item.kind === 'vote' && item.session_type === 'cross_wg_prioritization') return 'cross_wg';
   if (item.kind === 'presentation') return 'present:1';
   if (item.kind === 'results') return 'cross_wg';
