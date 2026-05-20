@@ -416,6 +416,126 @@ function ResultsView({ wgNumber, bus, accent }) {
 // the documented funnel (4 × 4 WGs + WG5's 5 themes = 21).
 const ADVANCING_PER_WG = 4;
 
+// Gently auto-scroll an overflowing container so audience at the back of
+// the room sees the full list without anyone touching the projector. Pauses
+// at the top and bottom, then loops. No-op when content fits.
+function useAutoScroll(ref, deps = []) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    let rafId;
+    let paused = Date.now() + 2500;   // 2.5s read time at the top
+    const PX_PER_SEC = 18;            // gentle scroll speed
+    const PAUSE_END_MS = 3500;        // pause at the bottom before looping
+    let lastTs = null;
+
+    const tick = (ts) => {
+      if (lastTs == null) lastTs = ts;
+      const dt = ts - lastTs;
+      lastTs = ts;
+      const now = Date.now();
+      const overflow = el.scrollHeight - el.clientHeight;
+      if (overflow > 4 && now > paused) {
+        const next = el.scrollTop + (PX_PER_SEC * dt) / 1000;
+        if (next >= overflow) {
+          el.scrollTop = overflow;
+          paused = now + PAUSE_END_MS;
+          // Snap back after the pause and start over from the top
+          setTimeout(() => {
+            if (!el) return;
+            el.scrollTop = 0;
+            paused = Date.now() + 2500;
+            lastTs = null;
+          }, PAUSE_END_MS);
+        } else {
+          el.scrollTop = next;
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
+// Left column of the live vote view: scrolling leaderboard of every
+// question in this panel's pool. Auto-scrolls when the list is taller
+// than the column so audience at the back sees every entry without
+// chair input.
+function FullRankingColumn({ accent, sortedRows, advancingIds, maxPts, maxRank, maxImp }) {
+  const scrollRef = useRef(null);
+  useAutoScroll(scrollRef, [sortedRows.length]);
+  return (
+    <div
+      className="flex min-h-0 flex-col rounded-2xl border p-3"
+      style={{ borderColor: `${accent}25`, backgroundColor: `${accent}08` }}
+    >
+      <div className="mb-2 flex shrink-0 items-baseline justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
+          Full ranking
+        </p>
+        <p className="text-[10px] text-white/35">
+          auto-scrolls
+        </p>
+      </div>
+      <div ref={scrollRef} className="flex-1 space-y-1.5 overflow-y-auto pr-1">
+        {sortedRows.map((r, idx) => {
+          const qid = r.question_id || r.id;
+          const denom = r.points != null ? maxPts : r.avg_rank != null ? maxRank : r.importance_mean != null ? maxImp : 1;
+          const val = r.points || r.importance_mean || (maxRank - (r.avg_rank || 0) + 1);
+          const advancing = advancingIds.has(qid);
+          return (
+            <div
+              key={qid}
+              className="rounded-xl border p-2.5"
+              style={{
+                borderColor: advancing ? 'rgba(16, 185, 129, 0.35)' : 'rgba(255,255,255,0.06)',
+                backgroundColor: advancing ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255,255,255,0.02)',
+              }}
+            >
+              <div className="flex items-start gap-2.5">
+                <span
+                  className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold"
+                  style={{
+                    backgroundColor: advancing ? 'rgba(16, 185, 129, 0.25)' : `${accent}25`,
+                    color: advancing ? '#34d399' : accent,
+                  }}
+                >
+                  {idx + 1}
+                </span>
+                <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/90 line-clamp-3">
+                  {r.text || r.question_text}
+                </p>
+              </div>
+              <div className="mt-2 flex items-center gap-3 pl-8 text-[10px] text-white/50">
+                {r.avg_rank != null && (
+                  <span>rank <span className="font-mono text-white">{Number(r.avg_rank).toFixed(2)}</span></span>
+                )}
+                {r.importance_mean != null && r.avg_rank == null && (
+                  <span>imp <span className="font-mono text-white">{Number(r.importance_mean).toFixed(1)}</span></span>
+                )}
+                {r.n_votes != null && (
+                  <span>n=<span className="font-mono text-white">{r.n_votes}</span></span>
+                )}
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, (val / denom) * 100)}%`,
+                    backgroundColor: advancing ? '#10b981' : accent,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function VoteView({ sessionId, resolving, bus, accent = '#00B4D8' }) {
   const [results, setResults] = useState(null);
   const [session, setSession] = useState(null);
@@ -500,67 +620,14 @@ function VoteView({ sessionId, resolving, bus, accent = '#00B4D8' }) {
         // the live ordering AND which questions are currently winning a
         // spot in the closing round.
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <div
-            className="flex min-h-0 flex-col overflow-y-auto rounded-2xl border p-3"
-            style={{ borderColor: `${accent}25`, backgroundColor: `${accent}08` }}
-          >
-            <p className="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
-              Full ranking
-            </p>
-            <div className="space-y-1.5">
-              {sortedRows.map((r, idx) => {
-                const qid = r.question_id || r.id;
-                const denom = r.points != null ? maxPts : r.avg_rank != null ? maxRank : r.importance_mean != null ? maxImp : 1;
-                const val = r.points || r.importance_mean || (maxRank - (r.avg_rank || 0) + 1);
-                const advancing = advancingIds.has(qid);
-                return (
-                  <div
-                    key={qid}
-                    className="rounded-xl border p-2.5"
-                    style={{
-                      borderColor: advancing ? 'rgba(16, 185, 129, 0.35)' : 'rgba(255,255,255,0.06)',
-                      backgroundColor: advancing ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255,255,255,0.02)',
-                    }}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <span
-                        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold"
-                        style={{
-                          backgroundColor: advancing ? 'rgba(16, 185, 129, 0.25)' : `${accent}25`,
-                          color: advancing ? '#34d399' : accent,
-                        }}
-                      >
-                        {idx + 1}
-                      </span>
-                      <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/90 line-clamp-3">
-                        {r.text || r.question_text}
-                      </p>
-                    </div>
-                    <div className="mt-2 flex items-center gap-3 pl-8.5 text-[10px] text-white/50">
-                      {r.avg_rank != null && (
-                        <span>rank <span className="font-mono text-white">{Number(r.avg_rank).toFixed(2)}</span></span>
-                      )}
-                      {r.importance_mean != null && r.avg_rank == null && (
-                        <span>imp <span className="font-mono text-white">{Number(r.importance_mean).toFixed(1)}</span></span>
-                      )}
-                      {r.n_votes != null && (
-                        <span>n=<span className="font-mono text-white">{r.n_votes}</span></span>
-                      )}
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${Math.min(100, (val / denom) * 100)}%`,
-                          backgroundColor: advancing ? '#10b981' : accent,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <FullRankingColumn
+            accent={accent}
+            sortedRows={sortedRows}
+            advancingIds={advancingIds}
+            maxPts={maxPts}
+            maxRank={maxRank}
+            maxImp={maxImp}
+          />
 
           {/* Advancing-to-cross-WG sidebar */}
           <div
