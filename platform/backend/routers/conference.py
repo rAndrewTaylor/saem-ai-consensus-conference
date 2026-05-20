@@ -280,6 +280,11 @@ def list_sessions(db: Session = Depends(get_db)):
     """List all conference sessions."""
     sessions = db.query(ConferenceSession).order_by(ConferenceSession.id).all()
     wg_lookup = {w.id: w.number for w in db.query(WorkingGroup).all()}
+    vote_counts = dict(
+        db.query(ConferenceVote.session_id, func.count(ConferenceVote.id))
+        .group_by(ConferenceVote.session_id)
+        .all()
+    )
     return [{
         "id": s.id,
         "wg_id": s.wg_id,
@@ -289,7 +294,7 @@ def list_sessions(db: Session = Depends(get_db)):
         "is_active": s.is_active,
         "started_at": s.started_at.isoformat() if s.started_at else None,
         "created_at": s.created_at.isoformat() if s.created_at else None,
-        "vote_count": db.query(ConferenceVote).filter(ConferenceVote.session_id == s.id).count(),
+        "vote_count": int(vote_counts.get(s.id, 0)),
     } for s in sessions]
 
 
@@ -306,22 +311,27 @@ def my_contributions(
                  "total_comments": 0}
     p = verify_participant_token(token, db)
     sessions = db.query(ConferenceSession).order_by(ConferenceSession.id).all()
+
+    # Two aggregate queries instead of N+1. Same shape as before.
+    vote_counts = dict(
+        db.query(ConferenceVote.session_id, func.count(ConferenceVote.id))
+        .filter(ConferenceVote.participant_id == p.id)
+        .group_by(ConferenceVote.session_id)
+        .all()
+    )
+    comment_counts = dict(
+        db.query(ConferenceComment.session_id, func.count(ConferenceComment.id))
+        .filter(ConferenceComment.participant_id == p.id)
+        .group_by(ConferenceComment.session_id)
+        .all()
+    )
+
     out = []
     total_votes = 0
     total_comments = 0
     for s in sessions:
-        vote_count = (
-            db.query(ConferenceVote)
-            .filter(ConferenceVote.session_id == s.id,
-                    ConferenceVote.participant_id == p.id)
-            .count()
-        )
-        comment_count = (
-            db.query(ConferenceComment)
-            .filter(ConferenceComment.session_id == s.id,
-                    ConferenceComment.participant_id == p.id)
-            .count()
-        )
+        vote_count = int(vote_counts.get(s.id, 0))
+        comment_count = int(comment_counts.get(s.id, 0))
         if vote_count or comment_count:
             out.append({
                 "session_id": s.id,
@@ -374,20 +384,36 @@ def day_state(db: Session = Depends(get_db)):
     can poll without admin/participant credentials. Voting itself still
     requires a participant token.
     """
-    # All sessions enriched with WG metadata + counts
+    # All sessions enriched with WG metadata + counts. Counts come from
+    # three aggregate queries (one each for votes, comments, distinct
+    # voters) instead of the prior N+1 — every audience phone polls this
+    # every 12s, so each saved round-trip multiplies across the room.
     sessions = db.query(ConferenceSession).order_by(ConferenceSession.id).all()
     wgs = {w.id: w for w in db.query(WorkingGroup).all()}
+
+    vote_counts = dict(
+        db.query(ConferenceVote.session_id, func.count(ConferenceVote.id))
+        .group_by(ConferenceVote.session_id)
+        .all()
+    )
+    comment_counts = dict(
+        db.query(ConferenceComment.session_id, func.count(ConferenceComment.id))
+        .group_by(ConferenceComment.session_id)
+        .all()
+    )
+    voter_counts = dict(
+        db.query(
+            ConferenceVote.session_id,
+            func.count(func.distinct(ConferenceVote.participant_id)),
+        )
+        .group_by(ConferenceVote.session_id)
+        .all()
+    )
+
     out_sessions: list[dict] = []
     active_id: Optional[int] = None
     for s in sessions:
         wg = wgs.get(s.wg_id) if s.wg_id else None
-        vc = db.query(ConferenceVote).filter(ConferenceVote.session_id == s.id).count()
-        cc = db.query(ConferenceComment).filter(ConferenceComment.session_id == s.id).count()
-        unique_voters = (
-            db.query(func.count(func.distinct(ConferenceVote.participant_id)))
-            .filter(ConferenceVote.session_id == s.id)
-            .scalar()
-        ) or 0
         if s.is_active and active_id is None:
             active_id = s.id
         out_sessions.append({
@@ -401,9 +427,9 @@ def day_state(db: Session = Depends(get_db)):
             "is_active": bool(s.is_active),
             "started_at": s.started_at.isoformat() if s.started_at else None,
             "ended_at": s.ended_at.isoformat() if s.ended_at else None,
-            "vote_count": vc,
-            "comment_count": cc,
-            "unique_voters": int(unique_voters),
+            "vote_count": int(vote_counts.get(s.id, 0)),
+            "comment_count": int(comment_counts.get(s.id, 0)),
+            "unique_voters": int(voter_counts.get(s.id, 0)),
         })
 
     # Static agenda — drives the timeline view. Times are local Atlanta
