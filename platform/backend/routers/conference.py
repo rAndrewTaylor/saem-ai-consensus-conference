@@ -1590,6 +1590,68 @@ def cross_wg_reset(
     return {"ok": True, "cleared": n}
 
 
+@router.post("/admin/reset-live-data")
+def reset_live_data(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """Wipe all conference-day live data: votes, comments, chat,
+    chat upvotes, breakout notes, and AI-promoted prompts. Stops any
+    active session and clears its started/ended timestamps.
+
+    Used to clear out test data accumulated during pre-conference
+    rehearsal so the actual conference starts from a clean slate.
+
+    Does NOT touch: ConferenceSession rows (the session shells stay
+    in place so the chair doesn't have to recreate them), curated
+    panel-pool flags (featured_in_panel / featured_in_cross_wg), or
+    any Question / Participant rows.
+
+    Admin-only. Audit-logged.
+    """
+    counts = {
+        "votes": db.query(ConferenceVote).count(),
+        "comments": db.query(ConferenceComment).count(),
+        "chat_messages": db.query(ConferenceChatMessage).count(),
+        "chat_upvotes": db.query(ConferenceChatUpvote).count(),
+        "breakout_notes": db.query(BreakoutNote).count(),
+    }
+
+    # Delete in FK-safe order — upvotes reference messages.
+    db.query(ConferenceChatUpvote).delete(synchronize_session=False)
+    db.query(ConferenceChatMessage).delete(synchronize_session=False)
+    db.query(ConferenceVote).delete(synchronize_session=False)
+    db.query(ConferenceComment).delete(synchronize_session=False)
+    db.query(BreakoutNote).delete(synchronize_session=False)
+
+    # Stop any active session and clear its timestamps; leave the
+    # session shells in place so the chair doesn't have to recreate
+    # them.
+    sessions_reset = (
+        db.query(ConferenceSession)
+        .update({
+            ConferenceSession.is_active: False,
+            ConferenceSession.started_at: None,
+            ConferenceSession.ended_at: None,
+            ConferenceSession.ai_prompts: None,
+        })
+    )
+
+    db.commit()
+
+    write_audit_log(
+        db, admin.get("sub", "admin"), "reset_live_data",
+        f"cleared votes={counts['votes']} comments={counts['comments']} "
+        f"chat={counts['chat_messages']} upvotes={counts['chat_upvotes']} "
+        f"notes={counts['breakout_notes']} sessions_reset={sessions_reset}",
+    )
+    db.commit()
+
+    _publish_day("live_data_reset", {})
+
+    return {"ok": True, "cleared": counts, "sessions_reset": sessions_reset}
+
+
 @router.post("/cross-wg/auto-feature")
 def cross_wg_auto_feature(
     n: int = 4,
