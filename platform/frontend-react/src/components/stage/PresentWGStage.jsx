@@ -190,23 +190,25 @@ export function PresentWGStage({ wgNumber, bus }) {
   }, [allActive, candidates, limit, wgNumber]);
 
   // Build the slide list dynamically — skip slides with no data.
-  // Per-question deep-dive slides (QuestionSlide), the FunnelSlide,
-  // MorningVoteSlide, and ShiftsSlide have all been removed in
-  // favour of more thematic content — the priority-presentation slot
-  // is a 5-min framing of what this WG's slate is ABOUT, not a
-  // walk-through of each advancing question. The 4-question detail
-  // belongs on the audience phone, not in the spoken presentation.
   const slides = useMemo(() => {
     const list = [];
     list.push((p) => <TitleSlide {...p} />);
     list.push((p) => <MissionSlide {...p} />);
     list.push((p) => <NumbersSlide {...p} />);
+    list.push((p) => <FunnelSlide {...p} />);
+    if (morningRanking.length > 0) list.push((p) => <MorningVoteSlide {...p} />);
+    advancing.forEach((q, i) => {
+      list.push((p) => <QuestionSlide {...p} question={q} index={i + 1} total={advancing.length} />);
+    });
+    if (shifts.up.length > 0 || shifts.down.length > 0) {
+      list.push((p) => <ShiftsSlide {...p} />);
+    }
     if (doc?.themes && doc.themes.length > 0) {
       list.push((p) => <ThemesSlide {...p} />);
     }
     list.push((p) => <ClosingSlide {...p} />);
     return list;
-  }, [doc]);
+  }, [advancing, doc, morningRanking, shifts]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -801,12 +803,6 @@ function QuestionSlide({ question, index, total, doc, accent }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <div className="flex items-baseline justify-between">
-        <Eyebrow tone={accent}>Advancing question {index} of {total}</Eyebrow>
-        <span className="font-mono text-xs" style={{ color: C.textMuted }}>
-          {question.text ? `Q${question.id ?? question.question_id ?? ''}` : ''}
-        </span>
-      </div>
       {rationale?.title && (
         <p
           className="mt-6 text-sm font-bold uppercase tracking-wider"
@@ -972,33 +968,30 @@ function ShiftColumn({ title, items, tone }) {
 // ────────────────────────────────────────────────────────────────────
 
 function ThemesSlide({ doc, accent }) {
-  const themes = doc?.themes || [];
-  // Auto-layout: 3 themes per row on lg when 3+, single col when 1-2.
-  const cols = themes.length >= 3 ? 'lg:grid-cols-3' : themes.length === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-1';
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col">
-      <Eyebrow tone={accent}>The throughline</Eyebrow>
-      <H1 size="lg" className="mt-4">
+    <div className="mx-auto w-full max-w-6xl">
+      <Eyebrow tone={accent}>Cross-cutting threads</Eyebrow>
+      <H1 size="lg" className="mt-6">
         The themes that echo across this WG.
       </H1>
-      <div className={`mt-8 grid flex-1 gap-6 ${cols}`}>
-        {themes.map((theme, i) => (
+      <div className="mt-10 grid gap-5 lg:grid-cols-3">
+        {(doc?.themes || []).map((theme, i) => (
           <motion.div
             key={theme.title}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.2 + i * 0.12 }}
-            className="flex flex-col rounded-2xl border p-8"
+            className="rounded-2xl border p-6"
             style={{ borderColor: `${accent}30`, background: `${accent}08` }}
           >
             <div
-              className="mb-5 h-1.5 w-16 rounded-full"
+              className="mb-4 h-1 w-12 rounded-full"
               style={{ background: accent }}
             />
-            <h3 className="text-3xl font-bold leading-tight lg:text-4xl" style={{ color: C.text }}>
+            <h3 className="text-lg font-bold leading-snug" style={{ color: C.text }}>
               {theme.title}
             </h3>
-            <p className="mt-5 text-xl leading-relaxed lg:text-2xl" style={{ color: C.textSec }}>
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: C.textSec }}>
               {theme.body}
             </p>
           </motion.div>
@@ -1012,16 +1005,18 @@ function ThemesSlide({ doc, accent }) {
 // Closing slide
 // ────────────────────────────────────────────────────────────────────
 
-function ClosingSlide({ accent, doc }) {
+function ClosingSlide({ accent, limit, doc, wgNumber }) {
   return (
-    <div className="mx-auto w-full max-w-[1400px] text-center">
-      <Eyebrow tone={accent}>What we're asking the room</Eyebrow>
+    <div className="mx-auto w-full max-w-5xl text-center">
+      <Eyebrow tone={accent}>What happens next</Eyebrow>
       <H1 size="xl" className="mt-8">
-        <span style={{ color: accent }}>Carry this forward.</span>
+        Rank these <span className="font-mono">{limit}</span> against{' '}
+        the other <span className="font-mono">{wgNumber === 5 ? 16 : 17}</span> — and{' '}
+        <span style={{ color: accent }}>shape the agenda.</span>
       </H1>
       {doc?.callToAction && (
         <p
-          className="mx-auto mt-10 max-w-5xl text-3xl leading-relaxed lg:text-4xl"
+          className="mx-auto mt-10 max-w-3xl text-lg leading-relaxed"
           style={{ color: C.textSec }}
         >
           {doc.callToAction}
@@ -1032,7 +1027,7 @@ function ClosingSlide({ accent, doc }) {
         style={{ borderColor: `${C.emerald}40`, background: `${C.emerald}10` }}
       >
         <ArrowRight className="h-6 w-6" style={{ color: C.emerald }} />
-        <p className="text-2xl lg:text-3xl" style={{ color: C.text }}>
+        <p className="text-xl sm:text-2xl" style={{ color: C.text }}>
           Cross-WG ranking opens after the last priority presentation.
         </p>
       </div>
