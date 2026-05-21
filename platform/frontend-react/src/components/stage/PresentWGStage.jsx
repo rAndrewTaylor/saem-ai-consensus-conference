@@ -72,6 +72,16 @@ const WG_SHORT = {
   5: 'Ethics & Legal',
 };
 
+// One-word labels for the hub-and-spokes SVG so labels can't overlap
+// adjacent circles or wrap off the viewBox.
+const WG_SPOKE_LABEL = {
+  1: 'Clinical',
+  2: 'Infrastructure',
+  3: 'Education',
+  4: 'Human-AI',
+  5: 'Ethics',
+};
+
 // Per-WG "bridges" — how this WG's agenda interlocks with each of the
 // other four. Each entry: { to: <wg_number>, body: <one-sentence link> }.
 // Authored by the chair team; kept here (rather than in SUMMARY_DOCS)
@@ -1147,11 +1157,12 @@ function CrossWgBridgesSlide({ wgNumber, accent }) {
       </H1>
 
       {/* Hub-and-spokes diagram + 2x2 bridge grid laid side by side on
-          wide screens; stacked on narrow ones. */}
-      <div className="mt-6 grid flex-1 items-center gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+          wide screens. Diagram column is given more room than before so
+          the figure can read at projector distance. */}
+      <div className="mt-6 grid flex-1 items-center gap-8 lg:grid-cols-[1.05fr_1fr]">
         <HubAndSpokes wgNumber={wgNumber} accent={accent} bridges={bridges} />
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {bridges.map((b, i) => {
             const otherColor = PILLAR_COLORS[b.to] || C.cyan;
             return (
@@ -1160,33 +1171,33 @@ function CrossWgBridgesSlide({ wgNumber, accent }) {
                 initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.45, delay: 0.4 + i * 0.1 }}
-                className="flex flex-col rounded-2xl border p-4 lg:p-5"
+                className="flex flex-col rounded-2xl border p-5 lg:p-6"
                 style={{
                   borderColor: `${otherColor}40`,
                   background: `linear-gradient(135deg, ${otherColor}14, ${otherColor}06)`,
                   boxShadow: `0 0 20px ${otherColor}1A`,
                 }}
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                   <span
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-bold"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-mono text-lg font-bold"
                     style={{
                       background: `${otherColor}30`,
                       color: otherColor,
-                      boxShadow: `0 0 12px ${otherColor}40`,
+                      boxShadow: `0 0 14px ${otherColor}45`,
                     }}
                   >
                     {b.to}
                   </span>
                   <p
-                    className="text-sm font-bold leading-tight lg:text-base"
+                    className="text-base font-bold leading-tight lg:text-lg"
                     style={{ color: C.text }}
                   >
                     {WG_SHORT[b.to]}
                   </p>
                 </div>
                 <p
-                  className="mt-2.5 text-sm leading-relaxed lg:text-[15px]"
+                  className="mt-3 text-base leading-relaxed lg:text-[17px]"
                   style={{ color: C.textSec }}
                 >
                   {b.body}
@@ -1205,13 +1216,18 @@ function CrossWgBridgesSlide({ wgNumber, accent }) {
 // = partner WG's pillar color; thickness = identical (all bridges
 // matter). Drawn as SVG so the projector renders cleanly at any size.
 function HubAndSpokes({ wgNumber, accent, bridges }) {
-  const W = 360;
-  const H = 360;
+  // Wider/taller viewBox + larger node radii so projector audiences in
+  // the back of the room can read the diagram. Extra horizontal margin
+  // keeps the WG-name labels off the visible edges.
+  const W = 520;
+  const H = 460;
   const cx = W / 2;
   const cy = H / 2;
-  const r = 130; // spoke length
-  const hubR = 46;
-  const partnerR = 34;
+  const r = 165; // spoke length
+  const hubR = 60;
+  const partnerR = 44;
+  // How far outside each partner circle the WG-name label sits.
+  const labelOffset = 26;
 
   // Position each partner at an evenly-distributed angle. Start at -90°
   // (top) so the layout looks like a four-armed cross when there are 4
@@ -1229,7 +1245,7 @@ function HubAndSpokes({ wgNumber, accent, bridges }) {
 
   return (
     <div className="flex items-center justify-center">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[420px]">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[600px]">
         <defs>
           <radialGradient id={`hub-glow-${wgNumber}`}>
             <stop offset="0%" stopColor={accent} stopOpacity="0.35" />
@@ -1290,7 +1306,7 @@ function HubAndSpokes({ wgNumber, accent, bridges }) {
             x={cx}
             y={cy - 4}
             textAnchor="middle"
-            fontSize="28"
+            fontSize="38"
             fontFamily="ui-monospace, monospace"
             fontWeight="700"
             fill={C.text}
@@ -1299,13 +1315,13 @@ function HubAndSpokes({ wgNumber, accent, bridges }) {
           </text>
           <text
             x={cx}
-            y={cy + 16}
+            y={cy + 22}
             textAnchor="middle"
-            fontSize="10"
+            fontSize="12"
             fontFamily="ui-monospace, monospace"
             fontWeight="600"
             fill={C.textMuted}
-            letterSpacing="1"
+            letterSpacing="2"
           >
             WG
           </text>
@@ -1334,7 +1350,7 @@ function HubAndSpokes({ wgNumber, accent, bridges }) {
               x={p.x}
               y={p.y - 2}
               textAnchor="middle"
-              fontSize="20"
+              fontSize="26"
               fontFamily="ui-monospace, monospace"
               fontWeight="700"
               fill={C.text}
@@ -1343,33 +1359,29 @@ function HubAndSpokes({ wgNumber, accent, bridges }) {
             </text>
             <text
               x={p.x}
-              y={p.y + 12}
+              y={p.y + 16}
               textAnchor="middle"
-              fontSize="8"
+              fontSize="10"
               fontFamily="ui-monospace, monospace"
               fontWeight="600"
               fill={C.textMuted}
-              letterSpacing="1"
+              letterSpacing="2"
             >
               WG
             </text>
-            {/* WG short label outside the node, positioned to follow the spoke direction */}
+            {/* WG short label outside the node, positioned to follow
+                the spoke direction. Always anchored along the radial
+                direction so labels can't overlap the node circle. */}
             <text
-              x={p.x + Math.cos(p.angle) * (partnerR + 14)}
-              y={p.y + Math.sin(p.angle) * (partnerR + 14) + 4}
-              textAnchor={
-                Math.abs(p.angle) < 0.5 || Math.abs(p.angle - Math.PI) < 0.5
-                  ? 'middle'
-                  : Math.cos(p.angle) > 0
-                  ? 'start'
-                  : 'end'
-              }
-              fontSize="11"
+              x={p.x + Math.cos(p.angle) * (partnerR + labelOffset)}
+              y={p.y + Math.sin(p.angle) * (partnerR + labelOffset) + 5}
+              textAnchor={Math.cos(p.angle) > 0.2 ? 'start' : Math.cos(p.angle) < -0.2 ? 'end' : 'middle'}
+              fontSize="15"
               fontFamily="Inter, sans-serif"
-              fontWeight="600"
+              fontWeight="700"
               fill={p.color}
             >
-              {WG_SHORT[p.to]}
+              {WG_SPOKE_LABEL[p.to]}
             </text>
           </motion.g>
         ))}
