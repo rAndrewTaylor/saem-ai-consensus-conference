@@ -1216,18 +1216,19 @@ function CrossWgBridgesSlide({ wgNumber, accent }) {
 // = partner WG's pillar color; thickness = identical (all bridges
 // matter). Drawn as SVG so the projector renders cleanly at any size.
 function HubAndSpokes({ wgNumber, accent, bridges }) {
-  // Wider/taller viewBox + larger node radii so projector audiences in
-  // the back of the room can read the diagram. Extra horizontal margin
-  // keeps the WG-name labels off the visible edges.
-  const W = 520;
-  const H = 460;
+  // viewBox is sized so the spoke labels (one word, ~16px font) have
+  // headroom on every side. The 90-pixel margin between each partner
+  // circle and the viewBox edge gives the labels (offset + text width)
+  // room to render without clipping.
+  const W = 760;
+  const H = 540;
   const cx = W / 2;
   const cy = H / 2;
-  const r = 165; // spoke length
-  const hubR = 60;
-  const partnerR = 44;
-  // How far outside each partner circle the WG-name label sits.
-  const labelOffset = 26;
+  const r = 175; // spoke length
+  const hubR = 64;
+  const partnerR = 46;
+  // Distance from the partner-circle edge to the start of the label.
+  const labelOffset = 28;
 
   // Position each partner at an evenly-distributed angle. Start at -90°
   // (top) so the layout looks like a four-armed cross when there are 4
@@ -1371,12 +1372,14 @@ function HubAndSpokes({ wgNumber, accent, bridges }) {
             </text>
             {/* WG short label outside the node, positioned to follow
                 the spoke direction. Always anchored along the radial
-                direction so labels can't overlap the node circle. */}
+                direction so labels can't overlap the node circle. The
+                radial-y offset includes a small dy so the text baseline
+                sits visually centered relative to the radial endpoint. */}
             <text
               x={p.x + Math.cos(p.angle) * (partnerR + labelOffset)}
-              y={p.y + Math.sin(p.angle) * (partnerR + labelOffset) + 5}
+              y={p.y + Math.sin(p.angle) * (partnerR + labelOffset) + 6}
               textAnchor={Math.cos(p.angle) > 0.2 ? 'start' : Math.cos(p.angle) < -0.2 ? 'end' : 'middle'}
-              fontSize="15"
+              fontSize="18"
               fontFamily="Inter, sans-serif"
               fontWeight="700"
               fill={p.color}
