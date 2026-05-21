@@ -197,39 +197,70 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
         );
       })()}
 
-      {/* Body layout. All three tabs are single-column / full-width:
-          - Results (discussion view): big panel of the chair-curated
-            question pool the room is about to rank. No funnel chart,
-            no pairwise leaders, no figures — the audience needs to read
-            the questions, not study how they were derived.
-          - Vote / Comparison: live ranking / pre-post shift. */}
-      <div className="flex min-h-0 flex-1 flex-col px-10 pb-3">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={effectivePanelTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
-            className="flex min-h-0 flex-1 flex-col"
-          >
-            {effectivePanelTab === 'results' && (
-              <PanelPoolView
-                sessionId={sessionId}
-                resolving={resolving}
-                bus={bus}
-                accent={accent}
-              />
-            )}
-            {effectivePanelTab === 'vote' && (
-              <VoteView sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} />
-            )}
-            {effectivePanelTab === 'comparison' && (
-              <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      {/* Body layout.
+          - Results (discussion view): three columns — curated panel
+            pool on the left, figures in the middle, word cloud + chat
+            on the right. (Previously also had a "How we got here"
+            funnel + pairwise leaders card on the left; those are
+            removed so the curated pool gets the full left column.)
+          - Vote / Comparison: full-width — chat / cloud would compete
+            with the live tally. */}
+      {effectivePanelTab === 'results' ? (
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1.1fr_1.1fr_1fr]">
+          {/* LEFT — chair-curated panel pool (what the audience will rank) */}
+          <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-5 pb-3">
+            <PanelPoolView
+              sessionId={sessionId}
+              resolving={resolving}
+              bus={bus}
+              accent={accent}
+            />
+          </div>
+
+          {/* MIDDLE — figures */}
+          <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-5 pb-3">
+            <div
+              className="flex h-full min-h-0 flex-col rounded-2xl border p-3"
+              style={{ borderColor: 'rgba(16, 185, 129, 0.18)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}
+            >
+              <FigureCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
+            </div>
+          </div>
+
+          {/* RIGHT — word cloud on top, audience chat below */}
+          <div className="flex h-full min-h-0 flex-col gap-3 px-4 pb-3">
+            <div
+              className="h-[160px] shrink-0 rounded-2xl border p-2"
+              style={{ borderColor: 'rgba(252, 211, 77, 0.18)', backgroundColor: 'rgba(252, 211, 77, 0.05)' }}
+            >
+              <WordCloud sessionId={sessionId} bus={bus} accent={accent} />
+            </div>
+            <div
+              className="min-h-0 flex-1 overflow-hidden rounded-2xl border p-2"
+              style={{ borderColor: 'rgba(248, 113, 113, 0.18)', backgroundColor: 'rgba(248, 113, 113, 0.05)' }}
+            >
+              <ChatSidebar sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} isAdmin={isAdmin} />
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Vote / Comparison: single column, full width.
+        <div className="flex min-h-0 flex-1 flex-col px-8 pb-3">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={effectivePanelTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              {effectivePanelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} />}
+              {effectivePanelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
@@ -271,30 +302,30 @@ function PanelPoolView({ sessionId, resolving, bus, accent }) {
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col rounded-2xl border p-5"
+      className="flex min-h-0 flex-1 flex-col rounded-2xl border p-3"
       style={{ borderColor: `${accent}30`, backgroundColor: `${accent}08` }}
     >
-      <div className="mb-4 flex shrink-0 items-baseline justify-between">
-        <p className="text-base font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
-          Questions for discussion · audience will rank these next
+      <div className="mb-3 flex shrink-0 items-baseline justify-between">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
+          Questions · audience ranks next
         </p>
-        <p className="font-mono text-sm text-white/55">
+        <p className="font-mono text-xs text-white/45">
           {pool.length} curated
         </p>
       </div>
-      <ol className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+      <ol className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
         {pool.map((q, idx) => (
           <li
             key={q.id}
-            className="flex items-start gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+            className="flex items-start gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
           >
             <span
-              className="mt-0.5 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-mono text-2xl font-bold"
+              className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-base font-bold"
               style={{ backgroundColor: `${accent}25`, color: accent }}
             >
               {idx + 1}
             </span>
-            <p className="min-w-0 flex-1 text-2xl leading-snug text-white/95">
+            <p className="min-w-0 flex-1 text-lg leading-snug text-white/95">
               {q.text}
             </p>
           </li>
