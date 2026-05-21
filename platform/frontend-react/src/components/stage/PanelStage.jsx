@@ -10,7 +10,7 @@
  * Audience phones see chat input on /day; this stage is the projection.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -251,13 +251,12 @@ function PanelPoolView({ sessionId, resolving, bus, accent }) {
     );
   }
 
-  // Number of grid rows = ceil(pool / 2). Scale row text down for
-  // larger pools so even 12 questions fit in a fixed-height grid
-  // without scrolling.
+  // Number of grid rows = ceil(pool / 2). Each row has equal height
+  // via grid-template-rows: repeat(N, 1fr) and each question's text
+  // auto-shrinks via FitText to fill its row without overflowing.
   const rows = Math.ceil(pool.length / 2);
-  // Tier text size to pool length so 6-row pools land cleanly.
+  // Chip scales with overall density so long pools don't waste space.
   const tight = rows >= 6;
-  const textSize = tight ? 'text-sm' : 'text-base';
   const chipSize = tight ? 'h-8 w-8 text-base' : 'h-9 w-9 text-lg';
 
   return (
@@ -289,13 +288,52 @@ function PanelPoolView({ sessionId, resolving, bus, accent }) {
             >
               {idx + 1}
             </span>
-            <p className={`min-w-0 flex-1 leading-snug text-white/95 ${textSize}`}>
+            <FitText className="min-w-0 flex-1 leading-snug text-white/95" max={20} min={10}>
               {q.text}
-            </p>
+            </FitText>
           </li>
         ))}
       </ol>
     </div>
+  );
+}
+
+// Auto-fit the text inside a flex/grid cell. Starts at `max` px and
+// shrinks until scrollHeight fits the parent's clientHeight (with a
+// small safety margin) — so long questions and short ones both
+// land at the largest font that doesn't overflow their grid row.
+function FitText({ children, max = 22, min = 10, className = '' }) {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const fit = () => {
+      const parent = el.parentElement;
+      if (!parent) return;
+      const avH = parent.clientHeight - 4;
+      const avW = parent.clientWidth - 4;
+      let size = max;
+      el.style.fontSize = `${size}px`;
+      while (size > min && (el.scrollHeight > avH || el.scrollWidth > avW)) {
+        size -= 1;
+        el.style.fontSize = `${size}px`;
+      }
+    };
+    fit();
+    // React to projector/iframe resizes, font-load shifts, etc.
+    let ro;
+    if (typeof ResizeObserver !== 'undefined' && el.parentElement) {
+      ro = new ResizeObserver(fit);
+      ro.observe(el.parentElement);
+    }
+    return () => { if (ro) ro.disconnect(); };
+  }, [children, max, min]);
+
+  return (
+    <span ref={ref} className={`block ${className}`}>
+      {children}
+    </span>
   );
 }
 
