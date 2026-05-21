@@ -62,6 +62,53 @@ const WG_R1_TOTAL = { 1: 34, 2: 45, 3: 22, 4: 35, 5: 41 };
 // Per-WG R2 response rate (R2 voters / eligible). Pinned to prod state.
 const WG_R2_RESPONSE_RATE = { 1: 91, 2: 90, 3: 73, 4: 81, 5: 91 };
 
+// Short names used in the cross-WG bridges slide. Mirrors the working-
+// group naming you see elsewhere (Panel 1 — Clinical Practice etc.).
+const WG_SHORT = {
+  1: 'Clinical Practice & Operations',
+  2: 'Infrastructure & Data',
+  3: 'Education & Training',
+  4: 'Human-AI Interaction',
+  5: 'Ethics & Legal',
+};
+
+// Per-WG "bridges" — how this WG's agenda interlocks with each of the
+// other four. Each entry: { to: <wg_number>, body: <one-sentence link> }.
+// Authored by the chair team; kept here (rather than in SUMMARY_DOCS)
+// so the slide content is co-located with the slide component.
+const CROSS_WG_BRIDGES = {
+  1: [
+    { to: 2, body: 'Every clinical-impact study WG1 wants requires WG2\'s data infrastructure — validated, monitored, drift-aware. Without it, deployment evidence stays anecdotal.' },
+    { to: 3, body: 'Workflow integration succeeds or fails on clinician capability. WG3\'s training curriculum determines whether WG1\'s tools actually get used the way they were designed.' },
+    { to: 4, body: 'Clinical impact depends on trust calibration. WG4\'s work on automation bias and consultation behavior is what makes — or breaks — WG1\'s outcome studies.' },
+    { to: 5, body: 'Governance, post-market surveillance, and equity aren\'t separate work — they\'re the conditions under which WG1\'s deployments are defensible.' },
+  ],
+  2: [
+    { to: 1, body: 'WG1\'s outcome questions are the demand signal — they tell us which datasets, validation pipelines, and monitoring systems matter most.' },
+    { to: 3, body: 'Data literacy belongs in EM training. WG3 shapes who can interpret WG2\'s validation reports and act on them.' },
+    { to: 4, body: 'UX choices about how data quality is surfaced to clinicians turn WG2\'s monitoring infrastructure into something the bedside can actually use.' },
+    { to: 5, body: 'FDA pathways, post-market surveillance, and equity audits all run on the data infrastructure WG2 defines — regulatory choices ARE infrastructure choices.' },
+  ],
+  3: [
+    { to: 1, body: 'The workflows WG1 designs need clinicians who can audit AI outputs. WG3\'s competencies are the prerequisite — not the follow-up.' },
+    { to: 2, body: 'WG2\'s validation reports require interpreters. AI / data literacy is a WG3 deliverable that makes WG2\'s outputs actionable.' },
+    { to: 4, body: 'What WG3 teaches and what WG4 studies are two sides of the same coin — clinician preparation and clinician behavior at the AI interface.' },
+    { to: 5, body: 'Curricular content on equity, consent, and disclosure draws directly on WG5\'s ethical frameworks; the classroom is where the next generation\'s norms get set.' },
+  ],
+  4: [
+    { to: 1, body: 'Workflow design (WG1) lives or dies on trust calibration, cognitive load, and clinician identity — WG4\'s territory.' },
+    { to: 2, body: 'Data quality signals only matter if clinicians can read them. WG4\'s UX work is the bridge between WG2\'s infrastructure and the bedside.' },
+    { to: 3, body: 'What WG3 teaches about AI use and what WG4 studies about AI behavior are two halves of the same problem — preparation and practice.' },
+    { to: 5, body: 'Patient consent, disclosure, and the clinician–patient relationship under AI augmentation are joint WG4 / WG5 questions, not separable ones.' },
+  ],
+  5: [
+    { to: 1, body: 'No deployment is ethical without governance, surveillance, and equity guardrails — WG1\'s clinical questions land on WG5\'s framework.' },
+    { to: 2, body: 'FDA pathways, post-market surveillance, transparency — WG2\'s infrastructure choices are also regulatory and ethical decisions.' },
+    { to: 3, body: 'Ethics, bias, and patient autonomy belong in EM training — WG3 carries WG5\'s frameworks into the next generation of clinicians.' },
+    { to: 4, body: 'Clinician–patient relationship under AI, disclosure, and consent — joint WG4 / WG5 questions, designed and answered together.' },
+  ],
+};
+
 // ────────────────────────────────────────────────────────────────────
 // Main component
 // ────────────────────────────────────────────────────────────────────
@@ -204,9 +251,12 @@ export function PresentWGStage({ wgNumber, bus }) {
     if (doc?.themes && doc.themes.length > 0) {
       list.push((p) => <ThemesSlide {...p} />);
     }
+    if (CROSS_WG_BRIDGES[wgNumber]) {
+      list.push((p) => <CrossWgBridgesSlide {...p} />);
+    }
     list.push((p) => <ClosingSlide {...p} />);
     return list;
-  }, [doc, morningRanking]);
+  }, [doc, morningRanking, wgNumber]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -994,6 +1044,56 @@ function ThemesSlide({ doc, accent }) {
             </p>
           </motion.div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Cross-WG bridges — how this WG's agenda interlocks with the others
+// ────────────────────────────────────────────────────────────────────
+
+function CrossWgBridgesSlide({ wgNumber, accent }) {
+  const bridges = CROSS_WG_BRIDGES[wgNumber] || [];
+  if (!bridges.length) return null;
+  return (
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col">
+      <Eyebrow tone={accent}>How this WG bumps into the others</Eyebrow>
+      <H1 size="lg" className="mt-6">
+        <span style={{ color: accent }}>WG{wgNumber}</span> doesn't stand alone.
+      </H1>
+      <div className="mt-8 grid flex-1 gap-4 lg:grid-cols-2">
+        {bridges.map((b, i) => {
+          const otherColor = PILLAR_COLORS[b.to] || C.cyan;
+          return (
+            <motion.div
+              key={b.to}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.15 + i * 0.1 }}
+              className="flex flex-col rounded-2xl border p-5"
+              style={{ borderColor: `${otherColor}30`, background: `${otherColor}0C` }}
+            >
+              <div className="flex items-baseline gap-3">
+                <span
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-base font-bold"
+                  style={{ background: `${otherColor}25`, color: otherColor }}
+                >
+                  {b.to}
+                </span>
+                <p className="text-lg font-bold leading-tight lg:text-xl" style={{ color: C.text }}>
+                  WG{b.to} — {WG_SHORT[b.to]}
+                </p>
+              </div>
+              <p
+                className="mt-3 text-base leading-relaxed lg:text-lg"
+                style={{ color: C.textSec }}
+              >
+                {b.body}
+              </p>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
