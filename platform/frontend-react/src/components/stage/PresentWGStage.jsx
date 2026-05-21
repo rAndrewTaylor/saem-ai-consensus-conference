@@ -206,29 +206,29 @@ export function PresentWGStage({ wgNumber, bus }) {
   // Morning vote tally.
   //
   // /api/conference/results/{id} returns one row PER vote-type per
-  // question — so a question that received both ranking and importance
+  // question — a question that received both ranking and importance
   // votes appears twice (rank-row with avg_rank set, importance-row
-  // with importance_mean set). Dedupe by question_id, preferring the
-  // row with avg_rank (the primary ordering signal). Without this the
-  // slide showed e.g. 10 rows for WG5 even though only 5 questions
-  // were on the panel.
+  // with only importance_mean). We want one row per question.
+  //
+  // Strategy: prefer the ranking row (it carries the ordering signal
+  // the audience just gave us). If any ranking rows exist, drop ALL
+  // importance-only rows up front so they can't slip through. Then
+  // dedupe by question_id as a defence in depth.
   const morningRanking = useMemo(() => {
-    const rows = (voteResults?.questions || voteResults?.results || [])
+    const allRows = (voteResults?.questions || voteResults?.results || [])
       .filter((r) => r.avg_rank != null || r.points != null || r.importance_mean != null);
-    if (!rows.length) return [];
+    if (!allRows.length) return [];
+
+    const hasRanking = allRows.some((r) => r.avg_rank != null);
+    const rows = hasRanking
+      ? allRows.filter((r) => r.avg_rank != null)
+      : allRows;
 
     const byQid = new Map();
     for (const r of rows) {
       const qid = r.question_id ?? r.id;
       if (qid == null) continue;
-      const existing = byQid.get(qid);
-      // Prefer the row that carries avg_rank (ranking vote tally) over
-      // one that carries only points or importance_mean.
-      if (!existing) {
-        byQid.set(qid, r);
-      } else if (r.avg_rank != null && existing.avg_rank == null) {
-        byQid.set(qid, r);
-      }
+      if (!byQid.has(qid)) byQid.set(qid, r);
     }
 
     return [...byQid.values()].sort((a, b) => {
