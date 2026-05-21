@@ -303,19 +303,19 @@ function PanelPoolView({ sessionId, resolving, bus, accent }) {
           {pool.length} curated
         </p>
       </div>
-      <ol className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+      <ol className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-3 overflow-y-auto pr-1 lg:grid-cols-2">
         {pool.map((q, idx) => (
           <li
             key={q.id}
-            className="flex items-start gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+            className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
           >
             <span
-              className="mt-0.5 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-mono text-2xl font-bold"
+              className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-mono text-xl font-bold"
               style={{ backgroundColor: `${accent}25`, color: accent }}
             >
               {idx + 1}
             </span>
-            <p className="min-w-0 flex-1 text-2xl leading-snug text-white/95">
+            <p className="min-w-0 flex-1 text-lg leading-snug text-white/95">
               {q.text}
             </p>
           </li>
