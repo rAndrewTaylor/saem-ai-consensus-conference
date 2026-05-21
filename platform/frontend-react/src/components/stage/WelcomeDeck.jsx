@@ -212,12 +212,17 @@ function Eyebrow({ children, tone = C.cyan }) {
 }
 
 function AnimatedNumber({ value, duration = 1200, suffix = '', delay = 0 }) {
-  const [display, setDisplay] = useState(0);
+  // Initialize to the final value so iframe / off-screen contexts
+  // where useInView never resolves still show the right number instead
+  // of a stuck "0". When inView fires we reset to 0 and animate up —
+  // visible callers still get the count-up animation.
+  const [display, setDisplay] = useState(value);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-10%' });
   useEffect(() => {
     if (!inView) return;
     let raf;
+    setDisplay(0);
     const timeoutId = setTimeout(() => {
       const start = performance.now();
       const step = (now) => {
@@ -469,7 +474,7 @@ function ByTheNumbersSlide() {
       <div className="mt-14 grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <StatBlock
           value={GROUND_TRUTH.invited}
-          label="Invited experts"
+          label="WG participants"
           sub="Across 5 working groups"
           accent={C.cyan}
           delay={0}
