@@ -71,6 +71,21 @@ function saveLocal(sessionId, key, value) {
   } catch { /* quota exceeded — non-critical */ }
 }
 
+// Fisher-Yates shuffle, returns a new array. Used to randomize the
+// question order each participant sees on the cross-WG vote, so the
+// API's natural WG1→WG5 ordering doesn't bias drag-rank selection
+// (questions further down the list are systematically less likely to
+// be dragged to the top). The shuffled order is persisted in
+// localStorage so reloading the page keeps the same layout.
+function shuffleIds(ids) {
+  const arr = [...ids];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 // ---------------------------------------------------------------------------
 // Tab definitions
 // ---------------------------------------------------------------------------
@@ -134,13 +149,31 @@ export function ConferencePage() {
     try {
       const data = await api(`/api/conference/sessions/${sessionId}/questions`, { token });
       setSession(data.session ?? data);
-      const qs = data.questions ?? data.items ?? [];
+      const qsRaw = data.questions ?? data.items ?? [];
+      const apiIds = qsRaw.map((q) => q.id || q.question_id);
+
+      // Per-participant shuffle: first visit picks a random order and
+      // saves it; subsequent visits replay the saved order so the
+      // participant doesn't see the list reshuffle between tabs or
+      // after they've started ranking.
+      let displayIds = loadLocal(sessionId, 'displayOrder');
+      const apiIdSet = new Set(apiIds);
+      const savedValid = Array.isArray(displayIds)
+        && displayIds.length === apiIds.length
+        && displayIds.every((id) => apiIdSet.has(id));
+      if (!savedValid) {
+        displayIds = shuffleIds(apiIds);
+        saveLocal(sessionId, 'displayOrder', displayIds);
+      }
+      const byId = new Map(qsRaw.map((q) => [q.id || q.question_id, q]));
+      const qs = displayIds.map((id) => byId.get(id)).filter(Boolean);
       setQuestions(qs);
+
       const savedRank = loadLocal(sessionId, 'rank');
       if (savedRank && savedRank.length === qs.length) {
         setRankOrder(savedRank);
       } else {
-        setRankOrder(qs.map((q) => q.id || q.question_id));
+        setRankOrder(displayIds);
       }
       const savedImportance = loadLocal(sessionId, 'importance');
       if (savedImportance) {
