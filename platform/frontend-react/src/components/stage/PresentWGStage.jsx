@@ -190,6 +190,10 @@ export function PresentWGStage({ wgNumber, bus }) {
   }, [allActive, candidates, limit, wgNumber]);
 
   // Build the slide list dynamically — skip slides with no data.
+  // QuestionSlide × N (the per-advancing-question deep-dive slides
+  // labeled "Advancing question 1 of N", etc.) were removed at the
+  // chair's request — the spoken presentation is a 5-min thematic
+  // framing, not a walk-through of each advancing question.
   const slides = useMemo(() => {
     const list = [];
     list.push((p) => <TitleSlide {...p} />);
@@ -197,9 +201,6 @@ export function PresentWGStage({ wgNumber, bus }) {
     list.push((p) => <NumbersSlide {...p} />);
     list.push((p) => <FunnelSlide {...p} />);
     if (morningRanking.length > 0) list.push((p) => <MorningVoteSlide {...p} />);
-    advancing.forEach((q, i) => {
-      list.push((p) => <QuestionSlide {...p} question={q} index={i + 1} total={advancing.length} />);
-    });
     if (shifts.up.length > 0 || shifts.down.length > 0) {
       list.push((p) => <ShiftsSlide {...p} />);
     }
@@ -208,7 +209,7 @@ export function PresentWGStage({ wgNumber, bus }) {
     }
     list.push((p) => <ClosingSlide {...p} />);
     return list;
-  }, [advancing, doc, morningRanking, shifts]);
+  }, [doc, morningRanking, shifts]);
 
   // Keyboard navigation
   useEffect(() => {
