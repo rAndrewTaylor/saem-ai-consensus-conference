@@ -966,29 +966,29 @@ function AgendaSlide() {
   return (
     <div className="mx-auto w-full max-w-[1600px]">
       <Eyebrow>How today flows</Eyebrow>
-      <H1 size="lg" className="mt-6">
+      <H1 size="lg" className="mt-4">
         <span className="font-mono">8</span> hours.{' '}
         <span className="font-mono">5</span> panels.{' '}
         <span style={{ color: C.cyan }}>One agenda.</span>
       </H1>
-      <ol className="mt-10 space-y-4">
+      <ol className="mt-6 space-y-2">
         {AGENDA.map((a, i) => (
           <motion.li
             key={a.time}
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.35, delay: 0.15 + i * 0.06 }}
-            className="grid grid-cols-[140px_1fr] items-baseline gap-6 rounded-xl border px-6 py-4"
+            className="grid grid-cols-[120px_1fr] items-baseline gap-5 rounded-xl border px-5 py-2.5"
             style={{ borderColor: C.borderLight, background: C.card }}
           >
-            <span className="font-mono text-3xl font-bold lg:text-4xl" style={{ color: a.color }}>
+            <span className="font-mono text-2xl font-bold lg:text-3xl" style={{ color: a.color }}>
               {a.time}
             </span>
             <div>
-              <p className="text-2xl font-bold leading-snug lg:text-3xl" style={{ color: C.text }}>
+              <p className="text-xl font-bold leading-snug lg:text-2xl" style={{ color: C.text }}>
                 {a.title}
               </p>
-              <p className="mt-1 text-lg lg:text-xl" style={{ color: C.textMuted }}>
+              <p className="mt-0.5 text-base lg:text-lg" style={{ color: C.textMuted }}>
                 {a.body}
               </p>
             </div>
