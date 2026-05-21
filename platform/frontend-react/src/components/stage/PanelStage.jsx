@@ -111,17 +111,19 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
     // (two-column results+chat). Everything fixed-height except the
     // body, which fills the remainder and scrolls internally.
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header — sized for ballroom-scale readability */}
-      <div className="flex shrink-0 items-center gap-5 px-10 pb-3 pt-5">
+      {/* Header — sized for ballroom-scale readability, tightened
+          vertically so 10-12 questions + chat fit on one 1080p screen
+          without scrolling. */}
+      <div className="flex shrink-0 items-center gap-4 px-10 pb-2 pt-3">
         <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl font-bold"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl font-bold"
           style={{ backgroundColor: `${accent}25`, color: accent }}
         >
           {wgNumber}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/55">Panel {wgNumber}</p>
-          <h1 className="text-4xl font-bold leading-tight sm:text-5xl">{wgName}</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">Panel {wgNumber}</p>
+          <h1 className="text-3xl font-bold leading-tight sm:text-4xl">{wgName}</h1>
         </div>
       </div>
 
@@ -153,12 +155,12 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
         ];
         const visible = combined.slice(-3);
         return (
-          <div className="mx-8 mb-3 shrink-0 rounded-xl border p-3"
+          <div className="mx-8 mb-2 shrink-0 rounded-xl border px-3 py-2"
                style={{ borderColor: `${accent}30`, backgroundColor: `${accent}08` }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
+            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
               Discussion prompts
             </p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            <div className="mt-1.5 grid gap-2 sm:grid-cols-3">
               <AnimatePresence initial={false} mode="popLayout">
                 {visible.map((p, i) => {
                   // Three palette slots: accent, warm, cool. AI prompts
@@ -172,7 +174,7 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={{ duration: 0.4 }}
-                      className="rounded-lg p-2.5"
+                      className="rounded-lg p-2"
                       style={{
                         backgroundColor: p.isAI ? 'rgba(139, 92, 246, 0.10)' : `${palette}10`,
                         borderLeft: p.isAI ? '3px solid rgba(167, 139, 250, 0.7)' : `3px solid ${palette}80`,
@@ -187,7 +189,7 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
                           {p.label}
                         </p>
                       </div>
-                      <p className="mt-1 text-sm leading-snug text-white/95 line-clamp-3">{p.text}</p>
+                      <p className="mt-1 text-xs leading-snug text-white/95 line-clamp-2">{p.text}</p>
                     </motion.div>
                   );
                 })}

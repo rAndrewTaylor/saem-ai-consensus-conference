@@ -48,7 +48,7 @@ export function CenterStage({ mode, slideIndex, panelTab, onChange }) {
   const presentWg = presentMatch ? parseInt(presentMatch[1], 10) : null;
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex h-full flex-col gap-2">
       <StagePreview />
       <ModeBanner mode={mode} slideIndex={slideIndex} panelWg={panelWg} />
       {mode === 'idle' && <IdleActions onChange={onChange} />}
@@ -283,7 +283,7 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
   );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* 1. PRIMARY ACTION — the thing the chair came here to click. Big, prominent. */}
       <SectionGroup title="Primary action" rightSlot={statusPill}>
         {session ? (
@@ -348,8 +348,8 @@ function PanelActions({ wgNumber, panelTab, onChange }) {
 
 function SectionGroup({ title, rightSlot, children }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{title}</p>
         {rightSlot}
       </div>
@@ -365,12 +365,12 @@ function CollapsibleSection({ title, defaultOpen = false, children }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-white/[0.02]"
+        className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-white/[0.02]"
       >
         <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{title}</p>
         {open ? <ChevronUp className="h-3.5 w-3.5 text-white/40" /> : <ChevronDown className="h-3.5 w-3.5 text-white/40" />}
       </button>
-      {open && <div className="border-t border-white/[0.06] p-3">{children}</div>}
+      {open && <div className="border-t border-white/[0.06] p-2.5">{children}</div>}
     </div>
   );
 }
