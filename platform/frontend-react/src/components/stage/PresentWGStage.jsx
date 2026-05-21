@@ -190,10 +190,13 @@ export function PresentWGStage({ wgNumber, bus }) {
   }, [allActive, candidates, limit, wgNumber]);
 
   // Build the slide list dynamically — skip slides with no data.
-  // QuestionSlide × N (the per-advancing-question deep-dive slides
-  // labeled "Advancing question 1 of N", etc.) were removed at the
-  // chair's request — the spoken presentation is a 5-min thematic
-  // framing, not a walk-through of each advancing question.
+  //
+  // Removed at the chair's request:
+  //   - QuestionSlide × N ("Advancing question N of N" deep-dive slides)
+  //   - ShiftsSlide ("Deliberation in motion" — R1→R2 shifts)
+  //
+  // Themes are split across two slides so each theme gets more
+  // screen real estate to land with the room.
   const slides = useMemo(() => {
     const list = [];
     list.push((p) => <TitleSlide {...p} />);
@@ -201,15 +204,23 @@ export function PresentWGStage({ wgNumber, bus }) {
     list.push((p) => <NumbersSlide {...p} />);
     list.push((p) => <FunnelSlide {...p} />);
     if (morningRanking.length > 0) list.push((p) => <MorningVoteSlide {...p} />);
-    if (shifts.up.length > 0 || shifts.down.length > 0) {
-      list.push((p) => <ShiftsSlide {...p} />);
-    }
     if (doc?.themes && doc.themes.length > 0) {
-      list.push((p) => <ThemesSlide {...p} />);
+      const themes = doc.themes;
+      const mid = Math.ceil(themes.length / 2);
+      const firstHalf = themes.slice(0, mid);
+      const secondHalf = themes.slice(mid);
+      list.push((p) => (
+        <ThemesSlide {...p} themesOverride={firstHalf} partLabel={`Part 1 of 2`} />
+      ));
+      if (secondHalf.length > 0) {
+        list.push((p) => (
+          <ThemesSlide {...p} themesOverride={secondHalf} partLabel={`Part 2 of 2`} />
+        ));
+      }
     }
     list.push((p) => <ClosingSlide {...p} />);
     return list;
-  }, [doc, morningRanking, shifts]);
+  }, [doc, morningRanking]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -968,31 +979,42 @@ function ShiftColumn({ title, items, tone }) {
 // Cross-cutting themes slide
 // ────────────────────────────────────────────────────────────────────
 
-function ThemesSlide({ doc, accent }) {
+function ThemesSlide({ doc, accent, themesOverride, partLabel }) {
+  const themes = themesOverride || doc?.themes || [];
+  // Auto-tune the grid so a small split (1-2 themes per slide) gets
+  // bigger cards, while a 3+ slide keeps the original 3-col layout.
+  const cols = themes.length >= 3 ? 'lg:grid-cols-3' : themes.length === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-1';
+  // Per-card sizing scales inversely to count so each card fills more
+  // of the slide as the count shrinks.
+  const cardPad = themes.length === 1 ? 'p-10' : themes.length === 2 ? 'p-8' : 'p-6';
+  const titleSize = themes.length === 1 ? 'text-4xl lg:text-5xl' : themes.length === 2 ? 'text-3xl lg:text-4xl' : 'text-lg';
+  const bodySize = themes.length === 1 ? 'text-2xl lg:text-3xl' : themes.length === 2 ? 'text-xl lg:text-2xl' : 'text-sm';
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      <Eyebrow tone={accent}>Cross-cutting threads</Eyebrow>
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col">
+      <Eyebrow tone={accent}>
+        Cross-cutting threads{partLabel ? ` · ${partLabel}` : ''}
+      </Eyebrow>
       <H1 size="lg" className="mt-6">
         The themes that echo across this WG.
       </H1>
-      <div className="mt-10 grid gap-5 lg:grid-cols-3">
-        {(doc?.themes || []).map((theme, i) => (
+      <div className={`mt-10 grid flex-1 gap-5 ${cols}`}>
+        {themes.map((theme, i) => (
           <motion.div
             key={theme.title}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.2 + i * 0.12 }}
-            className="rounded-2xl border p-6"
+            className={`flex flex-col rounded-2xl border ${cardPad}`}
             style={{ borderColor: `${accent}30`, background: `${accent}08` }}
           >
             <div
               className="mb-4 h-1 w-12 rounded-full"
               style={{ background: accent }}
             />
-            <h3 className="text-lg font-bold leading-snug" style={{ color: C.text }}>
+            <h3 className={`font-bold leading-snug ${titleSize}`} style={{ color: C.text }}>
               {theme.title}
             </h3>
-            <p className="mt-3 text-sm leading-relaxed" style={{ color: C.textSec }}>
+            <p className={`mt-3 leading-relaxed ${bodySize}`} style={{ color: C.textSec }}>
               {theme.body}
             </p>
           </motion.div>
