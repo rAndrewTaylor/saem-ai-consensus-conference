@@ -16,6 +16,9 @@ import { queueSubmit } from '@/lib/offlineQueue';
 import { ArrowUp, ChevronDown, ChevronUp, Send, MessageSquare } from 'lucide-react';
 
 const REFRESH_MS = 4_000;
+// Jitter each client's poll start by 0–1500ms so 100 devices in a room
+// don't all hit the API at the same instant. Computed once per session.
+const POLL_JITTER_MS = Math.floor(Math.random() * 1500);
 
 export function AudienceChatPanel({ focused = false }) {
   const [mode, setMode] = useState(null);
@@ -91,9 +94,18 @@ export function AudienceChatPanel({ focused = false }) {
 
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
-    if (!sessionId) return;
-    const t = setInterval(refresh, REFRESH_MS);
-    return () => clearInterval(t);
+    if (!sessionId) return undefined;
+    // Offset the first tick by per-client jitter so 100 devices in a
+    // conference room don't all hit the API in the same second.
+    let intervalId;
+    const initial = setTimeout(() => {
+      refresh();
+      intervalId = setInterval(refresh, REFRESH_MS);
+    }, POLL_JITTER_MS);
+    return () => {
+      clearTimeout(initial);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [refresh, sessionId]);
 
   const submit = async () => {

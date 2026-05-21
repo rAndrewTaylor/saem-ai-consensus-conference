@@ -325,16 +325,38 @@ _session_queues: dict[int, list[asyncio.Queue]] = {}
 _day_queues: list[asyncio.Queue] = []
 
 
+# Cap per-client SSE queue depth. If a viewer falls behind (wifi blip,
+# tab in background), we drop the oldest queued events rather than
+# letting memory grow without bound. 64 events is plenty of headroom
+# for a normal panel even when the client is briefly slow.
+_SSE_QUEUE_MAX = 64
+
+
+def _put_drop_oldest(queue: "asyncio.Queue", data: dict) -> None:
+    """Non-blocking enqueue that drops the oldest event when full."""
+    try:
+        queue.put_nowait(data)
+    except asyncio.QueueFull:
+        try:
+            queue.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+        try:
+            queue.put_nowait(data)
+        except asyncio.QueueFull:
+            pass  # give up; next event will succeed once a consumer drains
+
+
 def publish_vote_event(session_id: int, data: dict):
     """Push an event to all listeners for a given conference session."""
     for q in _session_queues.get(session_id, []):
-        q.put_nowait(data)
+        _put_drop_oldest(q, data)
 
 
 def publish_day_event(data: dict):
     """Push a day-state change to every subscriber of the global feed."""
     for q in list(_day_queues):
-        q.put_nowait(data)
+        _put_drop_oldest(q, data)
 
 
 @app.get("/api/events/day")
@@ -346,7 +368,7 @@ async def sse_day_events(request: Request):
     Declared BEFORE /api/events/{session_id} so the literal "day" path
     isn't captured by the int-typed parameter route.
     """
-    queue: asyncio.Queue = asyncio.Queue()
+    queue: asyncio.Queue = asyncio.Queue(maxsize=_SSE_QUEUE_MAX)
     _day_queues.append(queue)
 
     async def event_generator():
@@ -384,7 +406,7 @@ async def sse_day_events(request: Request):
 @app.get("/api/events/{session_id}")
 async def sse_conference_events(request: Request, session_id: int):
     """Server-Sent Events stream for live conference voting updates."""
-    queue: asyncio.Queue = asyncio.Queue()
+    queue: asyncio.Queue = asyncio.Queue(maxsize=_SSE_QUEUE_MAX)
     _session_queues.setdefault(session_id, []).append(queue)
 
     async def event_generator():

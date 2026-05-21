@@ -503,6 +503,11 @@ Index("ix_delphi_resp_participant", DelphiResponse.participant_id)
 Index("ix_pairwise_vote_wg", PairwiseVote.wg_id)
 Index("ix_conference_vote_session", ConferenceVote.session_id)
 Index("ix_question_wg_status", Question.wg_id, Question.status)
+# Chat list queries filter on session_id every 4s per audience client —
+# without this index the WHERE clause does a full scan once a panel
+# accumulates a few hundred messages.
+Index("ix_chat_message_session", ConferenceChatMessage.session_id)
+Index("ix_chat_upvote_message", ConferenceChatUpvote.message_id)
 
 
 # --- Initialize ---

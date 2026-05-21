@@ -1,6 +1,7 @@
 """Conference-day polling routes — real-time voting with offline support."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -9,6 +10,35 @@ from typing import Optional
 from datetime import datetime
 
 from fastapi import Header
+
+
+# In-process token-keyed rate limiter for chat / upvote. Per-IP (the
+# default slowapi key) would unfairly throttle a conference room of 100
+# devices sharing one WiFi as soon as any one of them is active —
+# keying on the Authorization header gives each device its own bucket.
+# Simple sliding window in process memory; multi-worker means each
+# worker has its own budget which is fine at this scale.
+from collections import defaultdict
+from time import time as _now
+
+_rate_buckets: dict[tuple[str, str], list[float]] = defaultdict(list)
+
+
+def rate_limit_token(bucket: str, max_calls: int, window_seconds: float):
+    """FastAPI dependency: enforce up to `max_calls` per `window_seconds`
+    per (bucket, token-or-IP). Raises 429 if exceeded."""
+    def dep(request: Request):
+        token = request.headers.get("authorization", "")
+        key_who = token[:120] if token else get_remote_address(request)
+        key = (bucket, key_who)
+        now = _now()
+        cutoff = now - window_seconds
+        hits = _rate_buckets[key]
+        hits[:] = [t for t in hits if t > cutoff]
+        if len(hits) >= max_calls:
+            raise HTTPException(429, f"Too many requests — limit {max_calls}/{int(window_seconds)}s")
+        hits.append(now)
+    return dep
 
 from ..database import (
     get_db, WorkingGroup, Question, Participant, ConferenceSession,
@@ -970,7 +1000,10 @@ def _chat_message_to_dict(m: ConferenceChatMessage, has_upvoted: bool = False) -
     }
 
 
-@router.post("/chat/{session_id}")
+@router.post(
+    "/chat/{session_id}",
+    dependencies=[Depends(rate_limit_token("chat_post", 12, 60))],
+)
 def post_chat_message(
     session_id: int,
     body: ChatMessageSubmit,
@@ -1030,7 +1063,9 @@ def list_chat_messages(
             ConferenceChatMessage.upvote_count.desc(),
             ConferenceChatMessage.created_at.desc(),
         )
-    messages = q.limit(500).all()
+    # Cap at 200 to bound the response payload on a 100-device room;
+    # the UI shows top + new and almost never scrolls past 50.
+    messages = q.limit(200).all()
 
     # Mark which messages this token has upvoted
     upvoted_ids: set[int] = set()
@@ -1054,13 +1089,22 @@ def list_chat_messages(
     }
 
 
-@router.post("/chat/{message_id}/upvote")
+@router.post(
+    "/chat/{message_id}/upvote",
+    dependencies=[Depends(rate_limit_token("chat_upvote", 60, 60))],
+)
 def toggle_chat_upvote(
     message_id: int,
     token: str = Depends(get_participant_token),
     db: Session = Depends(get_db),
 ):
-    """Toggle this participant's upvote on a message. Returns the new count and state."""
+    """Toggle this participant's upvote on a message. Returns the new count and state.
+
+    upvote_count is always derived from the actual row count after the
+    mutation rather than incremented/decremented in place — this keeps
+    the cached counter in sync even under concurrent toggles from the
+    same token (rapid double-tap, retry-on-retry).
+    """
     if not token:
         raise HTTPException(401, "Authorization header required")
     participant = verify_participant_token(token, db)
@@ -1081,27 +1125,33 @@ def toggle_chat_upvote(
     )
     if existing:
         db.delete(existing)
-        m.upvote_count = max(0, (m.upvote_count or 0) - 1)
         has_upvoted = False
     else:
         try:
             db.add(ConferenceChatUpvote(message_id=message_id, participant_id=participant.id))
             db.flush()
-            m.upvote_count = (m.upvote_count or 0) + 1
             has_upvoted = True
         except IntegrityError:
+            # Raced with another concurrent insert from the same token —
+            # treat as already-upvoted instead of failing.
             db.rollback()
             has_upvoted = True
 
+    # Source of truth: count actual upvote rows after the mutation.
+    new_count = (
+        db.query(func.count(ConferenceChatUpvote.id))
+        .filter(ConferenceChatUpvote.message_id == message_id)
+        .scalar()
+    ) or 0
+    m.upvote_count = new_count
     db.commit()
-    db.refresh(m)
 
     _publish_day("chat_upvote_changed", {
         "session_id": m.session_id,
         "message_id": message_id,
-        "upvote_count": m.upvote_count,
+        "upvote_count": new_count,
     })
-    return {"message_id": message_id, "upvote_count": m.upvote_count, "has_upvoted": has_upvoted}
+    return {"message_id": message_id, "upvote_count": new_count, "has_upvoted": has_upvoted}
 
 
 @router.post("/chat/{message_id}/hide")
