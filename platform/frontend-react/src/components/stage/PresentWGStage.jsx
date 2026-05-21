@@ -24,7 +24,7 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   ArrowRight, ArrowUpRight, ArrowDownRight,
   ChevronsDown, Network, Target, TrendingUp,
-  BarChart3, Sparkles, Layers,
+  BarChart3, Sparkles, Layers, Lightbulb, GitBranch, Compass,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -1015,36 +1015,119 @@ function ShiftColumn({ title, items, tone }) {
 // Cross-cutting themes slide
 // ────────────────────────────────────────────────────────────────────
 
+// Rotating icons for the three themes — Layers (foundational stack),
+// Network (interconnections), Target (focus). The order is stable so
+// the same theme position gets the same icon across all WG decks.
+const THEME_ICONS = [Layers, Network, Target];
+
 function ThemesSlide({ doc, accent }) {
+  const themes = doc?.themes || [];
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      <Eyebrow tone={accent}>Cross-cutting threads</Eyebrow>
-      <H1 size="lg" className="mt-6">
-        The themes that echo across this WG.
-      </H1>
-      <div className="mt-10 grid gap-5 lg:grid-cols-3">
-        {(doc?.themes || []).map((theme, i) => (
-          <motion.div
-            key={theme.title}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.2 + i * 0.12 }}
-            className="rounded-2xl border p-6"
-            style={{ borderColor: `${accent}30`, background: `${accent}08` }}
-          >
-            <div
-              className="mb-4 h-1 w-12 rounded-full"
-              style={{ background: accent }}
-            />
-            <h3 className="text-lg font-bold leading-snug" style={{ color: C.text }}>
-              {theme.title}
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed" style={{ color: C.textSec }}>
-              {theme.body}
-            </p>
-          </motion.div>
-        ))}
+    <div className="relative mx-auto w-full max-w-7xl">
+      <div className="text-center">
+        <Eyebrow tone={accent}>Cross-cutting threads</Eyebrow>
+        <H1 size="lg" className="mt-6">
+          Three threads <span style={{ color: accent }}>woven</span> through this WG.
+        </H1>
       </div>
+
+      <div className="relative mt-16">
+        {/* Animated thread linking the three cards — drawn behind them */}
+        <svg
+          className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2"
+          viewBox="0 0 1200 60"
+          preserveAspectRatio="none"
+          style={{ width: '100%', height: '60px' }}
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={`thread-${accent.replace('#', '')}`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={accent} stopOpacity="0" />
+              <stop offset="20%" stopColor={accent} stopOpacity="0.5" />
+              <stop offset="50%" stopColor={accent} stopOpacity="0.9" />
+              <stop offset="80%" stopColor={accent} stopOpacity="0.5" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <motion.path
+            d="M 0 30 Q 200 8 400 30 T 800 30 T 1200 30"
+            fill="none"
+            stroke={`url(#thread-${accent.replace('#', '')})`}
+            strokeWidth="1.5"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ duration: 1.4, ease: 'easeOut', delay: 0.4 }}
+          />
+        </svg>
+
+        <div className="relative grid gap-6 lg:grid-cols-3">
+          {themes.map((theme, i) => {
+            const Icon = THEME_ICONS[i % THEME_ICONS.length];
+            // Stagger the middle card slightly higher for visual rhythm.
+            const lift = i === 1 ? '-translate-y-3' : '';
+            return (
+              <motion.div
+                key={theme.title}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.2 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}
+                className={`relative rounded-3xl border p-7 ${lift}`}
+                style={{
+                  borderColor: `${accent}40`,
+                  background: `linear-gradient(165deg, ${accent}1A 0%, ${accent}08 50%, transparent 100%)`,
+                  boxShadow: `0 0 40px ${accent}1C, inset 0 1px 0 ${accent}25`,
+                }}
+              >
+                {/* Theme number badge */}
+                <div className="flex items-start justify-between">
+                  <div
+                    className="flex h-14 w-14 items-center justify-center rounded-2xl"
+                    style={{
+                      background: `${accent}25`,
+                      color: accent,
+                      boxShadow: `0 0 24px ${accent}30`,
+                    }}
+                  >
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <span
+                    className="font-mono text-3xl font-bold tabular-nums opacity-30"
+                    style={{ color: accent }}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                </div>
+                {/* Title */}
+                <h3
+                  className="mt-6 text-xl font-bold leading-snug lg:text-2xl"
+                  style={{ color: C.text }}
+                >
+                  {theme.title}
+                </h3>
+                {/* Glowing underline */}
+                <div
+                  className="mt-3 h-px w-full"
+                  style={{
+                    background: `linear-gradient(90deg, ${accent}, ${accent}00)`,
+                  }}
+                />
+                {/* Body */}
+                <p
+                  className="mt-4 text-base leading-relaxed"
+                  style={{ color: C.textSec }}
+                >
+                  {theme.body}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="mt-10 text-center text-sm" style={{ color: C.textMuted }}>
+        These threads are why the {themes.length === 5 ? 5 : 4 + (themes.length === 5 ? 1 : 0)} advancing
+        questions belong together — not as a checklist but as a coherent agenda.
+      </p>
     </div>
   );
 }
@@ -1057,44 +1140,240 @@ function CrossWgBridgesSlide({ wgNumber, accent }) {
   const bridges = CROSS_WG_BRIDGES[wgNumber] || [];
   if (!bridges.length) return null;
   return (
-    <div className="mx-auto flex h-full w-full max-w-6xl flex-col">
+    <div className="mx-auto flex h-full w-full max-w-7xl flex-col">
       <Eyebrow tone={accent}>How this WG bumps into the others</Eyebrow>
-      <H1 size="lg" className="mt-6">
+      <H1 size="lg" className="mt-4">
         <span style={{ color: accent }}>WG{wgNumber}</span> doesn't stand alone.
       </H1>
-      <div className="mt-8 grid flex-1 gap-4 lg:grid-cols-2">
-        {bridges.map((b, i) => {
-          const otherColor = PILLAR_COLORS[b.to] || C.cyan;
-          return (
-            <motion.div
-              key={b.to}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.15 + i * 0.1 }}
-              className="flex flex-col rounded-2xl border p-5"
-              style={{ borderColor: `${otherColor}30`, background: `${otherColor}0C` }}
-            >
-              <div className="flex items-baseline gap-3">
-                <span
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-base font-bold"
-                  style={{ background: `${otherColor}25`, color: otherColor }}
-                >
-                  {b.to}
-                </span>
-                <p className="text-lg font-bold leading-tight lg:text-xl" style={{ color: C.text }}>
-                  WG{b.to} — {WG_SHORT[b.to]}
-                </p>
-              </div>
-              <p
-                className="mt-3 text-base leading-relaxed lg:text-lg"
-                style={{ color: C.textSec }}
+
+      {/* Hub-and-spokes diagram + 2x2 bridge grid laid side by side on
+          wide screens; stacked on narrow ones. */}
+      <div className="mt-6 grid flex-1 items-center gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+        <HubAndSpokes wgNumber={wgNumber} accent={accent} bridges={bridges} />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {bridges.map((b, i) => {
+            const otherColor = PILLAR_COLORS[b.to] || C.cyan;
+            return (
+              <motion.div
+                key={b.to}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.45, delay: 0.4 + i * 0.1 }}
+                className="flex flex-col rounded-2xl border p-4 lg:p-5"
+                style={{
+                  borderColor: `${otherColor}40`,
+                  background: `linear-gradient(135deg, ${otherColor}14, ${otherColor}06)`,
+                  boxShadow: `0 0 20px ${otherColor}1A`,
+                }}
               >
-                {b.body}
-              </p>
-            </motion.div>
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-bold"
+                    style={{
+                      background: `${otherColor}30`,
+                      color: otherColor,
+                      boxShadow: `0 0 12px ${otherColor}40`,
+                    }}
+                  >
+                    {b.to}
+                  </span>
+                  <p
+                    className="text-sm font-bold leading-tight lg:text-base"
+                    style={{ color: C.text }}
+                  >
+                    {WG_SHORT[b.to]}
+                  </p>
+                </div>
+                <p
+                  className="mt-2.5 text-sm leading-relaxed lg:text-[15px]"
+                  style={{ color: C.textSec }}
+                >
+                  {b.body}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Radial hub diagram: this WG centered, the other four arranged around
+// it, with animated spokes drawn from the center outward. Spoke color
+// = partner WG's pillar color; thickness = identical (all bridges
+// matter). Drawn as SVG so the projector renders cleanly at any size.
+function HubAndSpokes({ wgNumber, accent, bridges }) {
+  const W = 360;
+  const H = 360;
+  const cx = W / 2;
+  const cy = H / 2;
+  const r = 130; // spoke length
+  const hubR = 46;
+  const partnerR = 34;
+
+  // Position each partner at an evenly-distributed angle. Start at -90°
+  // (top) so the layout looks like a four-armed cross when there are 4
+  // partners.
+  const partners = bridges.map((b, i) => {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / bridges.length;
+    return {
+      ...b,
+      angle,
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+      color: PILLAR_COLORS[b.to] || C.cyan,
+    };
+  });
+
+  return (
+    <div className="flex items-center justify-center">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[420px]">
+        <defs>
+          <radialGradient id={`hub-glow-${wgNumber}`}>
+            <stop offset="0%" stopColor={accent} stopOpacity="0.35" />
+            <stop offset="60%" stopColor={accent} stopOpacity="0.05" />
+            <stop offset="100%" stopColor={accent} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* Ambient glow behind hub */}
+        <circle cx={cx} cy={cy} r={r + 30} fill={`url(#hub-glow-${wgNumber})`} />
+
+        {/* Spokes */}
+        {partners.map((p, i) => {
+          // End the spoke at the partner-node edge instead of its center
+          // so the line meets the node visually without overlapping.
+          const dx = p.x - cx;
+          const dy = p.y - cy;
+          const len = Math.hypot(dx, dy);
+          const ex = cx + (dx * (len - partnerR)) / len;
+          const ey = cy + (dy * (len - partnerR)) / len;
+          const sx = cx + (dx * hubR) / len;
+          const sy = cy + (dy * hubR) / len;
+          return (
+            <motion.line
+              key={p.to}
+              x1={sx}
+              y1={sy}
+              x2={ex}
+              y2={ey}
+              stroke={p.color}
+              strokeWidth="2"
+              strokeOpacity="0.65"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.3 + i * 0.1, ease: 'easeOut' }}
+            />
           );
         })}
-      </div>
+
+        {/* Center hub */}
+        <motion.g
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          style={{ transformOrigin: `${cx}px ${cy}px`, transformBox: 'fill-box' }}
+        >
+          <circle cx={cx} cy={cy} r={hubR + 4} fill={accent} fillOpacity="0.10" />
+          <circle
+            cx={cx}
+            cy={cy}
+            r={hubR}
+            fill={accent}
+            fillOpacity="0.32"
+            stroke={accent}
+            strokeWidth="2"
+          />
+          <text
+            x={cx}
+            y={cy - 4}
+            textAnchor="middle"
+            fontSize="28"
+            fontFamily="ui-monospace, monospace"
+            fontWeight="700"
+            fill={C.text}
+          >
+            {wgNumber}
+          </text>
+          <text
+            x={cx}
+            y={cy + 16}
+            textAnchor="middle"
+            fontSize="10"
+            fontFamily="ui-monospace, monospace"
+            fontWeight="600"
+            fill={C.textMuted}
+            letterSpacing="1"
+          >
+            WG
+          </text>
+        </motion.g>
+
+        {/* Partner WG nodes */}
+        {partners.map((p, i) => (
+          <motion.g
+            key={p.to}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.45 + i * 0.08, ease: 'backOut' }}
+            style={{ transformOrigin: `${p.x}px ${p.y}px`, transformBox: 'fill-box' }}
+          >
+            <circle cx={p.x} cy={p.y} r={partnerR + 3} fill={p.color} fillOpacity="0.08" />
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={partnerR}
+              fill={p.color}
+              fillOpacity="0.22"
+              stroke={p.color}
+              strokeWidth="1.5"
+            />
+            <text
+              x={p.x}
+              y={p.y - 2}
+              textAnchor="middle"
+              fontSize="20"
+              fontFamily="ui-monospace, monospace"
+              fontWeight="700"
+              fill={C.text}
+            >
+              {p.to}
+            </text>
+            <text
+              x={p.x}
+              y={p.y + 12}
+              textAnchor="middle"
+              fontSize="8"
+              fontFamily="ui-monospace, monospace"
+              fontWeight="600"
+              fill={C.textMuted}
+              letterSpacing="1"
+            >
+              WG
+            </text>
+            {/* WG short label outside the node, positioned to follow the spoke direction */}
+            <text
+              x={p.x + Math.cos(p.angle) * (partnerR + 14)}
+              y={p.y + Math.sin(p.angle) * (partnerR + 14) + 4}
+              textAnchor={
+                Math.abs(p.angle) < 0.5 || Math.abs(p.angle - Math.PI) < 0.5
+                  ? 'middle'
+                  : Math.cos(p.angle) > 0
+                  ? 'start'
+                  : 'end'
+              }
+              fontSize="11"
+              fontFamily="Inter, sans-serif"
+              fontWeight="600"
+              fill={p.color}
+            >
+              {WG_SHORT[p.to]}
+            </text>
+          </motion.g>
+        ))}
+      </svg>
     </div>
   );
 }
