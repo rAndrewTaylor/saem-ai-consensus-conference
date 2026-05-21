@@ -93,33 +93,40 @@ export function TableReactionsStage({ bus, block }) {
 
       {blockMeta && (
         <div
-          className="mb-5 shrink-0 rounded-2xl border p-6"
+          className="mb-5 flex shrink-0 flex-col rounded-2xl border p-8"
           style={{
             borderColor: `${blockMeta.accent}40`,
             backgroundColor: `${blockMeta.accent}10`,
           }}
         >
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" style={{ color: blockMeta.accent }} />
-            <p className="text-base font-semibold uppercase tracking-[0.2em]" style={{ color: blockMeta.accent }}>
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-7 w-7" style={{ color: blockMeta.accent }} />
+            <p className="text-xl font-semibold uppercase tracking-[0.2em] lg:text-2xl" style={{ color: blockMeta.accent }}>
               Discuss at your table
             </p>
           </div>
-          <ol className="mt-4 space-y-4">
+          <ol className="mt-6 grid flex-1 gap-5 lg:grid-cols-2">
             {blockMeta.prompts.map((p, i) => (
-              <li key={i} className="flex items-start gap-4">
+              <li
+                key={i}
+                className="flex items-start gap-5 rounded-2xl border p-6"
+                style={{
+                  borderColor: `${blockMeta.accent}30`,
+                  backgroundColor: `${blockMeta.accent}08`,
+                }}
+              >
                 <span
-                  className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-xl font-bold"
+                  className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full font-mono text-3xl font-bold"
                   style={{ backgroundColor: `${blockMeta.accent}30`, color: blockMeta.accent }}
                 >
                   {i + 1}
                 </span>
-                <p className="text-2xl leading-snug text-white/95 sm:text-3xl">{p}</p>
+                <p className="text-3xl font-medium leading-snug text-white/95 lg:text-4xl xl:text-[2.6rem]">{p}</p>
               </li>
             ))}
           </ol>
-          <p className="mt-4 text-base text-white/55">
-            Facilitator: capture the table’s thoughts in the notes form on your phone — they appear here as you submit.
+          <p className="mt-5 text-lg text-white/55">
+            Facilitator: capture the table's thoughts in the notes form on your phone — they appear below as you submit.
           </p>
         </div>
       )}
