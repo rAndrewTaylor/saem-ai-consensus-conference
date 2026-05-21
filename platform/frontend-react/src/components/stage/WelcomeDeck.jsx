@@ -147,7 +147,7 @@ export function WelcomeDeck({ slideIndex = 0, onAdvance }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -24 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0 flex items-center justify-center px-12 py-12 sm:px-16 sm:py-14"
+          className="absolute inset-0 flex items-center justify-center px-6 py-8 sm:px-10 sm:py-10"
         >
           <Slide />
         </motion.div>
@@ -183,14 +183,16 @@ export function WelcomeDeck({ slideIndex = 0, onAdvance }) {
 // ────────────────────────────────────────────────────────────────────
 
 function H1({ children, className = '', size = 'xl' }) {
+  // Sized for a ballroom-scale projector. Each tier bumped one step so
+  // the back of the room can still parse the H1 without squinting.
   const sizes = {
-    hero: 'text-7xl sm:text-8xl lg:text-9xl',
-    xl: 'text-5xl sm:text-6xl lg:text-7xl',
-    lg: 'text-4xl sm:text-5xl lg:text-6xl',
+    hero: 'text-8xl sm:text-9xl lg:text-[10rem] xl:text-[12rem]',
+    xl: 'text-6xl sm:text-7xl lg:text-8xl xl:text-9xl',
+    lg: 'text-5xl sm:text-6xl lg:text-7xl',
   };
   return (
     <h1
-      className={`font-bold tracking-tight leading-[1.05] ${sizes[size]} ${className}`}
+      className={`font-bold tracking-tight leading-[1.02] ${sizes[size]} ${className}`}
       style={{ color: C.text }}
     >
       {children}
@@ -201,7 +203,7 @@ function H1({ children, className = '', size = 'xl' }) {
 function Eyebrow({ children, tone = C.cyan }) {
   return (
     <p
-      className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.32em]"
+      className="text-sm sm:text-base lg:text-lg font-semibold uppercase tracking-[0.32em]"
       style={{ color: tone }}
     >
       {children}
@@ -254,11 +256,11 @@ function StatBlock({ value, label, sub, accent = C.cyan, delay = 0, suffix = '' 
       >
         <AnimatedNumber value={value} delay={delay} suffix={suffix} />
       </p>
-      <p className="mt-3 text-sm font-semibold uppercase tracking-wider" style={{ color: C.text }}>
+      <p className="mt-3 text-base font-semibold uppercase tracking-wider lg:text-lg" style={{ color: C.text }}>
         {label}
       </p>
       {sub && (
-        <p className="mt-1 text-xs" style={{ color: C.textMuted }}>
+        <p className="mt-1 text-sm lg:text-base" style={{ color: C.textMuted }}>
           {sub}
         </p>
       )}
@@ -392,14 +394,14 @@ function TitleSlide() {
           <span style={{ color: C.cyan }}>Conference</span>
         </H1>
         <p
-          className="mt-10 max-w-3xl text-xl sm:text-2xl"
+          className="mt-10 max-w-5xl text-3xl sm:text-4xl lg:text-5xl leading-snug"
           style={{ color: C.textSec }}
         >
           The 10-year research agenda for AI in emergency medicine —
           decided today, by the room.
         </p>
         <div
-          className="mt-16 flex items-center gap-6 font-mono text-xs sm:text-sm"
+          className="mt-16 flex items-center gap-6 font-mono text-base sm:text-lg"
           style={{ color: C.textMuted }}
         >
           <span>Thursday · May 21, 2026</span>
@@ -419,7 +421,7 @@ function TitleSlide() {
 
 function MissionSlide() {
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="mx-auto w-full max-w-[1600px]">
       <Eyebrow>Why we're here</Eyebrow>
       <H1 size="xl" className="mt-8">
         AI is already in the ED.
@@ -441,7 +443,7 @@ function MissionSlide() {
             style={{ borderColor: C.border, background: C.card }}
           >
             <Eyebrow tone={C.textMuted}>{card.eyebrow}</Eyebrow>
-            <p className="mt-3 text-lg leading-relaxed" style={{ color: C.text }}>
+            <p className="mt-3 text-2xl leading-relaxed" style={{ color: C.text }}>
               {card.body}
             </p>
           </motion.div>
@@ -457,7 +459,7 @@ function MissionSlide() {
 
 function ByTheNumbersSlide() {
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full max-w-[1700px]">
       <div className="text-center">
         <Eyebrow>Before today, by the numbers</Eyebrow>
         <H1 size="xl" className="mt-6">
@@ -522,7 +524,7 @@ function ByTheNumbersSlide() {
 
 function WGGridSlide() {
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full max-w-[1700px]">
       <Eyebrow>The agenda</Eyebrow>
       <H1 size="lg" className="mt-6">
         Five working groups, four pillars,{' '}
@@ -554,7 +556,7 @@ function WGGridSlide() {
                   {wg.pillar}
                 </span>
               </div>
-              <h3 className="mt-3 text-base font-bold leading-snug" style={{ color: C.text }}>
+              <h3 className="mt-3 text-xl font-bold leading-snug lg:text-2xl" style={{ color: C.text }}>
                 {wg.title}
               </h3>
               <ul className="mt-3 space-y-1 text-xs" style={{ color: C.textSec }}>
@@ -658,7 +660,7 @@ const PROCESS_STEPS = [
 
 function MethodologySlide() {
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full max-w-[1700px]">
       <Eyebrow>How we got here</Eyebrow>
       <H1 size="lg" className="mt-6">
         Modified Delphi <span style={{ color: C.cyan }}>+ AI synthesis</span>{' '}
@@ -681,7 +683,7 @@ function MethodologySlide() {
               className="flex flex-col items-center text-center"
             >
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-bold"
+                className="flex h-14 w-14 items-center justify-center rounded-full font-mono text-xl font-bold"
                 style={{
                   background: step.color,
                   color: C.bg,
@@ -691,19 +693,19 @@ function MethodologySlide() {
                 {i + 1}
               </div>
               <p
-                className="mt-4 text-sm font-bold leading-snug"
+                className="mt-4 text-lg font-bold leading-snug lg:text-xl"
                 style={{ color: C.text }}
               >
                 {step.label}
               </p>
               <p
-                className="mt-1 font-mono text-[10px] tracking-wider"
+                className="mt-1 font-mono text-sm tracking-wider"
                 style={{ color: step.color }}
               >
                 {step.sub}
               </p>
               <p
-                className="mt-2 text-xs leading-relaxed"
+                className="mt-2 text-base leading-relaxed lg:text-lg"
                 style={{ color: C.textSec }}
               >
                 {step.detail}
@@ -714,7 +716,7 @@ function MethodologySlide() {
       </div>
 
       <div
-        className="mt-12 mx-auto max-w-3xl rounded-xl border-l-4 px-5 py-3 text-base"
+        className="mt-12 mx-auto max-w-5xl rounded-xl border-l-4 px-6 py-4 text-xl leading-relaxed lg:text-2xl"
         style={{ borderColor: C.cyan, background: `${C.cyan}10`, color: C.textSec }}
       >
         <span className="font-semibold" style={{ color: C.text }}>The point of the method:</span>{' '}
@@ -739,7 +741,7 @@ const FUNNEL_STAGES = [
 
 function FunnelSlide() {
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="mx-auto w-full max-w-[1600px]">
       <Eyebrow>The funnel</Eyebrow>
       <H1 size="lg" className="mt-6">
         From <span className="font-mono">177</span>{' '}
@@ -827,7 +829,7 @@ function CrossWGNetworkSlide() {
     [3, 4, 0.81],
   ];
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="mx-auto w-full max-w-[1700px]">
       <Eyebrow>Cross-pollination</Eyebrow>
       <H1 size="lg" className="mt-6">
         The hardest questions{' '}
@@ -962,31 +964,31 @@ const AGENDA = [
 
 function AgendaSlide() {
   return (
-    <div className="mx-auto w-full max-w-6xl">
+    <div className="mx-auto w-full max-w-[1600px]">
       <Eyebrow>How today flows</Eyebrow>
       <H1 size="lg" className="mt-6">
         <span className="font-mono">8</span> hours.{' '}
         <span className="font-mono">5</span> panels.{' '}
         <span style={{ color: C.cyan }}>One agenda.</span>
       </H1>
-      <ol className="mt-10 space-y-3">
+      <ol className="mt-10 space-y-4">
         {AGENDA.map((a, i) => (
           <motion.li
             key={a.time}
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.35, delay: 0.15 + i * 0.06 }}
-            className="grid grid-cols-[80px_1fr] items-baseline gap-5 rounded-xl border px-5 py-3"
+            className="grid grid-cols-[140px_1fr] items-baseline gap-6 rounded-xl border px-6 py-4"
             style={{ borderColor: C.borderLight, background: C.card }}
           >
-            <span className="font-mono text-base font-bold" style={{ color: a.color }}>
+            <span className="font-mono text-3xl font-bold lg:text-4xl" style={{ color: a.color }}>
               {a.time}
             </span>
             <div>
-              <p className="text-lg font-bold leading-snug" style={{ color: C.text }}>
+              <p className="text-2xl font-bold leading-snug lg:text-3xl" style={{ color: C.text }}>
                 {a.title}
               </p>
-              <p className="text-sm" style={{ color: C.textMuted }}>
+              <p className="mt-1 text-lg lg:text-xl" style={{ color: C.textMuted }}>
                 {a.body}
               </p>
             </div>
@@ -1003,35 +1005,35 @@ function AgendaSlide() {
 
 function ParticipateSlide() {
   return (
-    <div className="mx-auto grid w-full max-w-6xl items-center gap-14 lg:grid-cols-[1.1fr_1fr]">
+    <div className="mx-auto grid w-full max-w-[1600px] items-center gap-14 lg:grid-cols-[1.1fr_1fr]">
       <div>
         <Eyebrow>Your phone is the room</Eyebrow>
         <H1 size="lg" className="mt-6">
           Scan to join.<br />
           <span style={{ color: C.cyan }}>Vote · rank · comment.</span>
         </H1>
-        <ul className="mt-10 space-y-4 text-lg" style={{ color: C.textSec }}>
-          <li className="flex items-start gap-3">
+        <ul className="mt-10 space-y-5 text-2xl lg:text-3xl" style={{ color: C.textSec }}>
+          <li className="flex items-start gap-4">
             <span
-              className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-sm font-bold"
+              className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-mono text-xl font-bold"
               style={{ background: `${C.cyan}25`, color: C.cyan }}
             >
               1
             </span>
             <span>Open the camera. Scan the QR. No app, no account, no login.</span>
           </li>
-          <li className="flex items-start gap-3">
+          <li className="flex items-start gap-4">
             <span
-              className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-sm font-bold"
+              className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-mono text-xl font-bold"
               style={{ background: `${C.training}25`, color: C.training }}
             >
               2
             </span>
             <span>Vote and rank during panels. Submit anonymous comments and questions.</span>
           </li>
-          <li className="flex items-start gap-3">
+          <li className="flex items-start gap-4">
             <span
-              className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-sm font-bold"
+              className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-mono text-xl font-bold"
               style={{ background: `${C.self}25`, color: C.self }}
             >
               3
@@ -1042,11 +1044,11 @@ function ParticipateSlide() {
       </div>
       <div className="flex flex-col items-center">
         <a href={PLATFORM_URL} target="_blank" rel="noreferrer" className="block">
-          <div className="rounded-3xl bg-white p-5 shadow-2xl transition hover:scale-[1.02]">
+          <div className="rounded-3xl bg-white p-6 shadow-2xl transition hover:scale-[1.02]">
             <img
               alt="Scan to join"
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=360x360&data=${encodeURIComponent(PLATFORM_URL)}`}
-              className="block h-72 w-72"
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=520x520&data=${encodeURIComponent(PLATFORM_URL)}`}
+              className="block h-96 w-96 lg:h-[460px] lg:w-[460px]"
             />
           </div>
         </a>
@@ -1054,7 +1056,7 @@ function ParticipateSlide() {
           href={PLATFORM_URL}
           target="_blank"
           rel="noreferrer"
-          className="mt-5 font-mono text-sm hover:opacity-80"
+          className="mt-6 font-mono text-base hover:opacity-80 lg:text-lg"
           style={{ color: C.cyan }}
         >
           saem-ai-consensus-conference.up.railway.app/day
@@ -1070,45 +1072,45 @@ function ParticipateSlide() {
 
 function ThanksSlide() {
   return (
-    <div className="mx-auto w-full max-w-5xl text-center">
+    <div className="mx-auto w-full max-w-[1400px] text-center">
       <Eyebrow>Acknowledgments</Eyebrow>
       <H1 size="lg" className="mt-8">
         Thank you to the{' '}
         <span style={{ color: C.cyan }}>{GROUND_TRUTH.invited} working group members</span>{' '}
         who built this agenda.
       </H1>
-      <div className="mt-12 grid gap-3 text-left sm:grid-cols-2">
+      <div className="mt-12 grid gap-4 text-left sm:grid-cols-2">
         {WG_META.map((wg) => {
           const tone = PILLAR_COLOR[wg.pillar];
           return (
             <div
               key={wg.n}
-              className="rounded-xl border px-5 py-3"
+              className="rounded-xl border px-6 py-4"
               style={{ borderColor: `${tone}30`, background: `${tone}08` }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: tone }}>
+              <p className="text-sm font-semibold uppercase tracking-wider lg:text-base" style={{ color: tone }}>
                 WG {wg.n} · {wg.pillar}
               </p>
-              <p className="mt-0.5 text-sm font-bold" style={{ color: C.text }}>
+              <p className="mt-1 text-xl font-bold lg:text-2xl" style={{ color: C.text }}>
                 {wg.title}
               </p>
-              <p className="mt-1 text-xs" style={{ color: C.textSec }}>
+              <p className="mt-1 text-base lg:text-lg" style={{ color: C.textSec }}>
                 {wg.coLeads.join(' · ')}
               </p>
             </div>
           );
         })}
       </div>
-      <p className="mt-10 text-base" style={{ color: C.textSec }}>
+      <p className="mt-12 text-xl lg:text-2xl" style={{ color: C.textSec }}>
         Planning committee · Andy Muck · Tom Hartka · Matt Trowbridge · Moira Smith
       </p>
-      <p className="mt-2 text-base" style={{ color: C.textSec }}>
+      <p className="mt-2 text-xl lg:text-2xl" style={{ color: C.textSec }}>
         Project management · Hope Duncan
       </p>
-      <p className="mt-2 text-base" style={{ color: C.textSec }}>
+      <p className="mt-2 text-xl lg:text-2xl" style={{ color: C.textSec }}>
         Supported by SAEM · CORD · ABEM · UVA Department of Emergency Medicine
       </p>
-      <p className="mt-10 font-mono text-xs" style={{ color: C.textMuted }}>
+      <p className="mt-10 font-mono text-base lg:text-lg" style={{ color: C.textMuted }}>
         R. Andrew Taylor, MD MHS — Conference Chair
       </p>
     </div>
