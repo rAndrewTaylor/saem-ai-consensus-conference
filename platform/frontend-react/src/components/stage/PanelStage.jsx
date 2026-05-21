@@ -127,74 +127,33 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
         </div>
       </div>
 
-      {/* Discussion prompts — single full-width strip of exactly 3 slots.
-          Starts with 3 static prompts; as AI-promoted prompts arrive from
-          the chat, the oldest static prompt is dropped and the new AI one
-          takes the third slot. Maximum 3 visible at any time so the
-          projector never overflows the strip vertically.
-
-          Hidden during the Live Vote tab so the full leaderboard +
-          advancing-to-cross-WG sidebar can fit on one screen without
-          auto-scrolling. Returns on the Results / Comparison tabs. */}
-      {effectivePanelTab !== 'vote' && (prompts.length > 0 || aiPrompts.length > 0) && (() => {
-        // Build a combined list with chronological order: static prompts
-        // come first (initial seed), AI prompts append. Take the last 3.
-        const combined = [
-          ...prompts.map((p, idx) => ({
-            key: `static-${idx}`,
-            label: p.label,
-            text: p.text,
-            isAI: false,
-          })),
-          ...aiPrompts.map((text, idx) => ({
-            key: `ai-${idx}-${text.slice(0, 24)}`,
-            label: 'Live from chat',
-            text,
-            isAI: true,
-          })),
-        ];
-        const visible = combined.slice(-3);
+      {/* Discussion prompt — single AI-promoted prompt from the
+          audience chat. No static seed prompts; only chair-promoted
+          live ones, one at a time. The newest gets the slot.
+          Hidden during the Live Vote tab. */}
+      {effectivePanelTab !== 'vote' && aiPrompts.length > 0 && (() => {
+        const text = aiPrompts[aiPrompts.length - 1];
         return (
-          <div className="mx-8 mb-2 shrink-0 rounded-xl border px-3 py-2"
-               style={{ borderColor: `${accent}30`, backgroundColor: `${accent}08` }}>
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
-              Discussion prompts
-            </p>
-            <div className="mt-1.5 grid gap-2 sm:grid-cols-3">
-              <AnimatePresence initial={false} mode="popLayout">
-                {visible.map((p, i) => {
-                  // Three palette slots: accent, warm, cool. AI prompts
-                  // override with the purple "live from chat" treatment.
-                  const palette = p.isAI ? '#A78BFA' : [accent, '#F472B6', '#A78BFA'][i % 3];
-                  return (
-                    <motion.div
-                      key={p.key}
-                      layout
-                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ duration: 0.4 }}
-                      className="rounded-lg p-2"
-                      style={{
-                        backgroundColor: p.isAI ? 'rgba(139, 92, 246, 0.10)' : `${palette}10`,
-                        borderLeft: p.isAI ? '3px solid rgba(167, 139, 250, 0.7)' : `3px solid ${palette}80`,
-                      }}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        {p.isAI && (
-                          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-purple-300 animate-pulse" />
-                        )}
-                        <p className="text-[10px] font-semibold uppercase tracking-wider"
-                           style={{ color: palette }}>
-                          {p.label}
-                        </p>
-                      </div>
-                      <p className="mt-1 text-xs leading-snug text-white/95 line-clamp-2">{p.text}</p>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
+          <div className="mx-8 mb-2 shrink-0 rounded-xl border px-4 py-2"
+               style={{ borderColor: 'rgba(167, 139, 250, 0.35)', backgroundColor: 'rgba(139, 92, 246, 0.08)' }}>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-2 w-2 rounded-full bg-purple-300 animate-pulse" />
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-300">
+                Live from chat
+              </p>
             </div>
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={text}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.35 }}
+                className="mt-1 text-lg leading-snug text-white/95 line-clamp-2"
+              >
+                {text}
+              </motion.p>
+            </AnimatePresence>
           </div>
         );
       })()}
@@ -292,32 +251,45 @@ function PanelPoolView({ sessionId, resolving, bus, accent }) {
     );
   }
 
+  // Number of grid rows = ceil(pool / 2). Scale row text down for
+  // larger pools so even 12 questions fit in a fixed-height grid
+  // without scrolling.
+  const rows = Math.ceil(pool.length / 2);
+  // Tier text size to pool length so 6-row pools land cleanly.
+  const tight = rows >= 6;
+  const textSize = tight ? 'text-sm' : 'text-base';
+  const chipSize = tight ? 'h-8 w-8 text-base' : 'h-9 w-9 text-lg';
+
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col rounded-2xl border p-4"
+      className="flex min-h-0 flex-1 flex-col rounded-2xl border p-3"
       style={{ borderColor: `${accent}30`, backgroundColor: `${accent}08` }}
     >
-      <div className="mb-3 flex shrink-0 items-baseline justify-between">
-        <p className="text-base font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
+      <div className="mb-2 flex shrink-0 items-baseline justify-between">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
           Questions · audience ranks next
         </p>
-        <p className="font-mono text-sm text-white/55">
+        <p className="font-mono text-xs text-white/55">
           {pool.length} curated
         </p>
       </div>
-      <ol className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-3 overflow-y-auto pr-1 lg:grid-cols-2">
+      {/* grid-rows-N fits exactly the curated pool — no vertical scroll. */}
+      <ol
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 pr-1 lg:grid-cols-2"
+        style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+      >
         {pool.map((q, idx) => (
           <li
             key={q.id}
-            className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+            className="flex min-h-0 items-start gap-2.5 overflow-hidden rounded-lg border border-white/[0.06] bg-white/[0.02] p-2"
           >
             <span
-              className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-mono text-xl font-bold"
+              className={`inline-flex shrink-0 items-center justify-center rounded font-mono font-bold ${chipSize}`}
               style={{ backgroundColor: `${accent}25`, color: accent }}
             >
               {idx + 1}
             </span>
-            <p className="min-w-0 flex-1 text-lg leading-snug text-white/95">
+            <p className={`min-w-0 flex-1 leading-snug text-white/95 ${textSize}`}>
               {q.text}
             </p>
           </li>
