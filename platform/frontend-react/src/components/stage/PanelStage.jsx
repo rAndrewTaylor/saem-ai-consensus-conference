@@ -197,76 +197,109 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
         );
       })()}
 
-      {/* Body layout.
-          - Results tab: three columns — text/questions (L), figures (M),
-            audience word-cloud + chat (R). Everything the audience is
-            saying lives on the right so the room can see it.
-          - Vote tab: full-width VoteView. The room is voting, not
-            chatting; chat + word cloud would compete with the ranked
-            leaderboard for attention. We hide them.
-          - Comparison tab: full width too (pre/post deliberation read). */}
-      {effectivePanelTab === 'results' ? (
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-hidden lg:grid-cols-[1fr_1.1fr_1fr]">
-          {/* LEFT — questions + text insights, two stacked cycling panels */}
-          <div className="flex h-full min-h-0 flex-col gap-3 border-r border-white/[0.06] px-5 pb-3">
-            <div
-              className="flex min-h-0 flex-[1.6] flex-col rounded-2xl border p-3"
-              style={{ borderColor: 'rgba(99, 102, 241, 0.18)', backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
-            >
-              <ResultsView wgNumber={wgNumber} bus={bus} accent={accent} />
-            </div>
-            <div
-              className="flex min-h-0 flex-1 flex-col rounded-2xl border p-3"
-              style={{ borderColor: 'rgba(244, 114, 182, 0.18)', backgroundColor: 'rgba(244, 114, 182, 0.05)' }}
-            >
-              <FacetCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
-            </div>
-          </div>
+      {/* Body layout. All three tabs are single-column / full-width:
+          - Results (discussion view): big panel of the chair-curated
+            question pool the room is about to rank. No funnel chart,
+            no pairwise leaders, no figures — the audience needs to read
+            the questions, not study how they were derived.
+          - Vote / Comparison: live ranking / pre-post shift. */}
+      <div className="flex min-h-0 flex-1 flex-col px-10 pb-3">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={effectivePanelTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            {effectivePanelTab === 'results' && (
+              <PanelPoolView
+                sessionId={sessionId}
+                resolving={resolving}
+                bus={bus}
+                accent={accent}
+              />
+            )}
+            {effectivePanelTab === 'vote' && (
+              <VoteView sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} />
+            )}
+            {effectivePanelTab === 'comparison' && (
+              <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
 
-          {/* MIDDLE — figures */}
-          <div className="flex h-full min-h-0 flex-col border-r border-white/[0.06] px-5 pb-3">
-            <div
-              className="flex h-full min-h-0 flex-col rounded-2xl border p-3"
-              style={{ borderColor: 'rgba(16, 185, 129, 0.18)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }}
-            >
-              <FigureCarousel wgNumber={wgNumber} bus={bus} accent={accent} />
-            </div>
-          </div>
+// --- Discussion view (results tab) ----------------------------------------
 
-          {/* RIGHT — word cloud on top, chat takes the rest */}
-          <div className="flex h-full min-h-0 flex-col gap-3 px-4 pb-3">
-            <div
-              className="h-[160px] shrink-0 rounded-2xl border p-2"
-              style={{ borderColor: 'rgba(252, 211, 77, 0.18)', backgroundColor: 'rgba(252, 211, 77, 0.05)' }}
+// Single full-bleed panel of the chair's curated question pool —
+// what the room is about to rank. No funnel infographic, no pairwise
+// chart, no chat sidebar; the discussion view exists so the audience
+// can READ the questions from the back of the room while the panel
+// talks through them.
+function PanelPoolView({ sessionId, resolving, bus, accent }) {
+  const [pool, setPool] = useState(null);
+
+  useEffect(() => {
+    if (!sessionId) { setPool([]); return; }
+    let cancelled = false;
+    api(`/api/conference/sessions/${sessionId}/questions`)
+      .then((d) => { if (!cancelled) setPool(d?.questions || []); })
+      .catch(() => { if (!cancelled) setPool([]); });
+    return () => { cancelled = true; };
+  }, [sessionId, bus]);
+
+  if (resolving || pool === null) {
+    return <Skeleton className="h-[60vh] w-full rounded-2xl" />;
+  }
+
+  if (!pool.length) {
+    return (
+      <div className="rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] p-8">
+        <p className="text-2xl font-semibold text-amber-200">No panel pool curated yet</p>
+        <p className="mt-2 text-lg text-white/65">
+          Open the chair's Panel Pool curator on /command and pick the 6–8 questions
+          the audience will rank. They'll appear here once saved.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col rounded-2xl border p-5"
+      style={{ borderColor: `${accent}30`, backgroundColor: `${accent}08` }}
+    >
+      <div className="mb-4 flex shrink-0 items-baseline justify-between">
+        <p className="text-base font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
+          Questions for discussion · audience will rank these next
+        </p>
+        <p className="font-mono text-sm text-white/55">
+          {pool.length} curated
+        </p>
+      </div>
+      <ol className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+        {pool.map((q, idx) => (
+          <li
+            key={q.id}
+            className="flex items-start gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+          >
+            <span
+              className="mt-0.5 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-mono text-2xl font-bold"
+              style={{ backgroundColor: `${accent}25`, color: accent }}
             >
-              <WordCloud sessionId={sessionId} bus={bus} accent={accent} />
-            </div>
-            <div
-              className="min-h-0 flex-1 overflow-hidden rounded-2xl border p-2"
-              style={{ borderColor: 'rgba(248, 113, 113, 0.18)', backgroundColor: 'rgba(248, 113, 113, 0.05)' }}
-            >
-              <ChatSidebar sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} isAdmin={isAdmin} />
-            </div>
-          </div>
-        </div>
-      ) : (
-        // Vote / Comparison: single column, full width, no chat / cloud.
-        <div className="flex min-h-0 flex-1 flex-col px-8 pb-3">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={effectivePanelTab}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              {effectivePanelTab === 'vote' && <VoteView sessionId={sessionId} resolving={resolving} bus={bus} accent={accent} />}
-              {effectivePanelTab === 'comparison' && <ComparisonView wgNumber={wgNumber} bus={bus} accent={accent} />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      )}
+              {idx + 1}
+            </span>
+            <p className="min-w-0 flex-1 text-2xl leading-snug text-white/95">
+              {q.text}
+            </p>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
