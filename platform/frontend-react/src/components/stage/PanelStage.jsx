@@ -251,11 +251,14 @@ function PanelPoolView({ sessionId, resolving, bus, accent }) {
     );
   }
 
-  // Number of grid rows = ceil(pool / 2). Each row has equal height
-  // via grid-template-rows: repeat(N, 1fr) and each question's text
-  // auto-shrinks via FitText to fill its row without overflowing.
-  const rows = Math.ceil(pool.length / 2);
-  // Chip scales with overall density so long pools don't waste space.
+  // Layout: 2 columns when there are 7+ questions, single column for
+  // smaller pools (WG5 has 5 thematic-merge questions — looks better
+  // full-width than half-width with an empty trailing cell). Each row
+  // gets equal height via grid-template-rows + the FitText helper
+  // auto-shrinks per-row to fill its box.
+  const useTwoCols = pool.length >= 7;
+  const cols = useTwoCols ? 2 : 1;
+  const rows = Math.ceil(pool.length / cols);
   const tight = rows >= 6;
   const chipSize = tight ? 'h-8 w-8 text-base' : 'h-9 w-9 text-lg';
 
@@ -274,8 +277,11 @@ function PanelPoolView({ sessionId, resolving, bus, accent }) {
       </div>
       {/* grid-rows-N fits exactly the curated pool — no vertical scroll. */}
       <ol
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 pr-1 lg:grid-cols-2"
-        style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+        className="grid min-h-0 flex-1 gap-2 pr-1"
+        style={{
+          gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+        }}
       >
         {pool.map((q, idx) => (
           <li
