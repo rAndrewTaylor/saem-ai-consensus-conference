@@ -203,13 +203,38 @@ export function PresentWGStage({ wgNumber, bus }) {
       .slice(0, limit);
   }, [candidates, crossWgCandidates, limit]);
 
-  // Morning vote tally
+  // Morning vote tally.
+  //
+  // /api/conference/results/{id} returns one row PER vote-type per
+  // question — so a question that received both ranking and importance
+  // votes appears twice (rank-row with avg_rank set, importance-row
+  // with importance_mean set). Dedupe by question_id, preferring the
+  // row with avg_rank (the primary ordering signal). Without this the
+  // slide showed e.g. 10 rows for WG5 even though only 5 questions
+  // were on the panel.
   const morningRanking = useMemo(() => {
     const rows = (voteResults?.questions || voteResults?.results || [])
       .filter((r) => r.avg_rank != null || r.points != null || r.importance_mean != null);
     if (!rows.length) return [];
-    return [...rows].sort((a, b) => {
+
+    const byQid = new Map();
+    for (const r of rows) {
+      const qid = r.question_id ?? r.id;
+      if (qid == null) continue;
+      const existing = byQid.get(qid);
+      // Prefer the row that carries avg_rank (ranking vote tally) over
+      // one that carries only points or importance_mean.
+      if (!existing) {
+        byQid.set(qid, r);
+      } else if (r.avg_rank != null && existing.avg_rank == null) {
+        byQid.set(qid, r);
+      }
+    }
+
+    return [...byQid.values()].sort((a, b) => {
       if (a.avg_rank != null && b.avg_rank != null) return a.avg_rank - b.avg_rank;
+      if (a.avg_rank != null) return -1;
+      if (b.avg_rank != null) return 1;
       return (b.points ?? b.importance_mean ?? 0) - (a.points ?? a.importance_mean ?? 0);
     });
   }, [voteResults]);
