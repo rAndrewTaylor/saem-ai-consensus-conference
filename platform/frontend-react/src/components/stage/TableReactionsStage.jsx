@@ -70,12 +70,12 @@ export function TableReactionsStage({ bus, block }) {
     <div className="flex h-full flex-col overflow-hidden px-10 py-6">
       <div className="mb-4 flex shrink-0 items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+          <p className="text-base font-semibold uppercase tracking-[0.2em] text-white/55">
             Breakout discussion{blockMeta ? ` · ${blockMeta.label}` : ''}
           </p>
-          <h1 className="mt-1 text-3xl font-bold">Table reactions</h1>
+          <h1 className="mt-2 text-5xl font-bold">Table reactions</h1>
           {blockMeta && (
-            <p className="mt-1 text-sm text-white/55">{blockMeta.subtitle}</p>
+            <p className="mt-2 text-xl text-white/70">{blockMeta.subtitle}</p>
           )}
         </div>
         <select
@@ -93,32 +93,32 @@ export function TableReactionsStage({ bus, block }) {
 
       {blockMeta && (
         <div
-          className="mb-4 shrink-0 rounded-2xl border p-4"
+          className="mb-5 shrink-0 rounded-2xl border p-6"
           style={{
             borderColor: `${blockMeta.accent}40`,
             backgroundColor: `${blockMeta.accent}10`,
           }}
         >
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" style={{ color: blockMeta.accent }} />
-            <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: blockMeta.accent }}>
+            <Sparkles className="h-5 w-5" style={{ color: blockMeta.accent }} />
+            <p className="text-base font-semibold uppercase tracking-[0.2em]" style={{ color: blockMeta.accent }}>
               Discuss at your table
             </p>
           </div>
-          <ol className="mt-3 space-y-2">
+          <ol className="mt-4 space-y-4">
             {blockMeta.prompts.map((p, i) => (
-              <li key={i} className="flex items-start gap-3">
+              <li key={i} className="flex items-start gap-4">
                 <span
-                  className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold"
+                  className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-xl font-bold"
                   style={{ backgroundColor: `${blockMeta.accent}30`, color: blockMeta.accent }}
                 >
                   {i + 1}
                 </span>
-                <p className="text-lg leading-snug text-white/95 sm:text-xl">{p}</p>
+                <p className="text-2xl leading-snug text-white/95 sm:text-3xl">{p}</p>
               </li>
             ))}
           </ol>
-          <p className="mt-3 text-xs text-white/45">
+          <p className="mt-4 text-base text-white/55">
             Facilitator: capture the table’s thoughts in the notes form on your phone — they appear here as you submit.
           </p>
         </div>
@@ -164,8 +164,8 @@ export function TableReactionsStage({ bus, block }) {
 function NoteSection({ label, body }) {
   return (
     <div className="mt-3">
-      <p className="text-xs font-semibold uppercase tracking-wider text-white/50">{label}</p>
-      <p className="mt-1 whitespace-pre-line text-base text-white/85">{body}</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-white/55">{label}</p>
+      <p className="mt-1 whitespace-pre-line text-lg leading-snug text-white/90">{body}</p>
     </div>
   );
 }

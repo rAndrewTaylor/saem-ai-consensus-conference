@@ -93,17 +93,17 @@ export function CrossWgStage({ bus }) {
     <div className="flex h-full flex-col overflow-hidden px-10 py-6">
       <div className="flex shrink-0 flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-amber-300">Closing vote</p>
-          <h1 className="mt-1 text-4xl font-bold">Cross-WG prioritization</h1>
+          <p className="text-base font-semibold uppercase tracking-[0.2em] text-amber-300">Closing vote</p>
+          <h1 className="mt-2 text-5xl font-bold leading-tight">Cross-WG prioritization</h1>
         </div>
         <div className="text-right">
-          <p className="font-mono text-2xl font-semibold text-white">{totalVoters}</p>
-          <p className="text-[11px] uppercase tracking-wider text-white/40">
+          <p className="font-mono text-4xl font-semibold text-white">{totalVoters}</p>
+          <p className="text-sm uppercase tracking-wider text-white/55">
             {totalVoters === 1 ? 'person ranking' : 'people ranking'}
           </p>
         </div>
       </div>
-      <p className="mt-2 shrink-0 max-w-4xl text-base text-white/65">{CROSS_WG_PROMPT}</p>
+      <p className="mt-3 shrink-0 max-w-5xl text-xl leading-snug text-white/75">{CROSS_WG_PROMPT}</p>
 
       {loading && <Skeleton className="mt-6 h-64 w-full rounded-2xl" />}
 
@@ -133,36 +133,36 @@ export function CrossWgStage({ bus }) {
                 working groups. Audience drag-ranks on phones; live tally appears here.
               </p>
             )}
-            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
               {combined.map((q, idx) => {
                 const wgColor = PILLAR_COLORS[q.wg_number] || '#00B4D8';
                 const frac = barFraction(q.avg_rank);
                 return (
-                  <div key={q.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
-                    <div className="flex items-start gap-2">
+                  <div key={q.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+                    <div className="flex items-start gap-3">
                       {hasVotes && q.avg_rank != null && (
-                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold text-white"
+                        <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-mono text-xl font-bold text-white"
                               style={{ backgroundColor: `${wgColor}30` }}>
                           {idx + 1}
                         </span>
                       )}
                       {q.wg_number && (
                         <span
-                          className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-xs font-bold"
+                          className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg font-bold"
                           style={{ backgroundColor: `${wgColor}25`, color: wgColor }}
                         >
                           {q.wg_number}
                         </span>
                       )}
-                      <p className="min-w-0 flex-1 text-[15px] leading-snug text-white/95">{q.text}</p>
+                      <p className="min-w-0 flex-1 text-xl leading-snug text-white/95">{q.text}</p>
                       {hasVotes && q.avg_rank != null && (
-                        <span className="w-12 shrink-0 text-right font-mono text-sm font-semibold text-white tabular-nums">
+                        <span className="w-16 shrink-0 text-right font-mono text-xl font-semibold text-white tabular-nums">
                           {q.avg_rank.toFixed(1)}
                         </span>
                       )}
                     </div>
                     {hasVotes && q.avg_rank != null && (
-                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.04]">
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
                         <div
                           className="h-full rounded-full transition-all duration-700"
                           style={{ width: `${frac * 100}%`, backgroundColor: wgColor }}

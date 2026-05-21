@@ -72,21 +72,21 @@ export function FinalSynthesisStage({ bus }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0A1628] text-white">
-      <div className="flex shrink-0 items-end justify-between gap-4 px-10 pb-3 pt-6">
+      <div className="flex shrink-0 items-end justify-between gap-4 px-12 pb-4 pt-7">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-300/85">
+          <p className="text-base font-semibold uppercase tracking-[0.25em] text-amber-300/85">
             4:05 PM · closing
           </p>
-          <h1 className="mt-1 flex items-center gap-3 text-4xl font-bold tracking-tight">
-            <Sparkles className="h-7 w-7 text-amber-300" />
+          <h1 className="mt-2 flex items-center gap-3 text-5xl font-bold tracking-tight">
+            <Sparkles className="h-9 w-9 text-amber-300" />
             Final results &amp; synthesis
           </h1>
           {synth?.created_at && (
-            <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-white/45">
-              <Clock className="h-3 w-3" />
+            <p className="mt-2 inline-flex items-center gap-2 text-sm text-white/55">
+              <Clock className="h-4 w-4" />
               Drafted {new Date(synth.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
               {synth?.input_summary && (
-                <span className="ml-2 text-white/35">
+                <span className="ml-2 text-white/45">
                   · {synth.input_summary.n_questions} questions ·{' '}
                   {synth.input_summary.n_breakout_notes} table notes ·{' '}
                   {synth.input_summary.n_chat_messages} chat ·{' '}
@@ -129,9 +129,9 @@ export function FinalSynthesisStage({ bus }) {
           <article
             className="prose prose-invert max-w-none"
             style={{
-              // Larger, projector-readable text. Tailwind's typography
-              // plugin isn't installed; render with explicit sizing.
-              fontSize: '17px',
+              // Ballroom-scale read: bumped from 17px to 22px so the
+              // back of the room can still parse the synthesis body.
+              fontSize: '22px',
               lineHeight: 1.55,
             }}
           >
@@ -195,24 +195,24 @@ function SynthesisMarkdown({ text }) {
       {blocks.map((b, i) => {
         if (b.type === 'h2') {
           return (
-            <h2 key={i} className="mt-8 mb-3 border-b border-amber-400/25 pb-2 text-2xl font-bold text-amber-100">
+            <h2 key={i} className="mt-10 mb-4 border-b border-amber-400/25 pb-3 text-4xl font-bold text-amber-100">
               {b.content}
             </h2>
           );
         }
         if (b.type === 'h3') {
           return (
-            <h3 key={i} className="mt-5 mb-2 text-lg font-semibold text-white">
+            <h3 key={i} className="mt-6 mb-3 text-2xl font-semibold text-white">
               {b.content}
             </h3>
           );
         }
         if (b.type === 'ul') {
           return (
-            <ul key={i} className="my-3 space-y-2 pl-1">
+            <ul key={i} className="my-4 space-y-3 pl-1">
               {b.items.map((item, j) => (
-                <li key={j} className="flex gap-2 text-white/90">
-                  <span className="mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300/80" />
+                <li key={j} className="flex gap-3 text-white/90">
+                  <span className="mt-3 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-300/80" />
                   <span dangerouslySetInnerHTML={{ __html: inlineBold(item) }} />
                 </li>
               ))}
@@ -222,7 +222,7 @@ function SynthesisMarkdown({ text }) {
         return (
           <p
             key={i}
-            className="my-3 text-white/85"
+            className="my-4 text-white/85"
             dangerouslySetInnerHTML={{ __html: inlineBold(b.content) }}
           />
         );

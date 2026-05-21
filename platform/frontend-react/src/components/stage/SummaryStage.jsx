@@ -61,12 +61,12 @@ export function SummaryStage({ bus }) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-[#0A1628] text-white">
-      <div className="shrink-0 px-12 pb-3 pt-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-300/85">
+      <div className="shrink-0 px-12 pb-4 pt-7">
+        <p className="text-base font-semibold uppercase tracking-[0.25em] text-amber-300/85">
           4:35 PM · closing reflection
         </p>
-        <h1 className="mt-1 flex items-center gap-3 text-4xl font-bold tracking-tight">
-          <Flag className="h-7 w-7 text-amber-300" />
+        <h1 className="mt-2 flex items-center gap-3 text-5xl font-bold tracking-tight">
+          <Flag className="h-9 w-9 text-amber-300" />
           Summary &amp; next steps
         </h1>
       </div>
@@ -82,17 +82,17 @@ export function SummaryStage({ bus }) {
           {/* LEFT — Top 5 priorities */}
           <div className="flex min-h-0 min-w-0 flex-col">
             <div className="mb-3 flex shrink-0 items-baseline justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300/85">
+              <p className="text-base font-semibold uppercase tracking-wider text-cyan-300/85">
                 Top priorities — the room's headline
               </p>
-              <p className="text-[10px] text-white/40">
+              <p className="text-sm text-white/45">
                 {crossRows.length > 0 ? `from ${totalVoters} ranked` : 'awaiting cross-WG vote'}
               </p>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
               {crossRows.length === 0 && (
-                <p className="rounded-xl border border-amber-400/25 bg-amber-500/[0.06] p-4 text-sm text-amber-100">
+                <p className="rounded-xl border border-amber-400/25 bg-amber-500/[0.06] p-5 text-lg text-amber-100">
                   Cross-WG vote hasn't produced a ranking yet. Once the closing round is run,
                   the top 5 questions appear here as the conference's headline output.
                 </p>
@@ -102,25 +102,25 @@ export function SummaryStage({ bus }) {
                 return (
                   <div
                     key={r.question_id || r.id}
-                    className="rounded-xl border p-4"
+                    className="rounded-xl border p-5"
                     style={{
                       borderColor: `${color}40`,
                       backgroundColor: `${color}0E`,
                     }}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-4">
                       <span
-                        className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-mono text-lg font-bold"
+                        className="mt-0.5 inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl font-mono text-2xl font-bold"
                         style={{ backgroundColor: `${color}30`, color }}
                       >
                         {idx + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider"
+                        <p className="text-sm font-semibold uppercase tracking-wider"
                            style={{ color }}>
                           WG{r.wg_number} · avg rank {r.avg_rank.toFixed(2)}
                         </p>
-                        <p className="mt-1 text-base leading-snug text-white/95">
+                        <p className="mt-1 text-xl leading-snug text-white/95">
                           {r.text || r.question_text}
                         </p>
                       </div>
@@ -139,26 +139,26 @@ export function SummaryStage({ bus }) {
           </div>
 
           {/* RIGHT — Brief "what's next" — kept understated on purpose. */}
-          <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] p-5">
-            <div className="mb-3 flex shrink-0 items-baseline justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-200">
+          <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-amber-400/30 bg-amber-500/[0.06] p-6">
+            <div className="mb-4 flex shrink-0 items-baseline justify-between">
+              <p className="text-base font-semibold uppercase tracking-wider text-amber-200">
                 What's next
               </p>
-              <p className="text-[10px] text-amber-300/60">
-                directions the planning committee is exploring
+              <p className="text-sm text-amber-300/65">
+                directions we're exploring
               </p>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
               {nextSteps.length > 0 ? (
                 nextSteps.slice(0, 3).map((step, i) => (
                   <div
                     key={i}
-                    className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.04] p-3"
+                    className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.04] p-4"
                   >
-                    <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-300/80" />
+                    <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-amber-300/80" />
                     <p
-                      className="flex-1 text-sm leading-snug text-white/90"
+                      className="flex-1 text-lg leading-snug text-white/90"
                       dangerouslySetInnerHTML={{ __html: inlineBold(step) }}
                     />
                   </div>
@@ -172,8 +172,8 @@ export function SummaryStage({ bus }) {
               )}
             </div>
 
-            <p className="mt-3 shrink-0 text-[11px] leading-snug text-amber-200/65">
-              <Sparkles className="mr-1 inline h-3 w-3" />
+            <p className="mt-4 shrink-0 text-sm leading-snug text-amber-200/70">
+              <Sparkles className="mr-1 inline h-4 w-4" />
               Full synthesis lands in your inbox — possibilities, not commitments.
             </p>
           </div>
@@ -185,20 +185,20 @@ export function SummaryStage({ bus }) {
 
 function NextBullet({ children }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.04] p-3">
-      <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-amber-300/80" />
-      <p className="flex-1 text-sm leading-snug text-white/90">{children}</p>
+    <div className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/[0.04] p-4">
+      <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-amber-300/80" />
+      <p className="flex-1 text-lg leading-snug text-white/90">{children}</p>
     </div>
   );
 }
 
 function Stat({ label, value, suffix = '' }) {
   return (
-    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-      <p className="font-mono text-2xl font-bold text-white tabular-nums">
-        {value}{suffix && <span className="ml-0.5 text-xs font-normal text-white/45">{suffix}</span>}
+    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+      <p className="font-mono text-4xl font-bold text-white tabular-nums">
+        {value}{suffix && <span className="ml-1 text-sm font-normal text-white/45">{suffix}</span>}
       </p>
-      <p className="text-[10px] uppercase tracking-wider text-white/45">{label}</p>
+      <p className="text-xs uppercase tracking-wider text-white/55">{label}</p>
     </div>
   );
 }

@@ -111,17 +111,17 @@ export function PanelStage({ wgNumber, panelTab, bus, isAdmin, onTabChange }) {
     // (two-column results+chat). Everything fixed-height except the
     // body, which fills the remainder and scrolls internally.
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex shrink-0 items-center gap-4 px-8 pb-2 pt-4">
+      {/* Header — sized for ballroom-scale readability */}
+      <div className="flex shrink-0 items-center gap-5 px-10 pb-3 pt-5">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl font-bold"
+          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-3xl font-bold"
           style={{ backgroundColor: `${accent}25`, color: accent }}
         >
           {wgNumber}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-white/40">Panel {wgNumber}</p>
-          <h1 className="text-2xl font-bold sm:text-3xl">{wgName}</h1>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/55">Panel {wgNumber}</p>
+          <h1 className="text-4xl font-bold leading-tight sm:text-5xl">{wgName}</h1>
         </div>
       </div>
 
@@ -496,18 +496,18 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxRank, maxImp }
 
   return (
     <div
-      className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border p-3"
+      className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border p-4"
       style={{ borderColor: `${accent}25`, backgroundColor: `${accent}08` }}
     >
-      <div className="mb-2 flex shrink-0 items-baseline justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
+      <div className="mb-3 flex shrink-0 items-baseline justify-between">
+        <p className="text-base font-semibold uppercase tracking-wider" style={{ color: accent }}>
           Full ranking
         </p>
-        <p className="text-[10px] text-white/35">
+        <p className="text-sm text-white/45">
           {sortedRows.length} question{sortedRows.length === 1 ? '' : 's'} · {useRank ? 'avg rank' : 'importance'}
         </p>
       </div>
-      <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto pr-1">
+      <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto pr-1">
         {sortedRows.map((r, idx) => {
           const qid = r.question_id || r.id;
           const advancing = advancingIds.has(qid);
@@ -516,15 +516,15 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxRank, maxImp }
           return (
             <div
               key={qid}
-              className="rounded-lg border px-2 py-1.5"
+              className="rounded-lg border px-3 py-2.5"
               style={{
                 borderColor: advancing ? 'rgba(16, 185, 129, 0.35)' : 'rgba(255,255,255,0.06)',
                 backgroundColor: advancing ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255,255,255,0.02)',
               }}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <span
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded font-mono text-xs font-bold"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-mono text-lg font-bold"
                   style={{
                     backgroundColor: advancing ? 'rgba(16, 185, 129, 0.25)' : `${accent}25`,
                     color: advancing ? '#34d399' : accent,
@@ -532,14 +532,14 @@ function FullRankingColumn({ accent, sortedRows, advancingIds, maxRank, maxImp }
                 >
                   {idx + 1}
                 </span>
-                <p className="min-w-0 flex-1 truncate text-[13px] leading-tight text-white/90">
+                <p className="min-w-0 flex-1 truncate text-xl leading-tight text-white/95">
                   {r.text || r.question_text}
                 </p>
-                <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-white/55">
+                <span className="w-16 shrink-0 text-right font-mono text-lg font-semibold tabular-nums text-white/85">
                   {scoreLabel(r)}
                 </span>
               </div>
-              <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.04]">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -683,29 +683,29 @@ function AdvancingStrip({ sortedRows, unique_voters }) {
   const empties = Math.max(0, ADVANCING_PER_WG - top.length);
   return (
     <div
-      className="shrink-0 rounded-2xl border p-3"
+      className="shrink-0 rounded-2xl border p-4"
       style={{ borderColor: 'rgba(16, 185, 129, 0.35)', backgroundColor: 'rgba(16, 185, 129, 0.06)' }}
     >
-      <div className="mb-2 flex shrink-0 items-baseline justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+      <div className="mb-3 flex shrink-0 items-baseline justify-between">
+        <p className="text-base font-semibold uppercase tracking-wider text-emerald-300">
           Advancing to cross-WG — top {ADVANCING_PER_WG}
         </p>
-        <p className="font-mono text-[10px] text-white/45">
+        <p className="font-mono text-sm text-white/55">
           {unique_voters} {unique_voters === 1 ? 'voter' : 'voters'} · live
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {top.map((r, idx) => {
           const qid = r.question_id || r.id;
           return (
             <div
               key={qid}
-              className="flex items-start gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/[0.05] p-2.5"
+              className="flex items-start gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/[0.05] p-3"
             >
-              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/30 font-mono text-xs font-bold text-emerald-200">
+              <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/30 font-mono text-xl font-bold text-emerald-200">
                 {idx + 1}
               </span>
-              <p className="min-w-0 flex-1 text-[12px] leading-snug text-white/95 line-clamp-3">
+              <p className="min-w-0 flex-1 text-lg leading-snug text-white/95 line-clamp-4">
                 {r.text || r.question_text}
               </p>
             </div>
@@ -714,9 +714,9 @@ function AdvancingStrip({ sortedRows, unique_voters }) {
         {Array.from({ length: empties }).map((_, i) => (
           <div
             key={`empty-${i}`}
-            className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] p-2.5"
+            className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] p-3"
           >
-            <p className="text-[11px] text-white/30">Slot {top.length + i + 1} — open</p>
+            <p className="text-base text-white/30">Slot {top.length + i + 1} — open</p>
           </div>
         ))}
       </div>
