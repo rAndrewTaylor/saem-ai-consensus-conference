@@ -538,21 +538,27 @@ function TitleSlide({ wgNumber, wg, doc, accent }) {
     <div className="relative h-full w-full">
       <TitleBackground accent={accent} />
       <div className="relative flex h-full flex-col items-center justify-center text-center">
-        <Eyebrow tone={accent}>
+        <p
+          className="text-sm font-semibold uppercase tracking-[0.32em] sm:text-base"
+          style={{ color: accent }}
+        >
           Priority Presentation · WG {wgNumber}{pillar ? ` · ${pillar} pillar` : ''}
-        </Eyebrow>
-        <H1 size="hero" className="mt-8">
-          <span style={{ color: accent }}>WG {wgNumber}</span>
-        </H1>
+        </p>
+        <h1
+          className="mt-10 text-8xl font-bold leading-[0.95] tracking-tight sm:text-9xl lg:text-[12rem]"
+          style={{ color: accent }}
+        >
+          WG {wgNumber}
+        </h1>
         <h2
-          className="mt-3 max-w-5xl text-4xl font-semibold leading-tight sm:text-5xl"
+          className="mt-6 max-w-6xl text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
           style={{ color: C.text }}
         >
           {friendlyName}
         </h2>
         {doc?.subtitle && (
           <p
-            className="mt-6 max-w-3xl text-xl sm:text-2xl"
+            className="mt-8 max-w-4xl text-2xl leading-snug sm:text-3xl lg:text-4xl"
             style={{ color: C.textSec }}
           >
             {doc.subtitle}
@@ -560,12 +566,12 @@ function TitleSlide({ wgNumber, wg, doc, accent }) {
         )}
         {coLeads.length > 0 && (
           <div
-            className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-sm"
+            className="mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 font-mono text-base sm:text-lg"
             style={{ color: C.textMuted }}
           >
             {coLeads.map((cl, i) => (
               <span key={cl}>
-                {i > 0 && <span style={{ color: C.borderLight, marginRight: '1rem' }}>·</span>}
+                {i > 0 && <span style={{ color: C.borderLight, marginRight: '1.5rem' }}>·</span>}
                 {cl}
               </span>
             ))}
